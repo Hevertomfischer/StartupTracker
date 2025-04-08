@@ -57,21 +57,29 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   }, [statuses]);
 
   // Event handlers for drag and drop
-  const handleDragStart = (initial: any) => {
+  const handleDragStart = (initial: DragStart) => {
     // Save the dragging startup ID
     setDraggingStartupId(initial.draggableId);
   };
 
   const handleDragEnd = async (result: DropResult, provided?: ResponderProvided) => {
-    // Clear the dragging state
     setDraggingStartupId(null);
     
     const { destination, source, draggableId } = result;
 
-    // If dropped outside a droppable area or in the same place
-    if (!destination || 
-        (destination.droppableId === source.droppableId && 
-         destination.index === source.index)) {
+    if (!destination) {
+      return;
+    }
+
+    if (destination.droppableId === source.droppableId && 
+        destination.index === source.index) {
+      return;
+    }
+
+    // Find the startup that was dragged
+    const startup = startups.find(s => s.id === draggableId);
+    if (!startup) {
+      console.error("Startup not found:", draggableId);
       return;
     }
 
