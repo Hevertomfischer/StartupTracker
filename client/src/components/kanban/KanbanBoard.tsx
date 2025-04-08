@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   DragDropContext, 
   Droppable, 
@@ -6,7 +6,8 @@ import {
   DropResult, 
   DroppableProvided, 
   DraggableProvided, 
-  DraggableStateSnapshot 
+  DraggableStateSnapshot,
+  ResponderProvided
 } from "react-beautiful-dnd";
 import { StartupCard } from "./StartupCard";
 import { type Startup, type Status } from "@shared/schema";
@@ -28,6 +29,7 @@ type KanbanColumn = {
 
 export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   const { toast } = useToast();
+  const [draggingStartupId, setDraggingStartupId] = useState<string | null>(null);
   
   // Fetch statuses for the Kanban columns
   const { data: statuses, isLoading } = useQuery({
@@ -41,24 +43,47 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     }
   });
 
-  // Create columns from statuses and ensure proper ordering
-  const columns: KanbanColumn[] = statuses ? 
-    [...statuses]
+  // Use useMemo to create stable columns reference
+  const columns: KanbanColumn[] = useMemo(() => {
+    if (!statuses) return [];
+    
+    return [...statuses]
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .map(status => ({
         id: status.id,
         name: status.name,
         color: status.color,
-      })) 
-    : [];
+      }));
+  }, [statuses]);
 
-  const handleDragEnd = async (result: DropResult) => {
+  // Event handlers for drag and drop
+  const handleDragStart = (initial: any) => {
+    // Save the dragging startup ID
+    setDraggingStartupId(initial.draggableId);
+  };
+
+  const handleDragEnd = async (result: DropResult, provided?: ResponderProvided) => {
+    // Clear the dragging state
+    setDraggingStartupId(null);
+    
     const { destination, source, draggableId } = result;
 
     // If dropped outside a droppable area or in the same place
     if (!destination || 
         (destination.droppableId === source.droppableId && 
          destination.index === source.index)) {
+      return;
+    }
+
+    // Find the startup that was dragged
+    const draggedStartup = startups.find(startup => startup.id === draggableId);
+    if (!draggedStartup) {
+      console.error("Could not find startup with ID:", draggableId);
+      toast({
+        title: "Error",
+        description: "Could not find the startup you were trying to move.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -114,14 +139,28 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     );
   }
 
+  // useMemo for startup grouping to avoid re-filtering on each render
+  const columnStartupsMap = useMemo(() => {
+    const map: Record<string, Startup[]> = {};
+    
+    columns.forEach(column => {
+      map[column.id] = startups.filter(
+        startup => startup.status_id === column.id
+      );
+    });
+    
+    return map;
+  }, [columns, startups]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-      <DragDropContext onDragEnd={handleDragEnd}>
+      <DragDropContext 
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <div className="kanban-board flex space-x-4 overflow-x-auto pb-4">
           {columns.map(column => {
-            const columnStartups = startups.filter(
-              startup => startup.status_id === column.id
-            );
+            const columnStartups = columnStartupsMap[column.id] || [];
 
             return (
               <Droppable key={column.id} droppableId={column.id}>
@@ -146,13 +185,15 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                           key={startup.id}
                           draggableId={startup.id}
                           index={index}
+                          isDragDisabled={draggingStartupId !== null && draggingStartupId !== startup.id}
                         >
                           {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`${snapshot.isDragging ? 'opacity-70 transform scale-105' : ''}`}
+                              className={`mb-2 ${snapshot.isDragging ? 'opacity-70 transform scale-105' : ''}`}
+                              data-startup-id={startup.id}
                             >
                               <StartupCard 
                                 startup={startup} 
