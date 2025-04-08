@@ -10,9 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { type Startup, type StartupMember, StatusEnum } from "@shared/schema";
+import { type Startup, type StartupMember, type Status, SectorEnum, PriorityEnum } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { X, Calendar, MapPin, Users, BarChart3, TrendingUp, DollarSign } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 type StartupDetailsModalProps = {
   open: boolean;
@@ -20,45 +21,35 @@ type StartupDetailsModalProps = {
   onClose: () => void;
 };
 
-// Helper for industry styling
-const getIndustryStyles = (industry: string) => {
+// Helper for sector styling
+const getSectorStyles = (sector: string | null) => {
+  if (!sector) return { bg: "bg-gray-100", text: "text-gray-800" };
+  
   const styles = {
     tech: { bg: "bg-blue-100", text: "text-blue-800" },
     health: { bg: "bg-red-100", text: "text-red-800" },
     finance: { bg: "bg-indigo-100", text: "text-indigo-800" },
     ecommerce: { bg: "bg-pink-100", text: "text-pink-800" },
     education: { bg: "bg-green-100", text: "text-green-800" },
+    agritech: { bg: "bg-emerald-100", text: "text-emerald-800" },
+    cleantech: { bg: "bg-teal-100", text: "text-teal-800" },
     other: { bg: "bg-yellow-100", text: "text-yellow-800" },
   };
   
-  return styles[industry as keyof typeof styles] || styles.other;
+  return styles[sector as keyof typeof styles] || styles.other;
 };
 
-// Helper for status display
-const getStatusDisplay = (status: string) => {
-  const statusMap = {
-    [StatusEnum.IDEA]: { label: "Idea Stage", style: "bg-blue-100 text-blue-800" },
-    [StatusEnum.MVP]: { label: "MVP Stage", style: "bg-purple-100 text-purple-800" },
-    [StatusEnum.TRACTION]: { label: "Traction Stage", style: "bg-green-100 text-green-800" },
-    [StatusEnum.SCALING]: { label: "Scaling Stage", style: "bg-yellow-100 text-yellow-800" },
+// Helper for priority styling
+const getPriorityStyles = (priority: string | null) => {
+  if (!priority) return { bg: "bg-gray-100", text: "text-gray-800" };
+  
+  const styles = {
+    high: { bg: "bg-red-100", text: "text-red-800" },
+    medium: { bg: "bg-yellow-100", text: "text-yellow-800" },
+    low: { bg: "bg-green-100", text: "text-green-800" },
   };
   
-  return statusMap[status as keyof typeof statusMap] || 
-    { label: status, style: "bg-gray-100 text-gray-800" };
-};
-
-// Helper for funding stage format
-const formatFundingStage = (stage: string) => {
-  const formatMap: Record<string, string> = {
-    "bootstrapped": "Bootstrapped",
-    "pre-seed": "Pre-seed",
-    "seed": "Seed",
-    "series-a": "Series A",
-    "series-b": "Series B",
-    "series-c": "Series C+"
-  };
-  
-  return formatMap[stage] || stage;
+  return styles[priority as keyof typeof styles] || styles.medium;
 };
 
 export function StartupDetailsModal({ 
@@ -66,8 +57,15 @@ export function StartupDetailsModal({
   startup, 
   onClose 
 }: StartupDetailsModalProps) {
-  const industryStyle = getIndustryStyles(startup.industry);
-  const statusDisplay = getStatusDisplay(startup.status);
+  const sectorStyle = getSectorStyles(startup.sector);
+  const priorityStyle = getPriorityStyles(startup.priority);
+  
+  // Fetch startup status
+  const { data: status } = useQuery<Status>({
+    queryKey: ['/api/statuses', startup.status_id],
+    enabled: open && !!startup.status_id,
+    retry: false
+  });
   
   // Fetch startup members
   const { data: members = [] } = useQuery<StartupMember[]>({
@@ -95,48 +93,110 @@ export function StartupDetailsModal({
             <DialogTitle className="text-lg font-medium text-gray-700">
               {startup.name}
             </DialogTitle>
-            <span className={`text-xs px-2 py-1 rounded-full ${industryStyle.bg} ${industryStyle.text}`}>
-              {startup.industry.charAt(0).toUpperCase() + startup.industry.slice(1)}
-            </span>
+            {startup.sector && (
+              <Badge variant="outline" className={`${sectorStyle.bg} ${sectorStyle.text} border-0`}>
+                {startup.sector.charAt(0).toUpperCase() + startup.sector.slice(1)}
+              </Badge>
+            )}
           </div>
+          <DialogDescription className="text-sm text-gray-500 mt-1">
+            {status?.name && (
+              <Badge 
+                variant="outline" 
+                className="mr-2 bg-gray-100 text-gray-800 border-0"
+              >
+                {status.name}
+              </Badge>
+            )}
+            {startup.priority && (
+              <Badge 
+                variant="outline" 
+                className={`${priorityStyle.bg} ${priorityStyle.text} border-0`}
+              >
+                {`${startup.priority.charAt(0).toUpperCase() + startup.priority.slice(1)} Priority`}
+              </Badge>
+            )}
+          </DialogDescription>
         </DialogHeader>
         
         <div className="mt-4">
           <div className="border-t border-gray-200 pt-4">
             <dl className="divide-y divide-gray-200">
-              <div className="py-3 flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Status</dt>
-                <dd className="text-sm text-gray-700">
-                  <span className={`px-2 py-1 text-xs rounded-full ${statusDisplay.style}`}>
-                    {statusDisplay.label}
-                  </span>
-                </dd>
-              </div>
-              <div className="py-3 flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Funding Stage</dt>
-                <dd className="text-sm text-gray-700">{formatFundingStage(startup.fundingStage)}</dd>
-              </div>
-              <div className="py-3 flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Team Size</dt>
-                <dd className="text-sm text-gray-700">{startup.teamSize} members</dd>
-              </div>
-              <div className="py-3 flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Founded</dt>
-                <dd className="text-sm text-gray-700">{startup.foundedDate || "Not specified"}</dd>
-              </div>
-              <div className="py-3 flex justify-between">
-                <dt className="text-sm font-medium text-gray-500">Location</dt>
-                <dd className="text-sm text-gray-700">{startup.location || "Not specified"}</dd>
-              </div>
+              {startup.ceo_name && (
+                <div className="py-3 flex justify-between items-center">
+                  <dt className="text-sm font-medium text-gray-500 flex items-center">
+                    <Users className="h-4 w-4 mr-2" />
+                    CEO
+                  </dt>
+                  <dd className="text-sm text-gray-700">{startup.ceo_name}</dd>
+                </div>
+              )}
+              
+              {(startup.city || startup.state) && (
+                <div className="py-3 flex justify-between items-center">
+                  <dt className="text-sm font-medium text-gray-500 flex items-center">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    Location
+                  </dt>
+                  <dd className="text-sm text-gray-700">
+                    {[startup.city, startup.state].filter(Boolean).join(", ")}
+                  </dd>
+                </div>
+              )}
+              
+              {startup.mrr && (
+                <div className="py-3 flex justify-between items-center">
+                  <dt className="text-sm font-medium text-gray-500 flex items-center">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    MRR
+                  </dt>
+                  <dd className="text-sm text-gray-700">
+                    ${Number(startup.mrr).toLocaleString()}
+                  </dd>
+                </div>
+              )}
+              
+              {startup.total_revenue_last_year && (
+                <div className="py-3 flex justify-between items-center">
+                  <dt className="text-sm font-medium text-gray-500 flex items-center">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Last Year Revenue
+                  </dt>
+                  <dd className="text-sm text-gray-700">
+                    ${Number(startup.total_revenue_last_year).toLocaleString()}
+                  </dd>
+                </div>
+              )}
+              
+              {startup.tam && (
+                <div className="py-3 flex justify-between items-center">
+                  <dt className="text-sm font-medium text-gray-500 flex items-center">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Total Addressable Market
+                  </dt>
+                  <dd className="text-sm text-gray-700">
+                    ${Number(startup.tam).toLocaleString()}
+                  </dd>
+                </div>
+              )}
             </dl>
           </div>
           
           <div className="mt-4">
             <h4 className="text-sm font-medium text-gray-500 mb-2">Description</h4>
             <p className="text-sm text-gray-700">
-              {startup.description}
+              {startup.description || "No description available"}
             </p>
           </div>
+          
+          {startup.observations && (
+            <div className="mt-4">
+              <h4 className="text-sm font-medium text-gray-500 mb-2">Observations</h4>
+              <p className="text-sm text-gray-700">
+                {startup.observations}
+              </p>
+            </div>
+          )}
           
           <div className="mt-4">
             <h4 className="text-sm font-medium text-gray-500 mb-2">Team</h4>
@@ -146,7 +206,7 @@ export function StartupDetailsModal({
                   members.map((member) => (
                     <li key={member.id} className="py-4 flex items-center">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={member.photoUrl} alt={member.name} />
+                        <AvatarImage src={member.photo_url || undefined} alt={member.name} />
                         <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div className="ml-3">
@@ -164,10 +224,7 @@ export function StartupDetailsModal({
         </div>
         
         <DialogFooter className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-          <Button variant="default" className="w-full sm:w-auto">
-            Edit Details
-          </Button>
-          <Button variant="outline" onClick={onClose} className="mt-3 sm:mt-0 sm:mr-3 w-full sm:w-auto">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
             Close
           </Button>
         </DialogFooter>

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
@@ -28,13 +28,13 @@ import {
 } from "@/components/ui/select";
 import { 
   insertStartupSchema, 
-  IndustryEnum, 
-  StatusEnum, 
-  FundingStageEnum 
+  SectorEnum,
+  PriorityEnum,
+  type Status
 } from "@shared/schema";
 import { X } from "lucide-react";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,25 +47,45 @@ type AddStartupModalProps = {
 const formSchema = insertStartupSchema.extend({
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
-  teamSize: z.string().min(1, "Team size is required").transform(val => parseInt(val)),
 });
 
 export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
   const { toast } = useToast();
+  
+  // Fetch statuses for the dropdown
+  const { data: statuses = [] } = useQuery<Status[]>({
+    queryKey: ['/api/statuses'],
+    queryFn: async () => {
+      const response = await fetch('/api/statuses');
+      if (!response.ok) {
+        throw new Error('Failed to fetch statuses');
+      }
+      return response.json();
+    }
+  });
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       description: "",
-      industry: "tech",
-      status: "idea",
-      fundingStage: "pre-seed",
-      teamSize: "1",
-      location: "",
-      foundedDate: "",
+      sector: "tech",
+      status_id: "",
+      priority: "medium",
+      ceo_name: "",
+      city: "",
+      state: "",
+      observations: "",
     },
   });
+  
+  // Set the default status when statuses are loaded
+  useEffect(() => {
+    if (statuses.length > 0 && !form.getValues().status_id) {
+      // Use the first status as default
+      form.setValue('status_id', statuses[0].id);
+    }
+  }, [statuses, form]);
   
   const createStartupMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
@@ -132,28 +152,30 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
               )}
             />
             
-            <FormField
+            <Controller
               control={form.control}
-              name="industry"
+              name="sector"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Industry</FormLabel>
+                  <FormLabel>Sector</FormLabel>
                   <Select 
-                    defaultValue={field.value} 
+                    value={field.value || "tech"} 
                     onValueChange={field.onChange}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select industry" />
+                        <SelectValue placeholder="Select sector" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={IndustryEnum.TECH}>Technology</SelectItem>
-                      <SelectItem value={IndustryEnum.HEALTH}>Healthcare</SelectItem>
-                      <SelectItem value={IndustryEnum.FINANCE}>FinTech</SelectItem>
-                      <SelectItem value={IndustryEnum.ECOMMERCE}>E-commerce</SelectItem>
-                      <SelectItem value={IndustryEnum.EDUCATION}>Education</SelectItem>
-                      <SelectItem value={IndustryEnum.OTHER}>Other</SelectItem>
+                      <SelectItem value={SectorEnum.TECH}>Technology</SelectItem>
+                      <SelectItem value={SectorEnum.HEALTH}>Healthcare</SelectItem>
+                      <SelectItem value={SectorEnum.FINANCE}>Finance</SelectItem>
+                      <SelectItem value={SectorEnum.ECOMMERCE}>E-commerce</SelectItem>
+                      <SelectItem value={SectorEnum.EDUCATION}>Education</SelectItem>
+                      <SelectItem value={SectorEnum.AGRITECH}>AgriTech</SelectItem>
+                      <SelectItem value={SectorEnum.CLEANTECH}>CleanTech</SelectItem>
+                      <SelectItem value={SectorEnum.OTHER}>Other</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -161,26 +183,28 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
               )}
             />
             
-            <FormField
+            <Controller
               control={form.control}
-              name="status"
+              name="status_id"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Current Stage</FormLabel>
+                  <FormLabel>Current Status</FormLabel>
                   <Select 
-                    defaultValue={field.value} 
+                    value={field.value || ""} 
                     onValueChange={field.onChange}
+                    disabled={statuses.length === 0}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select stage" />
+                        <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={StatusEnum.IDEA}>Idea Stage</SelectItem>
-                      <SelectItem value={StatusEnum.MVP}>MVP Stage</SelectItem>
-                      <SelectItem value={StatusEnum.TRACTION}>Traction Stage</SelectItem>
-                      <SelectItem value={StatusEnum.SCALING}>Scaling Stage</SelectItem>
+                      {statuses.map(status => (
+                        <SelectItem key={status.id} value={status.id}>
+                          {status.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -188,28 +212,25 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
               )}
             />
             
-            <FormField
+            <Controller
               control={form.control}
-              name="fundingStage"
+              name="priority"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Funding Stage</FormLabel>
+                  <FormLabel>Priority</FormLabel>
                   <Select 
-                    defaultValue={field.value} 
+                    value={field.value || "medium"} 
                     onValueChange={field.onChange}
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select funding stage" />
+                        <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value={FundingStageEnum.BOOTSTRAPPED}>Bootstrapped</SelectItem>
-                      <SelectItem value={FundingStageEnum.PRE_SEED}>Pre-seed</SelectItem>
-                      <SelectItem value={FundingStageEnum.SEED}>Seed</SelectItem>
-                      <SelectItem value={FundingStageEnum.SERIES_A}>Series A</SelectItem>
-                      <SelectItem value={FundingStageEnum.SERIES_B}>Series B</SelectItem>
-                      <SelectItem value={FundingStageEnum.SERIES_C}>Series C+</SelectItem>
+                      <SelectItem value={PriorityEnum.HIGH}>High</SelectItem>
+                      <SelectItem value={PriorityEnum.MEDIUM}>Medium</SelectItem>
+                      <SelectItem value={PriorityEnum.LOW}>Low</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -217,18 +238,61 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
               )}
             />
             
-            <FormField
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Controller
+                control={form.control}
+                name="ceo_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CEO Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="CEO's name" 
+                        value={field.value || ""} 
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            
+              <Controller
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g. São Paulo" 
+                        value={field.value || ""} 
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <Controller
               control={form.control}
-              name="teamSize"
+              name="state"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Team Size</FormLabel>
+                  <FormLabel>State</FormLabel>
                   <FormControl>
                     <Input 
-                      type="number" 
-                      min="1" 
-                      placeholder="Number of team members" 
-                      {...field} 
+                      placeholder="e.g. SP" 
+                      value={field.value || ""} 
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
                     />
                   </FormControl>
                   <FormMessage />
@@ -236,35 +300,7 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
               )}
             />
             
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Location (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. San Francisco, CA" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="foundedDate"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Founded Date (Optional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. January 2023" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
+            <Controller
               control={form.control}
               name="description"
               render={({ field }) => (
@@ -272,10 +308,13 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
                   <FormLabel>Description</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Describe your startup..." 
+                      placeholder="Describe the startup..." 
                       className="resize-none" 
                       rows={3}
-                      {...field} 
+                      value={field.value || ""} 
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
                     />
                   </FormControl>
                   <FormMessage />

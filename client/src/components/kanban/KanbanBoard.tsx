@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   DragDropContext, 
   Droppable, 
@@ -9,10 +9,11 @@ import {
   DraggableStateSnapshot 
 } from "react-beautiful-dnd";
 import { StartupCard } from "./StartupCard";
-import { type Startup, StatusEnum } from "@shared/schema";
+import { type Startup, type Status } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 type KanbanBoardProps = {
   startups: Startup[];
@@ -21,19 +22,38 @@ type KanbanBoardProps = {
 
 type KanbanColumn = {
   id: string;
-  title: string;
+  name: string;
   color: string;
 };
 
 export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   const { toast } = useToast();
   
-  const columns: KanbanColumn[] = [
-    { id: StatusEnum.IDEA, title: "Idea Stage", color: "bg-blue-400" },
-    { id: StatusEnum.MVP, title: "MVP Stage", color: "bg-purple-400" },
-    { id: StatusEnum.TRACTION, title: "Traction Stage", color: "bg-green-400" },
-    { id: StatusEnum.SCALING, title: "Scaling Stage", color: "bg-yellow-400" },
-  ];
+  // Fetch statuses for the Kanban columns
+  const { data: statuses, isLoading } = useQuery({
+    queryKey: ['/api/statuses'],
+    queryFn: async () => {
+      const response = await fetch('/api/statuses');
+      if (!response.ok) {
+        throw new Error('Failed to fetch statuses');
+      }
+      return response.json() as Promise<Status[]>;
+    }
+  });
+
+  // Adjust columns based on fetched statuses
+  const columns: KanbanColumn[] = statuses?.map(status => ({
+    id: status.id,
+    name: status.name,
+    color: status.color,
+  })) || [];
+  
+  // Order columns by order property
+  columns.sort((a, b) => {
+    const statusA = statuses?.find(s => s.id === a.id);
+    const statusB = statuses?.find(s => s.id === b.id);
+    return (statusA?.order || 0) - (statusB?.order || 0);
+  });
 
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
@@ -47,8 +67,8 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
 
     // If the status has changed
     if (destination.droppableId !== source.droppableId) {
-      const startupId = parseInt(draggableId);
-      const newStatus = destination.droppableId;
+      const startupId = draggableId;
+      const newStatusId = destination.droppableId;
 
       try {
         // Optimistically update the UI
@@ -58,14 +78,14 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
             if (!old) return old;
             return old.map(startup => 
               startup.id === startupId 
-                ? { ...startup, status: newStatus } 
+                ? { ...startup, status_id: newStatusId } 
                 : startup
             );
           }
         );
 
         // Send API request to update the status
-        await apiRequest("PATCH", `/api/startups/${startupId}/status`, { status: newStatus });
+        await apiRequest("PATCH", `/api/startups/${startupId}/status`, { status_id: newStatusId });
         
         // Refetch to ensure data consistency
         queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
@@ -88,13 +108,22 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     }
   };
 
+  // If statuses are still loading, show a loading state
+  if (isLoading || columns.length === 0) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="kanban-board flex space-x-4 overflow-x-auto pb-4">
           {columns.map(column => {
             const columnStartups = startups.filter(
-              startup => startup.status === column.id
+              startup => startup.status_id === column.id
             );
 
             return (
@@ -107,8 +136,8 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                   >
                     <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
                       <h3 className="text-md font-medium text-gray-700 flex items-center">
-                        <span className={`w-3 h-3 ${column.color} rounded-full mr-2`}></span>
-                        {column.title}
+                        <span style={{ backgroundColor: column.color }} className="w-3 h-3 rounded-full mr-2"></span>
+                        {column.name}
                         <span className="ml-2 text-xs text-gray-500 bg-gray-200 rounded-full px-2 py-0.5">
                           {columnStartups.length}
                         </span>
@@ -117,8 +146,8 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                     <div className="p-2 min-h-[400px]">
                       {columnStartups.map((startup, index) => (
                         <Draggable
-                          key={startup.id.toString()}
-                          draggableId={startup.id.toString()}
+                          key={startup.id}
+                          draggableId={startup.id}
                           index={index}
                         >
                           {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (

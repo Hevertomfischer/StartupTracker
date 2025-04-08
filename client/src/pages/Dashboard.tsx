@@ -18,8 +18,8 @@ export default function Dashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterOptions, setFilterOptions] = useState({
     search: "",
-    industry: "",
-    funding: ""
+    sector: "",
+    priority: ""
   });
   
   const openStartupDetails = (startup: Startup) => {
@@ -56,21 +56,22 @@ export default function Dashboard() {
     const matchesSearch =
       !filterOptions.search ||
       startup.name.toLowerCase().includes(filterOptions.search.toLowerCase()) ||
-      startup.description.toLowerCase().includes(filterOptions.search.toLowerCase());
+      (startup.description?.toLowerCase().includes(filterOptions.search.toLowerCase()) ?? false) ||
+      (startup.ceo_name?.toLowerCase().includes(filterOptions.search.toLowerCase()) ?? false);
 
-    // Industry filter
-    const matchesIndustry =
-      !filterOptions.industry || 
-      filterOptions.industry === "all" ||
-      startup.industry === filterOptions.industry;
+    // Sector filter
+    const matchesSector =
+      !filterOptions.sector || 
+      filterOptions.sector === "all" ||
+      startup.sector === filterOptions.sector;
 
-    // Funding stage filter
-    const matchesFunding =
-      !filterOptions.funding || 
-      filterOptions.funding === "all" ||
-      startup.fundingStage === filterOptions.funding;
+    // Priority filter
+    const matchesPriority =
+      !filterOptions.priority || 
+      filterOptions.priority === "all" ||
+      startup.priority === filterOptions.priority;
 
-    return matchesSearch && matchesIndustry && matchesFunding;
+    return matchesSearch && matchesSector && matchesPriority;
   });
 
   return (

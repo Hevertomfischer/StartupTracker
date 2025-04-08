@@ -8,12 +8,12 @@ import {
   SelectValue, 
 } from "@/components/ui/select";
 import { Search } from "lucide-react";
-import { IndustryEnum, FundingStageEnum } from "@shared/schema";
+import { SectorEnum, PriorityEnum } from "@shared/schema";
 
 type FilterOptions = {
   search: string;
-  industry: string;
-  funding: string;
+  sector: string;
+  priority: string;
   sort?: string;
 };
 
@@ -29,12 +29,12 @@ export function FilterToolbar({ onFilterChange }: FilterToolbarProps) {
     onFilterChange({ search: value });
   };
   
-  const handleIndustryChange = (value: string) => {
-    onFilterChange({ industry: value });
+  const handleSectorChange = (value: string) => {
+    onFilterChange({ sector: value });
   };
   
-  const handleFundingChange = (value: string) => {
-    onFilterChange({ funding: value });
+  const handlePriorityChange = (value: string) => {
+    onFilterChange({ priority: value });
   };
   
   const handleSortChange = (value: string) => {
@@ -70,40 +70,39 @@ export function FilterToolbar({ onFilterChange }: FilterToolbarProps) {
 
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Industry
+                  Sector
                 </label>
-                <Select onValueChange={handleIndustryChange}>
+                <Select onValueChange={handleSectorChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All Industries" />
+                    <SelectValue placeholder="All Sectors" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Industries</SelectItem>
-                    <SelectItem value={IndustryEnum.TECH}>Technology</SelectItem>
-                    <SelectItem value={IndustryEnum.HEALTH}>Healthcare</SelectItem>
-                    <SelectItem value={IndustryEnum.FINANCE}>FinTech</SelectItem>
-                    <SelectItem value={IndustryEnum.ECOMMERCE}>E-commerce</SelectItem>
-                    <SelectItem value={IndustryEnum.EDUCATION}>Education</SelectItem>
-                    <SelectItem value={IndustryEnum.OTHER}>Other</SelectItem>
+                    <SelectItem value="all">All Sectors</SelectItem>
+                    <SelectItem value={SectorEnum.TECH}>Technology</SelectItem>
+                    <SelectItem value={SectorEnum.HEALTH}>Healthcare</SelectItem>
+                    <SelectItem value={SectorEnum.FINANCE}>Finance</SelectItem>
+                    <SelectItem value={SectorEnum.ECOMMERCE}>E-commerce</SelectItem>
+                    <SelectItem value={SectorEnum.EDUCATION}>Education</SelectItem>
+                    <SelectItem value={SectorEnum.AGRITECH}>AgriTech</SelectItem>
+                    <SelectItem value={SectorEnum.CLEANTECH}>CleanTech</SelectItem>
+                    <SelectItem value={SectorEnum.OTHER}>Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Funding Stage
+                  Priority
                 </label>
-                <Select onValueChange={handleFundingChange}>
+                <Select onValueChange={handlePriorityChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="All Stages" />
+                    <SelectValue placeholder="All Priorities" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Stages</SelectItem>
-                    <SelectItem value={FundingStageEnum.PRE_SEED}>Pre-seed</SelectItem>
-                    <SelectItem value={FundingStageEnum.SEED}>Seed</SelectItem>
-                    <SelectItem value={FundingStageEnum.SERIES_A}>Series A</SelectItem>
-                    <SelectItem value={FundingStageEnum.SERIES_B}>Series B</SelectItem>
-                    <SelectItem value={FundingStageEnum.SERIES_C}>Series C+</SelectItem>
-                    <SelectItem value={FundingStageEnum.BOOTSTRAPPED}>Bootstrapped</SelectItem>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value={PriorityEnum.HIGH}>High</SelectItem>
+                    <SelectItem value={PriorityEnum.MEDIUM}>Medium</SelectItem>
+                    <SelectItem value={PriorityEnum.LOW}>Low</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -119,8 +118,8 @@ export function FilterToolbar({ onFilterChange }: FilterToolbarProps) {
                   <SelectContent>
                     <SelectItem value="name">Name</SelectItem>
                     <SelectItem value="date">Date Added</SelectItem>
-                    <SelectItem value="funding">Funding Amount</SelectItem>
-                    <SelectItem value="team">Team Size</SelectItem>
+                    <SelectItem value="mrr">Monthly Revenue</SelectItem>
+                    <SelectItem value="priority">Priority</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

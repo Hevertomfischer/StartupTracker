@@ -4,12 +4,94 @@ import { storage } from "./storage";
 import { 
   insertStartupSchema, 
   insertStartupMemberSchema, 
-  updateStartupStatusSchema 
+  updateStartupStatusSchema,
+  insertStatusSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize database with seed data
+  try {
+    await storage.seedDatabase();
+    console.log("Database initialized with seed data");
+  } catch (error) {
+    console.error("Error initializing database:", error);
+  }
+
+  // Status routes
+  app.get("/api/statuses", async (req: Request, res: Response) => {
+    try {
+      const statuses = await storage.getStatuses();
+      return res.status(200).json(statuses);
+    } catch (error) {
+      console.error("Error fetching statuses:", error);
+      return res.status(500).json({ message: "Failed to fetch statuses" });
+    }
+  });
+
+  app.get("/api/statuses/:id", async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const status = await storage.getStatus(id);
+      if (!status) {
+        return res.status(404).json({ message: "Status not found" });
+      }
+      return res.status(200).json(status);
+    } catch (error) {
+      console.error(`Error fetching status:`, error);
+      return res.status(500).json({ message: "Failed to fetch status" });
+    }
+  });
+
+  app.post("/api/statuses", async (req: Request, res: Response) => {
+    try {
+      const data = insertStatusSchema.parse(req.body);
+      const status = await storage.createStatus(data);
+      return res.status(201).json(status);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      console.error("Error creating status:", error);
+      return res.status(500).json({ message: "Failed to create status" });
+    }
+  });
+
+  app.patch("/api/statuses/:id", async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const data = insertStatusSchema.partial().parse(req.body);
+      const status = await storage.updateStatus(id, data);
+      if (!status) {
+        return res.status(404).json({ message: "Status not found" });
+      }
+      return res.status(200).json(status);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      console.error("Error updating status:", error);
+      return res.status(500).json({ message: "Failed to update status" });
+    }
+  });
+
+  app.delete("/api/statuses/:id", async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const success = await storage.deleteStatus(id);
+      if (!success) {
+        return res.status(404).json({ message: "Status not found" });
+      }
+      return res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting status:", error);
+      return res.status(500).json({ message: "Failed to delete status" });
+    }
+  });
+
   // Get all startups
   app.get("/api/startups", async (req: Request, res: Response) => {
     try {
@@ -24,11 +106,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get a single startup
   app.get("/api/startups/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid startup ID" });
-      }
-
+      const id = req.params.id;
+      
       const startup = await storage.getStartup(id);
       if (!startup) {
         return res.status(404).json({ message: "Startup not found" });
@@ -60,11 +139,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update a startup
   app.patch("/api/startups/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid startup ID" });
-      }
-
+      const id = req.params.id;
+      
       const startup = await storage.getStartup(id);
       if (!startup) {
         return res.status(404).json({ message: "Startup not found" });
@@ -86,18 +162,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update startup status (special endpoint for Kanban drag and drop)
   app.patch("/api/startups/:id/status", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid startup ID" });
-      }
-
-      const data = updateStartupStatusSchema.parse({ id, status: req.body.status });
+      const id = req.params.id;
+      
+      const data = updateStartupStatusSchema.parse({ 
+        id, 
+        status_id: req.body.status_id 
+      });
+      
       const startup = await storage.getStartup(id);
       if (!startup) {
         return res.status(404).json({ message: "Startup not found" });
       }
 
-      const updatedStartup = await storage.updateStartupStatus(id, data.status);
+      const updatedStartup = await storage.updateStartupStatus(id, data.status_id);
       return res.status(200).json(updatedStartup);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -112,10 +189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete a startup
   app.delete("/api/startups/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      if (isNaN(id)) {
-        return res.status(400).json({ message: "Invalid startup ID" });
-      }
+      const id = req.params.id;
 
       const success = await storage.deleteStartup(id);
       if (!success) {
@@ -132,11 +206,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get startup members
   app.get("/api/startups/:id/members", async (req: Request, res: Response) => {
     try {
-      const startupId = parseInt(req.params.id);
-      if (isNaN(startupId)) {
-        return res.status(400).json({ message: "Invalid startup ID" });
-      }
-
+      const startupId = req.params.id;
+      
       const members = await storage.getStartupMembers(startupId);
       return res.status(200).json(members);
     } catch (error) {
@@ -148,14 +219,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add startup member
   app.post("/api/startups/:id/members", async (req: Request, res: Response) => {
     try {
-      const startupId = parseInt(req.params.id);
-      if (isNaN(startupId)) {
-        return res.status(400).json({ message: "Invalid startup ID" });
+      const startupId = req.params.id;
+      
+      // Check if startup exists
+      const startup = await storage.getStartup(startupId);
+      if (!startup) {
+        return res.status(404).json({ message: "Startup not found" });
       }
 
       const data = insertStartupMemberSchema.parse({
         ...req.body,
-        startupId
+        startup_id: startupId
       });
 
       const member = await storage.createStartupMember(data);
