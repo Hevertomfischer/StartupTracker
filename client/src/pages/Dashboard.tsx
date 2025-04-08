@@ -5,10 +5,11 @@ import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { FilterToolbar } from "@/components/startup/FilterToolbar";
 import { StartupDetailsModal } from "@/components/startup/StartupDetailsModal";
 import { AddStartupModal } from "@/components/startup/AddStartupModal";
+import { StatusManagementModal } from "@/components/status/StatusManagementModal";
 import { useStartups } from "@/hooks/use-startup";
 import { type Startup } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Columns } from "lucide-react";
 
 export default function Dashboard() {
   const { data: startups = [], isLoading } = useStartups();
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
   const [showStartupModal, setShowStartupModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
   const [filterOptions, setFilterOptions] = useState({
     search: "",
     sector: "",
@@ -42,6 +44,14 @@ export default function Dashboard() {
 
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar);
+  };
+  
+  const openStatusManagement = () => {
+    setShowStatusModal(true);
+  };
+
+  const closeStatusManagement = () => {
+    setShowStatusModal(false);
   };
 
   const handleFilterChange = (
@@ -96,10 +106,18 @@ export default function Dashboard() {
                     Startup Management
                   </h2>
                 </div>
-                <div className="mt-4 flex md:mt-0 md:ml-4">
+                <div className="mt-4 flex gap-2 md:mt-0 md:ml-4">
+                  <Button 
+                    onClick={openStatusManagement}
+                    variant="outline"
+                    className="inline-flex items-center"
+                  >
+                    <Columns className="-ml-1 mr-2 h-5 w-5" />
+                    Manage Columns
+                  </Button>
                   <Button 
                     onClick={openAddStartup} 
-                    className="ml-3 inline-flex items-center"
+                    className="inline-flex items-center"
                   >
                     <Plus className="-ml-1 mr-2 h-5 w-5" />
                     Add Startup
@@ -141,6 +159,10 @@ export default function Dashboard() {
       <AddStartupModal 
         open={showAddModal} 
         onClose={closeAddStartup} 
+      />
+      <StatusManagementModal
+        open={showStatusModal}
+        onClose={closeStatusManagement}
       />
     </div>
   );

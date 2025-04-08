@@ -7,7 +7,14 @@ import {
   DialogTitle,
   DialogFooter,
   DialogHeader,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import {
   Form,
   FormControl,
@@ -180,512 +187,538 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Startup Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter startup name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
+            <DialogDescription className="text-sm text-gray-500">
+              Fill in the details to add a new startup to your board.
+            </DialogDescription>
             
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Controller
-                control={form.control}
-                name="sector"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sector</FormLabel>
-                    <Select 
-                      value={field.value || "tech"} 
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select sector" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={SectorEnum.TECH}>Technology</SelectItem>
-                        <SelectItem value={SectorEnum.HEALTH}>Healthcare</SelectItem>
-                        <SelectItem value={SectorEnum.FINANCE}>Finance</SelectItem>
-                        <SelectItem value={SectorEnum.ECOMMERCE}>E-commerce</SelectItem>
-                        <SelectItem value={SectorEnum.EDUCATION}>Education</SelectItem>
-                        <SelectItem value={SectorEnum.AGRITECH}>AgriTech</SelectItem>
-                        <SelectItem value={SectorEnum.CLEANTECH}>CleanTech</SelectItem>
-                        <SelectItem value={SectorEnum.OTHER}>Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="grid grid-cols-5 mb-4">
+                <TabsTrigger value="basic">Basic Info</TabsTrigger>
+                <TabsTrigger value="ceo">CEO</TabsTrigger>
+                <TabsTrigger value="metrics">Metrics</TabsTrigger>
+                <TabsTrigger value="location">Location</TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+              </TabsList>
               
-              <Controller
-                control={form.control}
-                name="status_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Status</FormLabel>
-                    <Select 
-                      value={field.value || ""} 
-                      onValueChange={field.onChange}
-                      disabled={statuses.length === 0}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {statuses.map(status => (
-                          <SelectItem key={status.id} value={status.id}>
-                            {status.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Controller
-                control={form.control}
-                name="priority"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Priority</FormLabel>
-                    <Select 
-                      value={field.value || "medium"} 
-                      onValueChange={field.onChange}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select priority" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={PriorityEnum.HIGH}>High</SelectItem>
-                        <SelectItem value={PriorityEnum.MEDIUM}>Medium</SelectItem>
-                        <SelectItem value={PriorityEnum.LOW}>Low</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <Controller
-                control={form.control}
-                name="business_model"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Business Model</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="e.g. SaaS, Marketplace" 
-                        value={field.value || ""} 
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            {/* CEO Information */}
-            <div className="border p-3 rounded-md bg-gray-50">
-              <h3 className="text-sm font-medium mb-2">CEO Information</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Controller
+              {/* Basic Info Tab */}
+              <TabsContent value="basic" className="space-y-4">
+                <FormField
                   control={form.control}
-                  name="ceo_name"
+                  name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>CEO Name</FormLabel>
+                      <FormLabel>Startup Name</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="CEO's name" 
-                          value={field.value || ""} 
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
+                        <Input placeholder="Enter startup name" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 
-                <Controller
-                  control={form.control}
-                  name="ceo_email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CEO Email</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="ceo@startup.com" 
-                          type="email"
-                          value={field.value || ""} 
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <Controller
-                  control={form.control}
-                  name="ceo_whatsapp"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>WhatsApp</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="+55 (11) 99999-9999" 
-                          value={field.value || ""} 
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <Controller
-                  control={form.control}
-                  name="ceo_linkedin"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>LinkedIn</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="LinkedIn profile URL" 
-                          value={field.value || ""} 
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-            
-            {/* Location */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Controller
-                control={form.control}
-                name="city"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>City</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="e.g. São Paulo" 
-                        value={field.value || ""} 
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            
-              <Controller
-                control={form.control}
-                name="state"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>State</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="e.g. SP" 
-                        value={field.value || ""} 
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            {/* Financial Metrics */}
-            <div className="border p-3 rounded-md bg-gray-50">
-              <h3 className="text-sm font-medium mb-2">Financial Metrics</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Controller
-                  control={form.control}
-                  name="mrr"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Monthly Recurring Revenue</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="$" 
-                          type="number"
-                          value={field.value || ""} 
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <Controller
-                  control={form.control}
-                  name="client_count"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Number of Clients</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="0" 
-                          type="number"
-                          value={field.value || ""} 
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <Controller
-                  control={form.control}
-                  name="total_revenue_last_year"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Year Revenue</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="$" 
-                          type="number"
-                          value={field.value || ""} 
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <Controller
-                  control={form.control}
-                  name="partner_count"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Number of Partners</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="0" 
-                          type="number"
-                          value={field.value || ""} 
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-            
-            {/* Market Metrics */}
-            <div className="border p-3 rounded-md bg-gray-50">
-              <h3 className="text-sm font-medium mb-2">Market Metrics</h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Controller
-                  control={form.control}
-                  name="tam"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>TAM</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Total Addressable Market" 
-                          type="number"
-                          value={field.value || ""} 
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <Controller
-                  control={form.control}
-                  name="sam"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SAM</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Serviceable Available Market" 
-                          type="number"
-                          value={field.value || ""} 
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <Controller
-                  control={form.control}
-                  name="som"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SOM</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Serviceable Obtainable Market" 
-                          type="number"
-                          value={field.value || ""} 
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            </div>
-            
-            <Controller
-              control={form.control}
-              name="website"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Website</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="https://www.example.com" 
-                      value={field.value || ""} 
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      ref={field.ref}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Controller
-              control={form.control}
-              name="founding_date"
-              render={({ field }) => {
-                // Ensure we're working with a valid date string
-                const formattedValue = field.value ? 
-                  (typeof field.value === 'string' ? field.value : '') : '';
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Controller
+                    control={form.control}
+                    name="sector"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sector</FormLabel>
+                        <Select 
+                          value={field.value || "tech"} 
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select sector" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={SectorEnum.TECH}>Technology</SelectItem>
+                            <SelectItem value={SectorEnum.HEALTH}>Healthcare</SelectItem>
+                            <SelectItem value={SectorEnum.FINANCE}>Finance</SelectItem>
+                            <SelectItem value={SectorEnum.ECOMMERCE}>E-commerce</SelectItem>
+                            <SelectItem value={SectorEnum.EDUCATION}>Education</SelectItem>
+                            <SelectItem value={SectorEnum.AGRITECH}>AgriTech</SelectItem>
+                            <SelectItem value={SectorEnum.CLEANTECH}>CleanTech</SelectItem>
+                            <SelectItem value={SectorEnum.OTHER}>Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
-                return (
-                  <FormItem>
-                    <FormLabel>Founded Date</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="date"
-                        value={formattedValue}
-                        onChange={(e) => {
-                          // Store as string to avoid Date object issues
-                          field.onChange(e.target.value || '');
-                        }}
-                        onBlur={field.onBlur}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                );
-              }}
-            />
-            
-            <Controller
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Describe the startup..." 
-                      className="resize-none" 
-                      rows={3}
-                      value={field.value || ""} 
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      ref={field.ref}
+                  <Controller
+                    control={form.control}
+                    name="status_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Current Status</FormLabel>
+                        <Select 
+                          value={field.value || ""} 
+                          onValueChange={field.onChange}
+                          disabled={statuses.length === 0}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {statuses.map(status => (
+                              <SelectItem key={status.id} value={status.id}>
+                                {status.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Controller
+                    control={form.control}
+                    name="priority"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Priority</FormLabel>
+                        <Select 
+                          value={field.value || "medium"} 
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select priority" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={PriorityEnum.HIGH}>High</SelectItem>
+                            <SelectItem value={PriorityEnum.MEDIUM}>Medium</SelectItem>
+                            <SelectItem value={PriorityEnum.LOW}>Low</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <Controller
+                    control={form.control}
+                    name="business_model"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Business Model</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g. SaaS, Marketplace" 
+                            value={field.value || ""} 
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <Controller
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Describe the startup..." 
+                          className="resize-none" 
+                          rows={3}
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TabsContent>
+              
+              {/* CEO Information Tab */}
+              <TabsContent value="ceo" className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Controller
+                    control={form.control}
+                    name="ceo_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CEO Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="CEO's name" 
+                            value={field.value || ""} 
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <Controller
+                    control={form.control}
+                    name="ceo_email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CEO Email</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="ceo@startup.com" 
+                            type="email"
+                            value={field.value || ""} 
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Controller
+                    control={form.control}
+                    name="ceo_whatsapp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>WhatsApp</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="+55 (11) 99999-9999" 
+                            value={field.value || ""} 
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <Controller
+                    control={form.control}
+                    name="ceo_linkedin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>LinkedIn</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="LinkedIn profile URL" 
+                            value={field.value || ""} 
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </TabsContent>
+              
+              {/* Metrics Tab */}
+              <TabsContent value="metrics" className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Financial Metrics</h3>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Controller
+                      control={form.control}
+                      name="mrr"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Monthly Recurring Revenue</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="$" 
+                              type="number"
+                              value={field.value || ""} 
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Controller
-              control={form.control}
-              name="observations"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Observations/Notes</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Additional notes..." 
-                      className="resize-none" 
-                      rows={3}
-                      value={field.value || ""} 
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      ref={field.ref}
+                    
+                    <Controller
+                      control={form.control}
+                      name="client_count"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Number of Clients</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="0" 
+                              type="number"
+                              value={field.value || ""} 
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Controller
+                      control={form.control}
+                      name="total_revenue_last_year"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Year Revenue</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="$" 
+                              type="number"
+                              value={field.value || ""} 
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Controller
+                      control={form.control}
+                      name="partner_count"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Number of Partners</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="0" 
+                              type="number"
+                              value={field.value || ""} 
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2 pt-4">
+                  <h3 className="text-sm font-medium">Market Metrics</h3>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <Controller
+                      control={form.control}
+                      name="tam"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>TAM</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Total Market" 
+                              type="number"
+                              value={field.value || ""} 
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Controller
+                      control={form.control}
+                      name="sam"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SAM</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Serviceable Market" 
+                              type="number"
+                              value={field.value || ""} 
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Controller
+                      control={form.control}
+                      name="som"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>SOM</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Obtainable Market" 
+                              type="number"
+                              value={field.value || ""} 
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              ref={field.ref}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+              
+              {/* Location Tab */}
+              <TabsContent value="location" className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Controller
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g. São Paulo" 
+                            value={field.value || ""} 
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                
+                  <Controller
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="e.g. SP" 
+                            value={field.value || ""} 
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </TabsContent>
+              
+              {/* Additional Details Tab */}
+              <TabsContent value="details" className="space-y-4">
+                <Controller
+                  control={form.control}
+                  name="website"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Website</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="https://www.example.com" 
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Controller
+                  control={form.control}
+                  name="founding_date"
+                  render={({ field }) => {
+                    // Ensure we're working with a valid date string
+                    const formattedValue = field.value ? 
+                      (typeof field.value === 'string' ? field.value : '') : '';
+                      
+                    return (
+                      <FormItem>
+                        <FormLabel>Founded Date</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="date"
+                            value={formattedValue}
+                            onChange={(e) => {
+                              // Store as string to avoid Date object issues
+                              field.onChange(e.target.value || '');
+                            }}
+                            onBlur={field.onBlur}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+                
+                <Controller
+                  control={form.control}
+                  name="observations"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Observations/Notes</FormLabel>
+                      <FormControl>
+                        <Textarea 
+                          placeholder="Additional notes..." 
+                          className="resize-none" 
+                          rows={3}
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </TabsContent>
+            </Tabs>
+            
             <DialogFooter className="mt-5 gap-2">
               <Button 
                 type="button" 

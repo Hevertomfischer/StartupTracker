@@ -41,19 +41,16 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     }
   });
 
-  // Adjust columns based on fetched statuses
-  const columns: KanbanColumn[] = statuses?.map(status => ({
-    id: status.id,
-    name: status.name,
-    color: status.color,
-  })) || [];
-  
-  // Order columns by order property
-  columns.sort((a, b) => {
-    const statusA = statuses?.find(s => s.id === a.id);
-    const statusB = statuses?.find(s => s.id === b.id);
-    return (statusA?.order || 0) - (statusB?.order || 0);
-  });
+  // Create columns from statuses and ensure proper ordering
+  const columns: KanbanColumn[] = statuses ? 
+    [...statuses]
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .map(status => ({
+        id: status.id,
+        name: status.name,
+        color: status.color,
+      })) 
+    : [];
 
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
