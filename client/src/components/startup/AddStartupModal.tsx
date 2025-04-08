@@ -46,7 +46,37 @@ type AddStartupModalProps = {
 // Extended schema with required fields
 const formSchema = insertStartupSchema.extend({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  description: z.string().min(10, "Description must be at least 10 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters").optional(),
+  
+  // Add validation for additional fields
+  business_model: z.string().optional(),
+  website: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  
+  // CEO Information
+  ceo_name: z.string().optional(),
+  ceo_email: z.string().email("Must be a valid email").optional().or(z.literal("")),
+  ceo_whatsapp: z.string().optional(),
+  ceo_linkedin: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  
+  // Location
+  city: z.string().optional(),
+  state: z.string().optional(),
+  
+  // Financial Metrics - using coerce for proper number conversion
+  mrr: z.coerce.number().optional(),
+  client_count: z.coerce.number().int().optional(),
+  total_revenue_last_year: z.coerce.number().optional(),
+  partner_count: z.coerce.number().int().optional(),
+  
+  // Market Metrics
+  tam: z.coerce.number().optional(),
+  sam: z.coerce.number().optional(),
+  som: z.coerce.number().optional(),
+  
+  // Dates - keep as string for compatibility with HTML date input
+  founding_date: z.string().optional(),
+  
+  observations: z.string().optional(),
 });
 
 export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
@@ -72,9 +102,22 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
       sector: "tech",
       status_id: "",
       priority: "medium",
+      business_model: "",
+      website: "",
       ceo_name: "",
+      ceo_email: "",
+      ceo_whatsapp: "",
+      ceo_linkedin: "",
       city: "",
       state: "",
+      mrr: undefined,
+      client_count: undefined,
+      total_revenue_last_year: undefined,
+      partner_count: undefined,
+      tam: undefined,
+      sam: undefined,
+      som: undefined,
+      founding_date: "",
       observations: "",
     },
   });
@@ -152,102 +195,104 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
               )}
             />
             
-            <Controller
-              control={form.control}
-              name="sector"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sector</FormLabel>
-                  <Select 
-                    value={field.value || "tech"} 
-                    onValueChange={field.onChange}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select sector" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={SectorEnum.TECH}>Technology</SelectItem>
-                      <SelectItem value={SectorEnum.HEALTH}>Healthcare</SelectItem>
-                      <SelectItem value={SectorEnum.FINANCE}>Finance</SelectItem>
-                      <SelectItem value={SectorEnum.ECOMMERCE}>E-commerce</SelectItem>
-                      <SelectItem value={SectorEnum.EDUCATION}>Education</SelectItem>
-                      <SelectItem value={SectorEnum.AGRITECH}>AgriTech</SelectItem>
-                      <SelectItem value={SectorEnum.CLEANTECH}>CleanTech</SelectItem>
-                      <SelectItem value={SectorEnum.OTHER}>Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Controller
-              control={form.control}
-              name="status_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Current Status</FormLabel>
-                  <Select 
-                    value={field.value || ""} 
-                    onValueChange={field.onChange}
-                    disabled={statuses.length === 0}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {statuses.map(status => (
-                        <SelectItem key={status.id} value={status.id}>
-                          {status.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <Controller
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Priority</FormLabel>
-                  <Select 
-                    value={field.value || "medium"} 
-                    onValueChange={field.onChange}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select priority" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={PriorityEnum.HIGH}>High</SelectItem>
-                      <SelectItem value={PriorityEnum.MEDIUM}>Medium</SelectItem>
-                      <SelectItem value={PriorityEnum.LOW}>Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Controller
+                control={form.control}
+                name="sector"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sector</FormLabel>
+                    <Select 
+                      value={field.value || "tech"} 
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sector" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={SectorEnum.TECH}>Technology</SelectItem>
+                        <SelectItem value={SectorEnum.HEALTH}>Healthcare</SelectItem>
+                        <SelectItem value={SectorEnum.FINANCE}>Finance</SelectItem>
+                        <SelectItem value={SectorEnum.ECOMMERCE}>E-commerce</SelectItem>
+                        <SelectItem value={SectorEnum.EDUCATION}>Education</SelectItem>
+                        <SelectItem value={SectorEnum.AGRITECH}>AgriTech</SelectItem>
+                        <SelectItem value={SectorEnum.CLEANTECH}>CleanTech</SelectItem>
+                        <SelectItem value={SectorEnum.OTHER}>Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <Controller
+                control={form.control}
+                name="status_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Current Status</FormLabel>
+                    <Select 
+                      value={field.value || ""} 
+                      onValueChange={field.onChange}
+                      disabled={statuses.length === 0}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {statuses.map(status => (
+                          <SelectItem key={status.id} value={status.id}>
+                            {status.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Controller
                 control={form.control}
-                name="ceo_name"
+                name="priority"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CEO Name</FormLabel>
+                    <FormLabel>Priority</FormLabel>
+                    <Select 
+                      value={field.value || "medium"} 
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select priority" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={PriorityEnum.HIGH}>High</SelectItem>
+                        <SelectItem value={PriorityEnum.MEDIUM}>Medium</SelectItem>
+                        <SelectItem value={PriorityEnum.LOW}>Low</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <Controller
+                control={form.control}
+                name="business_model"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Business Model</FormLabel>
                     <FormControl>
                       <Input 
-                        placeholder="CEO's name" 
+                        placeholder="e.g. SaaS, Marketplace" 
                         value={field.value || ""} 
                         onChange={field.onChange}
                         onBlur={field.onBlur}
@@ -258,7 +303,97 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
                   </FormItem>
                 )}
               />
+            </div>
             
+            {/* CEO Information */}
+            <div className="border p-3 rounded-md bg-gray-50">
+              <h3 className="text-sm font-medium mb-2">CEO Information</h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Controller
+                  control={form.control}
+                  name="ceo_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CEO Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="CEO's name" 
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Controller
+                  control={form.control}
+                  name="ceo_email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CEO Email</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="ceo@startup.com" 
+                          type="email"
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Controller
+                  control={form.control}
+                  name="ceo_whatsapp"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>WhatsApp</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="+55 (11) 99999-9999" 
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Controller
+                  control={form.control}
+                  name="ceo_linkedin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>LinkedIn</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="LinkedIn profile URL" 
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            
+            {/* Location */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Controller
                 control={form.control}
                 name="city"
@@ -278,17 +413,196 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
                   </FormItem>
                 )}
               />
+            
+              <Controller
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="e.g. SP" 
+                        value={field.value || ""} 
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            {/* Financial Metrics */}
+            <div className="border p-3 rounded-md bg-gray-50">
+              <h3 className="text-sm font-medium mb-2">Financial Metrics</h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Controller
+                  control={form.control}
+                  name="mrr"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Monthly Recurring Revenue</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="$" 
+                          type="number"
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Controller
+                  control={form.control}
+                  name="client_count"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Number of Clients</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="0" 
+                          type="number"
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Controller
+                  control={form.control}
+                  name="total_revenue_last_year"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Last Year Revenue</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="$" 
+                          type="number"
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Controller
+                  control={form.control}
+                  name="partner_count"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Number of Partners</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="0" 
+                          type="number"
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+            
+            {/* Market Metrics */}
+            <div className="border p-3 rounded-md bg-gray-50">
+              <h3 className="text-sm font-medium mb-2">Market Metrics</h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Controller
+                  control={form.control}
+                  name="tam"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>TAM</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Total Addressable Market" 
+                          type="number"
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Controller
+                  control={form.control}
+                  name="sam"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SAM</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Serviceable Available Market" 
+                          type="number"
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <Controller
+                  control={form.control}
+                  name="som"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>SOM</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Serviceable Obtainable Market" 
+                          type="number"
+                          value={field.value || ""} 
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
             
             <Controller
               control={form.control}
-              name="state"
+              name="website"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>State</FormLabel>
+                  <FormLabel>Website</FormLabel>
                   <FormControl>
                     <Input 
-                      placeholder="e.g. SP" 
+                      placeholder="https://www.example.com" 
                       value={field.value || ""} 
                       onChange={field.onChange}
                       onBlur={field.onBlur}
@@ -302,6 +616,34 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
             
             <Controller
               control={form.control}
+              name="founding_date"
+              render={({ field }) => {
+                // Ensure we're working with a valid date string
+                const formattedValue = field.value ? 
+                  (typeof field.value === 'string' ? field.value : '') : '';
+                  
+                return (
+                  <FormItem>
+                    <FormLabel>Founded Date</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="date"
+                        value={formattedValue}
+                        onChange={(e) => {
+                          // Store as string to avoid Date object issues
+                          field.onChange(e.target.value || '');
+                        }}
+                        onBlur={field.onBlur}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
+            />
+            
+            <Controller
+              control={form.control}
               name="description"
               render={({ field }) => (
                 <FormItem>
@@ -309,6 +651,28 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
                   <FormControl>
                     <Textarea 
                       placeholder="Describe the startup..." 
+                      className="resize-none" 
+                      rows={3}
+                      value={field.value || ""} 
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <Controller
+              control={form.control}
+              name="observations"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Observations/Notes</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      placeholder="Additional notes..." 
                       className="resize-none" 
                       rows={3}
                       value={field.value || ""} 
