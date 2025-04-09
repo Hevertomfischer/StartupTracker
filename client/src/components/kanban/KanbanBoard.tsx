@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { 
   DragDropContext, 
   Droppable, 
@@ -7,7 +7,8 @@ import {
   DroppableProvided, 
   DraggableProvided, 
   DraggableStateSnapshot,
-  ResponderProvided
+  ResponderProvided,
+  DragStart
 } from "react-beautiful-dnd";
 import { StartupCard } from "./StartupCard";
 import { type Startup, type Status } from "@shared/schema";
@@ -55,6 +56,21 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
         color: status.color,
       }));
   }, [statuses]);
+  
+  // Create a map of columns to startups
+  const columnStartupsMap = useMemo(() => {
+    const map: Record<string, Startup[]> = {};
+    
+    if (columns) {
+      columns.forEach(column => {
+        map[column.id] = startups.filter(
+          startup => startup.status_id === column.id
+        );
+      });
+    }
+    
+    return map;
+  }, [columns, startups]);
 
   // Event handlers for drag and drop
   const handleDragStart = (initial: DragStart) => {
@@ -63,23 +79,15 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   };
 
   const handleDragEnd = async (result: DropResult, provided?: ResponderProvided) => {
+    // Clear the dragging state
     setDraggingStartupId(null);
     
     const { destination, source, draggableId } = result;
 
-    if (!destination) {
-      return;
-    }
-
-    if (destination.droppableId === source.droppableId && 
-        destination.index === source.index) {
-      return;
-    }
-
-    // Find the startup that was dragged
-    const startup = startups.find(s => s.id === draggableId);
-    if (!startup) {
-      console.error("Startup not found:", draggableId);
+    // If dropped outside a droppable area or in the same place
+    if (!destination || 
+        (destination.droppableId === source.droppableId && 
+         destination.index === source.index)) {
       return;
     }
 
@@ -146,19 +154,6 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
       </div>
     );
   }
-
-  // useMemo for startup grouping to avoid re-filtering on each render
-  const columnStartupsMap = useMemo(() => {
-    const map: Record<string, Startup[]> = {};
-    
-    columns.forEach(column => {
-      map[column.id] = startups.filter(
-        startup => startup.status_id === column.id
-      );
-    });
-    
-    return map;
-  }, [columns, startups]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
