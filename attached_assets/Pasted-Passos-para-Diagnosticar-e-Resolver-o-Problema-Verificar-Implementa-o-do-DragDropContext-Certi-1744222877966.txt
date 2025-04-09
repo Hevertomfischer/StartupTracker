@@ -1,0 +1,68 @@
+Passos para Diagnosticar e Resolver o Problema
+Verificar Implementação do DragDropContext:
+
+Certifique-se de que o DragDropContext envolve corretamente todos os componentes Droppable e Draggable.
+A função onDragEnd deve ser chamada corretamente, e está sendo utilizada para lidar com alterações de estado.
+Verificar a Função handleDragEnd:
+
+Assegure-se de que a lógica dentro da função handleDragEnd manipule corretamente a atualização do status dos cartões quando movidos. Aqui está um trecho de código necessário para verificar isso:
+const handleDragEnd = useCallback(async (result: DropResult) => {
+  const { destination, source, draggableId } = result;
+  if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
+    return; // Nada mudou, então saia
+  }
+  
+  // Aqui deve ser a lógica para atualizar o status do cartão e persistí-lo no banco
+  try {
+    // Atualizar o status do cartão aqui
+    await apiRequest("PATCH", `/api/startups/${draggableId}`, { status_id: destination.droppableId });
+    toast({
+      title: "Movido com sucesso!",
+      description: "O card foi movido.",
+      variant: "success",
+    });
+  } catch (error) {
+    console.error("Erro ao mover o card:", error);
+    toast({
+      title: "Erro",
+      description: "Não foi possível mover o card.",
+      variant: "destructive",
+    });
+  }
+}, [columns, toast]);
+Verificar Droppable e Draggable:
+
+O Droppable deve ter o droppableId correto, e o Draggable deve ter um draggableId correspondente.
+Cada card deve ser um Draggable que está dentro de um Droppable. Aqui está um exemplo de um card:
+<Droppable droppableId={column.id} key={column.id}>
+  {(provided) => (
+    <div ref={provided.innerRef} {...provided.droppableProps}>
+      {columnStartups.map((startup, index) => (
+        <Draggable key={startup.id} draggableId={startup.id} index={index}>
+          {(provided, snapshot) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.draggableProps}
+              {...provided.dragHandleProps}
+              style={{ ...provided.draggableProps.style, opacity: snapshot.isDragging ? 0.8 : 1 }}
+            >
+              <StartupCard startup={startup} onClick={() => onCardClick(startup)} onDelete={() => setDeleteStartupId(startup.id)} />
+            </div>
+          )}
+        </Draggable>
+      ))}
+      {provided.placeholder}
+    </div>
+  )}
+</Droppable>
+Ajustes na Animação:
+
+Utilize classes CSS apropriadas para animar as transições. Certifique-se de aplicar estilos durante o arraste para dar feedback visual ao usuário.
+Verificar Estilos e CSS:
+
+Algumas regras CSS podem afetar o comportamento do arraste e solta. Verifique se não há estilos que estão ocultando ou desabilitando a interação com os elementos.
+Resumo
+Certifique-se de que o DragDropContext está corretamente formatado.
+Verifique a lógica do handleDragEnd para garantir que está atualizando corretamente o estado do card.
+Assegure-se de que cada Droppable e Draggable está configurado corretamente.
+Ajuste os estilos para fornecer feedback visual adequado.

@@ -102,6 +102,11 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
         : draggableId;
         
       console.log('Extracted startup ID:', startupId);
+      console.log('Available startup IDs in state:', startups.map(s => s.id));
+      console.log('Available stable IDs:', Object.keys(stableStartupIds).map(key => ({ 
+        originalId: key, 
+        stableId: stableStartupIds[key] 
+      })));
       
       // Encontrar o startup pelo ID
       const startup = startups.find(s => s.id === startupId);
@@ -226,6 +231,34 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     columns.reduce((acc, col) => ({ ...acc, [col.id]: `column-${col.id}` }), {} as Record<string, string>)
   );
   
+  // Também criaremos IDs estáveis para os startups para garantir consistência entre renderizações
+  const [stableStartupIds, setStableStartupIds] = useState<Record<string, string>>(() => {
+    return startups.reduce((acc, startup) => {
+      return { ...acc, [startup.id]: `startup-${startup.id}` };
+    }, {} as Record<string, string>);
+  });
+  
+  // Atualizar os IDs estáveis quando os startups mudam
+  useEffect(() => {
+    if (startups.length > 0) {
+      // Garantir que todos os startups atuais tenham IDs estáveis
+      const updatedIds = { ...stableStartupIds };
+      let hasChanged = false;
+      
+      startups.forEach(startup => {
+        if (!updatedIds[startup.id]) {
+          updatedIds[startup.id] = `startup-${startup.id}`;
+          hasChanged = true;
+          console.log(`Added missing stable ID for startup ${startup.id}`);
+        }
+      });
+      
+      if (hasChanged) {
+        setStableStartupIds(updatedIds);
+      }
+    }
+  }, [startups, stableStartupIds]);
+  
   // Estado para armazenar a última coluna que recebeu um card (para feedback visual)
   const [lastUpdatedColumn, setLastUpdatedColumn] = useState<string | null>(null);
   
@@ -238,6 +271,14 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
       console.log('Stable column IDs:', stableColumnIds);
     }
   }, [columns, stableColumnIds]);
+  
+  // Hook para monitorar os IDs estáveis dos startups
+  useEffect(() => {
+    if (startups.length > 0) {
+      console.log('Stable startup IDs:', stableStartupIds);
+      console.log('Current startup IDs:', startups.map(s => s.id));
+    }
+  }, [startups, stableStartupIds]);
   
   // Efeito para limpar o lastUpdatedColumn após 2 segundos
   useEffect(() => {
@@ -270,6 +311,16 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     }
     return stableColumnIds[columnId];
   }, [stableColumnIds]);
+  
+  // Helper para obter IDs estáveis para os startups
+  const getStableStartupId = useCallback((startupId: string) => {
+    // Se o ID estável não existir, vamos criar um
+    if (!stableStartupIds[startupId]) {
+      console.log(`Creating new stable ID for startup ${startupId}`);
+      return `startup-${startupId}`;
+    }
+    return stableStartupIds[startupId];
+  }, [stableStartupIds]);
   
   return (
     <>
@@ -312,8 +363,8 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                       
                       <div className="p-2 min-h-[400px]">
                         {columnStartups.map((startup, index) => {
-                          // ID estável também para o Draggable
-                          const draggableId = `startup-${startup.id}`;
+                          // Usar ID estável para garantir consistência
+                          const draggableId = getStableStartupId(startup.id);
                           
                           return (
                             <Draggable 
