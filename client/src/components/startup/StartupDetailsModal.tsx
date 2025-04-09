@@ -62,11 +62,23 @@ const getPriorityStyles = (priority: string | null) => {
 
 export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsModalProps) {
   const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(true); // Começamos em modo de edição
   
+  // Garantir que os valores são strings vazias em vez de null
+  const defaultValues = {
+    ...startup,
+    description: startup.description || '',
+    website: startup.website || '',
+    business_model: startup.business_model || '',
+    observations: startup.observations || '',
+    ceo_name: startup.ceo_name || '',
+    city: startup.city || '',
+    state: startup.state || '',
+  };
+
   const form = useForm({
     resolver: zodResolver(insertStartupSchema),
-    defaultValues: startup
+    defaultValues
   });
 
   const onSubmit = async (data: Startup) => {
@@ -266,13 +278,13 @@ export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsMo
             </DialogHeader>
             
             <Form {...form}>
-              <form className="space-y-4 mt-4">
+              <form className="space-y-4 mt-4 pr-1 max-h-[400px] overflow-y-auto">
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Name</FormLabel>
+                      <FormLabel>Nome</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -285,7 +297,7 @@ export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsMo
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Descrição</FormLabel>
                       <FormControl>
                         <Textarea {...field} />
                       </FormControl>
@@ -299,14 +311,14 @@ export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsMo
                     name="sector"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Sector</FormLabel>
+                        <FormLabel>Setor</FormLabel>
                         <Select 
                           onValueChange={field.onChange} 
                           defaultValue={field.value || undefined}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select sector" />
+                              <SelectValue placeholder="Selecione o setor" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -326,14 +338,14 @@ export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsMo
                     name="priority"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Priority</FormLabel>
+                        <FormLabel>Prioridade</FormLabel>
                         <Select 
                           onValueChange={field.onChange} 
                           defaultValue={field.value || undefined}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select priority" />
+                              <SelectValue placeholder="Selecione a prioridade" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -348,6 +360,75 @@ export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsMo
                     )}
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="ceo_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CEO</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="website"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Website</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Cidade</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <FormField
+                    control={form.control}
+                    name="state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Estado</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="observations"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Observações</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
               </form>
             </Form>
             

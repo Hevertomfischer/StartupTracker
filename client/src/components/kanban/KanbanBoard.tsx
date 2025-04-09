@@ -74,38 +74,57 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
 
     const { destination, source, draggableId } = result;
 
+    // Para debugging
+    console.log('Drag result:', { destination, source, draggableId });
+    
     if (!destination || 
         (destination.droppableId === source.droppableId && 
          destination.index === source.index)) {
       return;
     }
 
+    // Encontrar o startup pelo ID
+    // Converter de string para o formato original ID
     const startup = startups.find(s => s.id === draggableId);
-    if (!startup) return;
+    if (!startup) {
+      console.error('Startup not found:', draggableId);
+      console.log('Available startups:', startups.map(s => s.id));
+      return;
+    }
+    
+    // Log de debugging
+    console.log('Found startup:', startup);
 
     const oldData = queryClient.getQueryData<Startup[]>(['/api/startups']);
 
     try {
+      // Atualizar a cache localmente primeiro para UI responsiva
       queryClient.setQueryData(['/api/startups'], (old: Startup[] | undefined) => {
         if (!old) return old;
         return old.map(s => 
-          s.id === draggableId 
+          s.id === startup.id 
             ? { ...s, status_id: destination.droppableId } 
             : s
         );
       });
 
+      // Enviar atualização para o servidor
       await apiRequest(
         "PATCH", 
-        `/api/startups/${draggableId}/status`, 
+        `/api/startups/${startup.id}/status`, 
         { status_id: destination.droppableId }
       );
+
+      // Atualizar a query cache
+      await queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
 
       toast({
         title: "Success",
         description: "Card moved successfully",
       });
     } catch (error) {
+      console.error('Error moving card:', error);
+      // Reverter para os dados antigos em caso de erro
       queryClient.setQueryData(['/api/startups'], oldData);
       toast({
         title: "Error",
@@ -178,7 +197,7 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                       {columnStartupsMap[column.id]?.map((startup, index) => (
                         <Draggable
                           key={startup.id}
-                          draggableId={startup.id}
+                          draggableId={String(startup.id)}
                           index={index}
                         >
                           {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
