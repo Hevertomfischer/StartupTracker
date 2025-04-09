@@ -74,11 +74,17 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
       return;
     }
 
-    // Encontrar o startup pelo ID
-    const startup = startups.find(s => `draggable-${s.id}` === draggableId);
+    // Extrair ID original do startup do draggableId (remover o prefixo 'draggable-')
+    const startupId = draggableId.replace(/^draggable-/, '');
+    
+    console.log('Extracted startup ID:', startupId);
+    
+    // Encontrar o startup pelo ID extraído
+    const startup = startups.find(s => s.id === startupId);
     
     if (!startup) {
-      console.error('Startup not found with draggable ID:', draggableId);
+      console.error('Startup not found with ID:', startupId);
+      console.log('All available startup IDs:', startups.map(s => s.id));
       toast({
         title: "Erro",
         description: "Não foi possível encontrar o item arrastado.",
@@ -89,6 +95,13 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     
     // Status de destino
     const newStatusId = destination.droppableId;
+    
+    console.log('Moving startup:', {
+      startupId: startup.id,
+      startupName: startup.name,
+      fromStatus: source.droppableId,
+      toStatus: newStatusId
+    });
     
     // Backup para caso de erro
     const oldData = queryClient.getQueryData<Startup[]>(['/api/startups']);
@@ -104,12 +117,20 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
         );
       });
       
+      // Montar corpo da requisição exatamente como o servidor espera
+      const requestBody = { status_id: newStatusId };
+      
+      console.log('Sending PATCH request to:', `/api/startups/${startup.id}/status`);
+      console.log('With body:', requestBody);
+      
       // Atualizar no servidor
-      await apiRequest(
+      const updatedStartup = await apiRequest(
         "PATCH", 
         `/api/startups/${startup.id}/status`, 
-        { status_id: newStatusId }
+        requestBody
       );
+      
+      console.log('API response:', updatedStartup);
       
       // Revalidar dados
       await queryClient.invalidateQueries({ queryKey: ['/api/startups'] });

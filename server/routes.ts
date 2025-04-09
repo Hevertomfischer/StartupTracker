@@ -163,22 +163,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/startups/:id/status", async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
+      const { status_id } = req.body;
       
+      console.log(`Updating startup ${id} status to ${status_id}`);
+      console.log('Request body:', req.body);
+      
+      // Validar o formato dos IDs
       const data = updateStartupStatusSchema.parse({ 
         id, 
-        status_id: req.body.status_id 
+        status_id 
       });
       
+      // Verificar se o startup existe
       const startup = await storage.getStartup(id);
       if (!startup) {
+        console.error(`Startup with ID ${id} not found`);
         return res.status(404).json({ message: "Startup not found" });
       }
 
+      // Verificar se o status existe
+      const status = await storage.getStatus(status_id);
+      if (!status) {
+        console.error(`Status with ID ${status_id} not found`);
+        return res.status(404).json({ message: "Status not found" });
+      }
+      
+      // Atualizar o status
       const updatedStartup = await storage.updateStartupStatus(id, data.status_id);
+      console.log('Successfully updated startup status:', updatedStartup);
       return res.status(200).json(updatedStartup);
     } catch (error) {
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
+        console.error('Validation error:', validationError);
         return res.status(400).json({ message: validationError.message });
       }
       console.error("Error updating startup status:", error);
