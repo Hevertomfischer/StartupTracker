@@ -23,11 +23,11 @@ export function StartupHistoryPanel({ startupId }: StartupHistoryPanelProps) {
       setLoading(true);
       try {
         // Fetch history data
-        const historyData = await apiRequest(`/api/startups/${startupId}/history`);
+        const historyData = await apiRequest("GET", `/api/startups/${startupId}/history`);
         setHistory(historyData || []);
         
         // Fetch time tracking data
-        const trackingData = await apiRequest(`/api/startups/${startupId}/time-tracking`);
+        const trackingData = await apiRequest("GET", `/api/startups/${startupId}/time-tracking`);
         setTimeTracking(trackingData || []);
       } catch (error) {
         console.error("Error loading history data:", error);
