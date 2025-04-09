@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, uuid, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, uuid, numeric, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -94,6 +94,29 @@ export const startupMembers = pgTable("startup_members", {
   linkedin: text("linkedin"),
 });
 
+// Histórico de alterações das startups
+export const startupHistory = pgTable("startup_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  startup_id: uuid("startup_id").notNull().references(() => startups.id),
+  user_id: uuid("user_id").references(() => users.id),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  changes: jsonb("changes").notNull(), // Armazena as mudanças feitas
+  change_type: text("change_type").notNull(), // "update", "status_change", etc.
+  previous_status_id: uuid("previous_status_id").references(() => statuses.id),
+  new_status_id: uuid("new_status_id").references(() => statuses.id),
+  comments: text("comments"),
+});
+
+// Rastreamento de tempo em cada status
+export const statusTimeTracking = pgTable("status_time_tracking", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  startup_id: uuid("startup_id").notNull().references(() => startups.id),
+  status_id: uuid("status_id").notNull().references(() => statuses.id),
+  entry_time: timestamp("entry_time").defaultNow().notNull(),
+  exit_time: timestamp("exit_time"),
+  duration_seconds: integer("duration_seconds"),
+});
+
 // Zod Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -133,6 +156,21 @@ export type Startup = typeof startups.$inferSelect;
 
 export type InsertStartupMember = z.infer<typeof insertStartupMemberSchema>;
 export type StartupMember = typeof startupMembers.$inferSelect;
+
+// Schemas and types for the new tables
+export const insertStartupHistorySchema = createInsertSchema(startupHistory).omit({
+  id: true,
+  timestamp: true,
+});
+export type InsertStartupHistory = z.infer<typeof insertStartupHistorySchema>;
+export type StartupHistory = typeof startupHistory.$inferSelect;
+
+export const insertStatusTimeTrackingSchema = createInsertSchema(statusTimeTracking).omit({
+  id: true,
+  entry_time: true,
+});
+export type InsertStatusTimeTracking = z.infer<typeof insertStatusTimeTrackingSchema>;
+export type StatusTimeTracking = typeof statusTimeTracking.$inferSelect;
 
 // Status Enum (for default statuses)
 export const StatusEnum = {

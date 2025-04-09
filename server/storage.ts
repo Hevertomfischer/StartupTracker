@@ -10,7 +10,13 @@ import {
   type InsertStartupMember,
   statuses,
   type Status,
-  type InsertStatus
+  type InsertStatus,
+  startupHistory,
+  type StartupHistory,
+  type InsertStartupHistory,
+  statusTimeTracking,
+  type StatusTimeTracking,
+  type InsertStatusTimeTracking
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, sql } from "drizzle-orm";
@@ -39,6 +45,16 @@ export interface IStorage {
   // Startup member operations
   getStartupMembers(startupId: string): Promise<StartupMember[]>;
   createStartupMember(member: InsertStartupMember): Promise<StartupMember>;
+  
+  // Startup history operations
+  getStartupHistory(startupId: string): Promise<StartupHistory[]>;
+  addStartupHistoryEntry(entry: InsertStartupHistory): Promise<StartupHistory>;
+  
+  // Status time tracking operations
+  getStatusTimeTracking(startupId: string): Promise<StatusTimeTracking[]>;
+  startStatusTimeTracking(startupId: string, statusId: string): Promise<StatusTimeTracking>;
+  endStatusTimeTracking(trackingId: string): Promise<StatusTimeTracking | undefined>;
+  getCurrentStatusTimeTracking(startupId: string): Promise<StatusTimeTracking | undefined>;
   
   // Seed data
   seedDatabase(): Promise<void>;
@@ -115,22 +131,91 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateStartup(id: string, updateData: Partial<InsertStartup>): Promise<Startup | undefined> {
+    // Get the current startup data for comparison
+    const currentStartup = await this.getStartup(id);
+    if (!currentStartup) {
+      return undefined;
+    }
+    
     // Always update the updated_at timestamp
     const dataWithTimestamp = {
       ...updateData,
       updated_at: new Date()
     };
     
+    // Update the startup data
     const [updatedStartup] = await db
       .update(startups)
       .set(dataWithTimestamp)
       .where(eq(startups.id, id))
       .returning();
+    
+    if (updatedStartup) {
+      // Record the changes in the history
+      const changes: Record<string, any> = {};
+      let hasChanges = false;
+      
+      // Compare old and new values
+      for (const key in updateData) {
+        if (key !== 'updated_at' && key !== 'status_id' && updateData[key] !== currentStartup[key]) {
+          changes[key] = {
+            from: currentStartup[key],
+            to: updateData[key]
+          };
+          hasChanges = true;
+        }
+      }
+      
+      // Only record if there are actual changes
+      if (hasChanges) {
+        await this.addStartupHistoryEntry({
+          startup_id: id,
+          change_type: "data_update",
+          changes,
+          comments: "Dados da startup atualizados"
+        });
+      }
+    }
+    
     return updatedStartup;
   }
   
   async updateStartupStatus(id: string, status_id: string): Promise<Startup | undefined> {
-    return this.updateStartup(id, { status_id });
+    // First get the startup to know its current status
+    const startup = await this.getStartup(id);
+    if (!startup) {
+      return undefined;
+    }
+    
+    const previousStatusId = startup.status_id;
+    
+    // Update the startup status
+    const updatedStartup = await this.updateStartup(id, { status_id });
+    
+    if (updatedStartup) {
+      // Register the status change in history
+      await this.addStartupHistoryEntry({
+        startup_id: id,
+        change_type: "status_change",
+        changes: { status_id: { from: previousStatusId, to: status_id } },
+        previous_status_id: previousStatusId,
+        new_status_id: status_id,
+        comments: `Status alterado de ${previousStatusId} para ${status_id}`
+      });
+      
+      // End any current time tracking
+      if (previousStatusId) {
+        const currentTracking = await this.getCurrentStatusTimeTracking(id);
+        if (currentTracking) {
+          await this.endStatusTimeTracking(currentTracking.id);
+        }
+      }
+      
+      // Start a new time tracking for the new status
+      await this.startStatusTimeTracking(id, status_id);
+    }
+    
+    return updatedStartup;
   }
   
   async deleteStartup(id: string): Promise<boolean> {
@@ -152,6 +237,97 @@ export class DatabaseStorage implements IStorage {
       .values(insertMember)
       .returning();
     return member;
+  }
+  
+  // Startup history operations
+  async getStartupHistory(startupId: string): Promise<StartupHistory[]> {
+    return await db
+      .select()
+      .from(startupHistory)
+      .where(eq(startupHistory.startup_id, startupId))
+      .orderBy(desc(startupHistory.timestamp));
+  }
+  
+  async addStartupHistoryEntry(entry: InsertStartupHistory): Promise<StartupHistory> {
+    const [historyEntry] = await db
+      .insert(startupHistory)
+      .values(entry)
+      .returning();
+    return historyEntry;
+  }
+  
+  // Status time tracking operations
+  async getStatusTimeTracking(startupId: string): Promise<StatusTimeTracking[]> {
+    return await db
+      .select()
+      .from(statusTimeTracking)
+      .where(eq(statusTimeTracking.startup_id, startupId))
+      .orderBy(desc(statusTimeTracking.entry_time));
+  }
+  
+  async startStatusTimeTracking(startupId: string, statusId: string): Promise<StatusTimeTracking> {
+    // First, close any existing open time tracking for this startup
+    await this.closeCurrentTimeTracking(startupId);
+    
+    // Then create a new time tracking entry
+    const [tracking] = await db
+      .insert(statusTimeTracking)
+      .values({
+        startup_id: startupId,
+        status_id: statusId,
+      })
+      .returning();
+    
+    return tracking;
+  }
+  
+  private async closeCurrentTimeTracking(startupId: string): Promise<void> {
+    // Find the current open tracking
+    const currentTracking = await this.getCurrentStatusTimeTracking(startupId);
+    
+    if (currentTracking) {
+      await this.endStatusTimeTracking(currentTracking.id);
+    }
+  }
+  
+  async getCurrentStatusTimeTracking(startupId: string): Promise<StatusTimeTracking | undefined> {
+    const [tracking] = await db
+      .select()
+      .from(statusTimeTracking)
+      .where(eq(statusTimeTracking.startup_id, startupId))
+      .where(sql`${statusTimeTracking.exit_time} IS NULL`);
+    
+    return tracking;
+  }
+  
+  async endStatusTimeTracking(trackingId: string): Promise<StatusTimeTracking | undefined> {
+    const now = new Date();
+    
+    // Get the tracking entry to calculate the duration
+    const [tracking] = await db
+      .select()
+      .from(statusTimeTracking)
+      .where(eq(statusTimeTracking.id, trackingId));
+    
+    if (!tracking) {
+      return undefined;
+    }
+    
+    // Calculate duration in seconds
+    const entryTime = new Date(tracking.entry_time);
+    const durationSeconds = Math.floor((now.getTime() - entryTime.getTime()) / 1000);
+    
+    // Update the tracking entry
+    const [updatedTracking] = await db
+      .update(statusTimeTracking)
+      .set({
+        exit_time: now,
+        duration_seconds: durationSeconds
+      })
+      .where(eq(statusTimeTracking.id, trackingId))
+      .returning();
+    
+    return updatedTracking;
   }
   
   // Seed data

@@ -261,6 +261,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // History routes
+  app.get("/api/startups/:id/history", async (req: Request, res: Response) => {
+    try {
+      const startupId = req.params.id;
+      
+      // Check if startup exists
+      const startup = await storage.getStartup(startupId);
+      if (!startup) {
+        return res.status(404).json({ message: "Startup not found" });
+      }
+      
+      const history = await storage.getStartupHistory(startupId);
+      return res.status(200).json(history);
+    } catch (error) {
+      console.error("Error fetching startup history:", error);
+      return res.status(500).json({ message: "Failed to fetch startup history" });
+    }
+  });
+  
+  // Time tracking routes
+  app.get("/api/startups/:id/time-tracking", async (req: Request, res: Response) => {
+    try {
+      const startupId = req.params.id;
+      
+      // Check if startup exists
+      const startup = await storage.getStartup(startupId);
+      if (!startup) {
+        return res.status(404).json({ message: "Startup not found" });
+      }
+      
+      const timeTracking = await storage.getStatusTimeTracking(startupId);
+      return res.status(200).json(timeTracking);
+    } catch (error) {
+      console.error("Error fetching time tracking:", error);
+      return res.status(500).json({ message: "Failed to fetch time tracking data" });
+    }
+  });
+  
+  // Get current time tracking for a startup
+  app.get("/api/startups/:id/current-tracking", async (req: Request, res: Response) => {
+    try {
+      const startupId = req.params.id;
+      
+      // Check if startup exists
+      const startup = await storage.getStartup(startupId);
+      if (!startup) {
+        return res.status(404).json({ message: "Startup not found" });
+      }
+      
+      const currentTracking = await storage.getCurrentStatusTimeTracking(startupId);
+      if (!currentTracking) {
+        return res.status(404).json({ message: "No active time tracking found" });
+      }
+      
+      return res.status(200).json(currentTracking);
+    } catch (error) {
+      console.error("Error fetching current time tracking:", error);
+      return res.status(500).json({ message: "Failed to fetch current time tracking" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
