@@ -7,7 +7,6 @@ import {
   DroppableProvided, 
   DraggableProvided, 
   DraggableStateSnapshot,
-  ResponderProvided,
   DragStart
 } from "react-beautiful-dnd";
 import { StartupCard } from "./StartupCard";
@@ -74,11 +73,10 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
 
   // Event handlers for drag and drop
   const handleDragStart = (initial: DragStart) => {
-    // Save the dragging startup ID
     setDraggingStartupId(initial.draggableId);
   };
 
-  const handleDragEnd = async (result: DropResult, provided?: ResponderProvided) => {
+  const handleDragEnd = async (result: DropResult) => {
     // Clear the dragging state
     setDraggingStartupId(null);
     
@@ -90,7 +88,7 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
          destination.index === source.index)) {
       return;
     }
-
+    
     // Find the startup that was dragged
     const draggedStartup = startups.find(startup => startup.id === draggableId);
     if (!draggedStartup) {
@@ -188,7 +186,6 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                           key={startup.id}
                           draggableId={startup.id}
                           index={index}
-                          isDragDisabled={draggingStartupId !== null && draggingStartupId !== startup.id}
                         >
                           {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
                             <div
@@ -196,7 +193,6 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
                               className={`mb-2 ${snapshot.isDragging ? 'opacity-70 transform scale-105' : ''}`}
-                              data-startup-id={startup.id}
                             >
                               <StartupCard 
                                 startup={startup} 
