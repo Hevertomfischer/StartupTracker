@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useCallback } from "react";
 import { StartupCard } from "./StartupCard";
 import { type Startup, type Status } from "@shared/schema";
@@ -7,66 +6,12 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-
-// Importações para dnd-kit
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragOverlay,
-  DragStartEvent,
-  useDraggable,
-  useDroppable,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-
-// Componente para item arrastável (substituindo SortableItem para simplificar)
-function DraggableItem({
-  id,
-  startup,
-  onClickCard,
-  onDeleteCard,
-}: {
-  id: string;
-  startup: Startup;
-  onClickCard: (startup: Startup) => void;
-  onDeleteCard: (id: string) => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
-    id,
-  });
-
-  const style = transform
-    ? {
-        transform: CSS.Translate.toString(transform),
-      }
-    : undefined;
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className="mb-2 hover:shadow-md"
-    >
-      <StartupCard
-        startup={startup}
-        onClick={() => onClickCard(startup)}
-        onDelete={() => onDeleteCard(id)}
-      />
-    </div>
-  );
-}
+import { 
+  DragDropContext, 
+  Droppable, 
+  Draggable, 
+  DropResult
+} from "react-beautiful-dnd";
 
 type KanbanBoardProps = {
   startups: Startup[];
@@ -112,7 +57,92 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     return startups.filter(startup => startup.status_id === columnId);
   }, [startups]);
 
-  
+  // Manipulador para quando o arrastar termina
+  const handleDragEnd = useCallback(async (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+    
+    console.log('Drag end:', { destination, source, draggableId });
+    
+    // Se não tiver destino ou o destino for o mesmo que a origem (mesma coluna e posição)
+    if (!destination || 
+        (destination.droppableId === source.droppableId && 
+         destination.index === source.index)) {
+      return;
+    }
+
+    // Extrair ID original do startup do draggableId
+    const startupId = draggableId;
+    console.log('Extracted startup ID:', startupId);
+    
+    // Encontrar o startup pelo ID
+    const startup = startups.find(s => s.id === startupId);
+    
+    if (!startup) {
+      console.error('Startup not found with ID:', startupId);
+      console.log('All available startup IDs:', startups.map(s => s.id));
+      toast({
+        title: "Erro",
+        description: "Não foi possível encontrar o item arrastado.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Status de destino
+    const newStatusId = destination.droppableId;
+    
+    console.log('Moving startup:', {
+      startupId: startup.id,
+      startupName: startup.name,
+      fromStatus: source.droppableId,
+      toStatus: newStatusId
+    });
+    
+    // Backup para caso de erro
+    const oldData = queryClient.getQueryData<Startup[]>(['/api/startups']);
+    
+    try {
+      // Atualizar UI primeiro (otimista)
+      queryClient.setQueryData(['/api/startups'], (old: Startup[] | undefined) => {
+        if (!old) return old;
+        return old.map(s => 
+          s.id === startup.id 
+            ? { ...s, status_id: newStatusId } 
+            : s
+        );
+      });
+      
+      // Montar corpo da requisição
+      const requestBody = { status_id: newStatusId };
+      
+      console.log('Sending PATCH request to:', `/api/startups/${startup.id}/status`);
+      console.log('With body:', requestBody);
+      
+      // Atualizar no servidor
+      await apiRequest(
+        "PATCH", 
+        `/api/startups/${startup.id}/status`, 
+        requestBody
+      );
+      
+      // Revalidar dados
+      await queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
+      
+      toast({
+        title: "Sucesso",
+        description: "Card movido com sucesso",
+      });
+    } catch (error) {
+      console.error('Error moving card:', error);
+      // Desfazer mudanças em caso de erro
+      queryClient.setQueryData(['/api/startups'], oldData);
+      toast({
+        title: "Erro",
+        description: "Falha ao mover o card",
+        variant: "destructive",
+      });
+    }
+  }, [startups, toast]);
 
   // Manipulador para excluir um startup
   const handleDeleteStartup = async () => {
@@ -156,167 +186,76 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     );
   }
 
-  // Estados para dnd-kit
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeStartup, setActiveStartup] = useState<Startup | null>(null);
-
-  // Configuração dos sensores para dnd-kit
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5, // Distância mínima para iniciar o arrasto
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  // Tratamento de início de arrasto
-  const handleDragStart = (event: DragStartEvent) => {
-    console.log('Drag start:', event);
-    const { active } = event;
-    setActiveId(active.id as string);
-    
-    // Encontrar startup sendo arrastado
-    const draggedStartup = startups.find(s => s.id === active.id);
-    if (draggedStartup) {
-      setActiveStartup(draggedStartup);
-    }
-  };
-
-  // Tratamento do fim do arrasto com dnd-kit
-  const handleDragEndDndKit = async (event: DragEndEvent) => {
-    console.log('Drag end dnd-kit:', event);
-    const { active, over } = event;
-    
-    setActiveId(null);
-    setActiveStartup(null);
-    
-    if (!over) return;
-
-    const startupId = active.id as string;
-    const newStatusId = over.id as string;
-    
-    // Se a coluna não mudou, não fazer nada
-    const startup = startups.find(s => s.id === startupId);
-    if (!startup || startup.status_id === newStatusId) return;
-    
-    console.log('Moving startup:', {
-      startupId,
-      fromStatus: startup.status_id,
-      toStatus: newStatusId
-    });
-    
-    // Backup para caso de erro
-    const oldData = queryClient.getQueryData<Startup[]>(['/api/startups']);
-    
-    try {
-      // Atualizar UI primeiro (otimista)
-      queryClient.setQueryData(['/api/startups'], (old: Startup[] | undefined) => {
-        if (!old) return old;
-        return old.map(s => 
-          s.id === startupId 
-            ? { ...s, status_id: newStatusId } 
-            : s
-        );
-      });
-      
-      // Montar corpo da requisição
-      const requestBody = { status_id: newStatusId };
-      
-      console.log('Sending PATCH request to:', `/api/startups/${startupId}/status`);
-      console.log('With body:', requestBody);
-      
-      // Atualizar no servidor
-      await apiRequest(
-        "PATCH", 
-        `/api/startups/${startupId}/status`, 
-        requestBody
-      );
-      
-      // Revalidar dados
-      await queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
-      
-      toast({
-        title: "Sucesso",
-        description: "Card movido com sucesso",
-      });
-    } catch (error) {
-      console.error('Error moving card:', error);
-      // Desfazer mudanças em caso de erro
-      queryClient.setQueryData(['/api/startups'], oldData);
-      toast({
-        title: "Erro",
-        description: "Falha ao mover o card",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEndDndKit}
-        >
+        <DragDropContext onDragEnd={handleDragEnd}>
           <div className="kanban-board flex space-x-4 overflow-x-auto pb-4">
             {columns.map(column => {
               // Obter startups para esta coluna
               const columnStartups = getStartupsForColumn(column.id);
-              const columnStartupIds = columnStartups.map(s => s.id);
               
               return (
-                <div
-                  key={column.id}
-                  className="kanban-column flex-shrink-0 w-80 bg-white rounded-lg shadow"
-                >
-                  <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
-                    <h3 className="text-md font-medium text-gray-700 flex items-center">
-                      <span 
-                        style={{ backgroundColor: column.color }} 
-                        className="w-3 h-3 rounded-full mr-2"
-                      />
-                      {column.name}
-                      <span className="ml-2 text-xs text-gray-500 bg-gray-200 rounded-full px-2 py-0.5">
-                        {columnStartups.length}
-                      </span>
-                    </h3>
-                  </div>
-                  
-                  {/* Área dropável com o hook useDroppable */}
-                  <div ref={useDroppable({ id: column.id }).setNodeRef} className="p-2 min-h-[400px]">
-                    {columnStartups.map((startup) => (
-                      <DraggableItem
-                        key={startup.id}
-                        id={startup.id}
-                        startup={startup}
-                        onClickCard={onCardClick}
-                        onDeleteCard={(id: string) => setDeleteStartupId(id)}
-                      />
-                    ))}
-                  </div>
-                </div>
+                <Droppable droppableId={column.id} key={column.id}>
+                  {(provided) => (
+                    <div
+                      className="kanban-column flex-shrink-0 w-80 bg-white rounded-lg shadow"
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                    >
+                      <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
+                        <h3 className="text-md font-medium text-gray-700 flex items-center">
+                          <span 
+                            style={{ backgroundColor: column.color }} 
+                            className="w-3 h-3 rounded-full mr-2"
+                          />
+                          {column.name}
+                          <span className="ml-2 text-xs text-gray-500 bg-gray-200 rounded-full px-2 py-0.5">
+                            {columnStartups.length}
+                          </span>
+                        </h3>
+                      </div>
+                      
+                      <div className="p-2 min-h-[400px]">
+                        {columnStartups.map((startup, index) => (
+                          <Draggable 
+                            key={startup.id} 
+                            draggableId={startup.id} 
+                            index={index}
+                          >
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                style={{
+                                  ...provided.draggableProps.style,
+                                  opacity: snapshot.isDragging ? 0.8 : 1,
+                                }}
+                                className={`mb-2 ${
+                                  snapshot.isDragging 
+                                    ? 'shadow-lg z-50' 
+                                    : 'hover:shadow-md'
+                                }`}
+                              >
+                                <StartupCard 
+                                  startup={startup} 
+                                  onClick={() => onCardClick(startup)}
+                                  onDelete={() => setDeleteStartupId(startup.id)}
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
+                    </div>
+                  )}
+                </Droppable>
               );
             })}
           </div>
-          
-          {/* Overlay para visualizar o item sendo arrastado */}
-          <DragOverlay>
-            {activeId && activeStartup && (
-              <div className="opacity-80 shadow-lg z-50">
-                <StartupCard
-                  startup={activeStartup}
-                  onClick={() => {}}
-                  onDelete={() => {}}
-                />
-              </div>
-            )}
-          </DragOverlay>
-        </DndContext>
+        </DragDropContext>
       </div>
 
       <AlertDialog open={!!deleteStartupId} onOpenChange={() => setDeleteStartupId(null)}>
