@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { type Startup, type StartupMember, type Status, SectorEnum, PriorityEnum, insertStartupSchema } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
-import { X, Calendar, MapPin, Users, BarChart3, TrendingUp, DollarSign, History, Clock } from "lucide-react";
+import { X, Calendar, MapPin, Users, BarChart3, TrendingUp, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -22,8 +22,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
-import { StartupHistoryPanel } from "./StartupHistoryPanel";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type StartupDetailsModalProps = {
   open: boolean;
@@ -258,29 +256,6 @@ export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsMo
                     )}
                   </ul>
                 </div>
-              </div>
-              
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                <Tabs defaultValue="info">
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="info" className="flex items-center">
-                      <Users className="mr-2 h-4 w-4" />
-                      Dados Básicos
-                    </TabsTrigger>
-                    <TabsTrigger value="history" className="flex items-center">
-                      <History className="mr-2 h-4 w-4" />
-                      Histórico
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="info">
-                    {/* Conteúdo já está visível acima */}
-                  </TabsContent>
-                  
-                  <TabsContent value="history">
-                    <StartupHistoryPanel startupId={startup.id} />
-                  </TabsContent>
-                </Tabs>
               </div>
             </div>
             
