@@ -10,8 +10,12 @@ import {
   DragDropContext, 
   Droppable, 
   Draggable, 
-  DropResult
+  DropResult,
+  resetServerContext
 } from "react-beautiful-dnd";
+
+// Reseta o contexto para evitar incompatibilidades de ID em hot reloads
+resetServerContext();
 
 type KanbanBoardProps = {
   startups: Startup[];
@@ -92,8 +96,11 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
         return;
       }
 
-      // Extrair ID original do startup do draggableId
-      const startupId = draggableId;
+      // Extrair ID original do startup do draggableId (formato 'startup-xxxxxx')
+      const startupId = draggableId.startsWith('startup-') 
+        ? draggableId.substring(8) // Remove 'startup-' do início
+        : draggableId;
+        
       console.log('Extracted startup ID:', startupId);
       
       // Encontrar o startup pelo ID
@@ -111,7 +118,7 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
       }
       
       // Status de destino
-      const newStatusId = targetColumn.id;
+      const newStatusId = destination.droppableId;
       
       console.log('Moving startup:', {
         startupId: startup.id,
@@ -210,6 +217,28 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     );
   }
 
+  // Para evitar problemas com o ID, vou criar um cache de IDs estável para as colunas
+  const [stableColumnIds] = useState<Record<string, string>>(() => 
+    columns.reduce((acc, col) => ({ ...acc, [col.id]: `column-${col.id}` }), {} as Record<string, string>)
+  );
+  
+  // Hook para atualizar os IDs estáveis quando as colunas mudam
+  useEffect(() => {
+    if (columns.length > 0) {
+      console.log('Stable column IDs:', stableColumnIds);
+    }
+  }, [columns, stableColumnIds]);
+  
+  // Cria versões estáveis dos IDs das colunas para o Droppable
+  const getStableColumnId = useCallback((columnId: string) => {
+    // Se o ID estável não existir, vamos criar um (isso deve ser raro)
+    if (!stableColumnIds[columnId]) {
+      console.log(`Creating new stable ID for column ${columnId}`);
+      return `column-${columnId}`;
+    }
+    return stableColumnIds[columnId];
+  }, [stableColumnIds]);
+  
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
@@ -219,13 +248,20 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
               // Obter startups para esta coluna
               const columnStartups = getStartupsForColumn(column.id);
               
+              // Usar ID estável para o Droppable
+              const stableId = getStableColumnId(column.id);
+              
               return (
-                <Droppable droppableId={column.id} key={column.id}>
+                <Droppable 
+                  droppableId={column.id} 
+                  key={column.id}
+                >
                   {(provided) => (
                     <div
                       className="kanban-column flex-shrink-0 w-80 bg-white rounded-lg shadow"
                       ref={provided.innerRef}
                       {...provided.droppableProps}
+                      data-column-id={column.id}
                     >
                       <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
                         <h3 className="text-md font-medium text-gray-700 flex items-center">
@@ -241,36 +277,42 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                       </div>
                       
                       <div className="p-2 min-h-[400px]">
-                        {columnStartups.map((startup, index) => (
-                          <Draggable 
-                            key={startup.id} 
-                            draggableId={startup.id} 
-                            index={index}
-                          >
-                            {(provided, snapshot) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                style={{
-                                  ...provided.draggableProps.style,
-                                  opacity: snapshot.isDragging ? 0.8 : 1,
-                                }}
-                                className={`mb-2 ${
-                                  snapshot.isDragging 
-                                    ? 'shadow-lg z-50' 
-                                    : 'hover:shadow-md'
-                                }`}
-                              >
-                                <StartupCard 
-                                  startup={startup} 
-                                  onClick={() => onCardClick(startup)}
-                                  onDelete={() => setDeleteStartupId(startup.id)}
-                                />
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
+                        {columnStartups.map((startup, index) => {
+                          // ID estável também para o Draggable
+                          const draggableId = `startup-${startup.id}`;
+                          
+                          return (
+                            <Draggable 
+                              key={draggableId} 
+                              draggableId={draggableId} 
+                              index={index}
+                            >
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  data-startup-id={startup.id}
+                                  style={{
+                                    ...provided.draggableProps.style,
+                                    opacity: snapshot.isDragging ? 0.8 : 1,
+                                  }}
+                                  className={`mb-2 ${
+                                    snapshot.isDragging 
+                                      ? 'shadow-lg z-50' 
+                                      : 'hover:shadow-md'
+                                  }`}
+                                >
+                                  <StartupCard 
+                                    startup={startup} 
+                                    onClick={() => onCardClick(startup)}
+                                    onDelete={() => setDeleteStartupId(startup.id)}
+                                  />
+                                </div>
+                              )}
+                            </Draggable>
+                          );
+                        })}
                         {provided.placeholder}
                       </div>
                     </div>
