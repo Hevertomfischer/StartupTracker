@@ -307,15 +307,22 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
           
           {activeStartup && (
             <DragOverlay 
-              adjustScale={true} 
+              adjustScale={false} 
               zIndex={100}
-              className="opacity-80"
+              className="opacity-90 w-[320px] transform-none"
+              dropAnimation={{
+                duration: 300,
+                easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+                sideEffects: () => {}
+              }}
             >
-              <StartupCard 
-                startup={activeStartup} 
-                onClick={() => {}} 
-                onDelete={() => {}}
-              />
+              <div className="scale-95 shadow-md">
+                <StartupCard 
+                  startup={activeStartup} 
+                  onClick={() => {}} 
+                  onDelete={() => {}}
+                />
+              </div>
             </DragOverlay>
           )}
         </DndContext>
@@ -429,8 +436,9 @@ function DraggableCard({ startup, onClick, onDelete, isHighlighted }: DraggableC
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 10 : 'auto',
+    scale: isDragging ? '0.95' : '1',
   };
   
   return (
