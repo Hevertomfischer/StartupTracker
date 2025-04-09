@@ -1,5 +1,5 @@
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { 
   DragDropContext, 
   Droppable, 
@@ -28,24 +28,16 @@ type KanbanColumn = {
   color: string;
 };
 
+// Função auxiliar para gerar IDs estáveis para o Draggable
+const getStartupDraggableId = (id: string): string => {
+  return `startup-${id}`;
+};
+
 export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   const { toast } = useToast();
-  const [draggingStartupId, setDraggingStartupId] = useState<string | null>(null);
   const [deleteStartupId, setDeleteStartupId] = useState<string | null>(null);
-  const [draggableMap, setDraggableMap] = useState<Record<string, string>>({});
 
-  // Inicializa um mapa de IDs para garantir consistência
-  useEffect(() => {
-    const map: Record<string, string> = {};
-    startups.forEach(startup => {
-      map[startup.id] = String(startup.id);
-    });
-    setDraggableMap(map);
-    
-    // Log para debugging
-    console.log("Draggable IDs map initialized:", map);
-  }, [startups]);
-
+  // Buscar as colunas de status
   const { data: statuses } = useQuery({
     queryKey: ['/api/statuses'],
     queryFn: async () => {
@@ -57,6 +49,7 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     }
   });
 
+  // Organizar as colunas por ordem
   const columns: KanbanColumn[] = useMemo(() => {
     if (!statuses) return [];
     return [...statuses]
@@ -68,93 +61,76 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
       }));
   }, [statuses]);
 
+  // Mapear os startups para as colunas
   const columnStartupsMap = useMemo(() => {
     const map: Record<string, Startup[]> = {};
+    
+    // Inicializar todas as colunas com arrays vazios
     columns.forEach(column => {
-      map[column.id] = startups.filter(
-        startup => startup.status_id === column.id
-      );
+      map[column.id] = [];
     });
+    
+    // Adicionar os startups às colunas corretas
+    startups.forEach(startup => {
+      const statusId = startup.status_id;
+      if (statusId && map[statusId]) {
+        map[statusId].push(startup);
+      }
+    });
+    
     return map;
   }, [columns, startups]);
 
-  const handleDragStart = (result: any) => {
-    console.log('🔄 Drag start:', { 
-      draggableId: result.draggableId,
-      source: result.source
-    });
-    setDraggingStartupId(result.draggableId);
-  };
-
+  // Manipulador para quando o arrastar termina
   const handleDragEnd = async (result: DropResult) => {
-    setDraggingStartupId(null);
-
     const { destination, source, draggableId } = result;
-
-    // Log mais detalhado para debugging
+    
+    // Log de debugging detalhado
     console.log('Drag result:', { 
       destination, 
       source, 
       draggableId,
-      draggableIdType: typeof draggableId
     });
     
-    if (!destination || 
-        (destination.droppableId === source.droppableId && 
-         destination.index === source.index)) {
-      console.log('Dropping in same position or outside valid area. Ignoring.');
-      return;
-    }
-
-    // Tentar encontrar o startup de várias maneiras para robustez
-    let startup = startups.find(s => String(s.id) === draggableId);
-    
-    // Se não encontrar pelo método padrão, tentar outras alternativas
-    if (!startup) {
-      // Tentar encontrar pelo ID no mapa
-      for (const [originalId, mappedId] of Object.entries(draggableMap)) {
-        if (mappedId === draggableId) {
-          startup = startups.find(s => s.id === originalId);
-          if (startup) {
-            console.log('✅ Startup encontrado usando o draggableMap:', startup);
-            break;
-          }
-        }
-      }
-    }
-    
-    // Se ainda não encontrou, registrar erro detalhado
-    if (!startup) {
-      console.error('❌ Startup não encontrado com ID:', draggableId);
-      console.log('🔍 Informações de depuração:');
-      console.log('- draggableId:', draggableId, 'tipo:', typeof draggableId);
-      console.log('- draggableMap:', draggableMap);
-      console.log('- Startups disponíveis:');
-      startups.forEach(s => {
-        console.log(`  ID: ${s.id}, Tipo: ${typeof s.id}, Correspondência: ${String(s.id) === draggableId}`);
-      });
-      
-      // Notificar o usuário sobre o erro
-      toast({
-        title: "Erro de Arrastar e Soltar",
-        description: "Não foi possível encontrar o card arrastado. Tente novamente.",
-        variant: "destructive",
-      });
+    // Verificar se o destino é válido
+    if (!destination) {
+      console.log('Card dropped outside of a valid area.');
       return;
     }
     
-    // Log de sucesso detalhado
-    console.log('✅ Startup encontrado:', { 
-      id: startup.id, 
-      name: startup.name,
-      source_status: source.droppableId,
-      destination_status: destination.droppableId 
-    });
-
+    // Verificar se o card foi largado na mesma posição
+    if (destination.droppableId === source.droppableId && 
+        destination.index === source.index) {
+      console.log('Card dropped in the same position. No action needed.');
+      return;
+    }
+    
+    // Extrair o ID do startup do draggableId
+    const startupIdMatch = draggableId.match(/^startup-(.+)$/);
+    
+    if (!startupIdMatch) {
+      console.error('Invalid draggable ID format:', draggableId);
+      return;
+    }
+    
+    const startupId = startupIdMatch[1];
+    
+    // Encontrar o startup pelo ID
+    const startup = startups.find(s => s.id === startupId);
+    
+    if (!startup) {
+      console.error('Startup not found with ID:', startupId);
+      console.log('Available startups:', startups.map(s => s.id));
+      return;
+    }
+    
+    console.log('Found startup:', startup);
+    
+    // Guardar os dados antigos para caso de erro
     const oldData = queryClient.getQueryData<Startup[]>(['/api/startups']);
-
+    
     try {
-      // Atualizar a cache localmente primeiro para UI responsiva
+      // Atualizar localmente para UI responsiva
       queryClient.setQueryData(['/api/startups'], (old: Startup[] | undefined) => {
         if (!old) return old;
         return old.map(s => 
@@ -163,62 +139,67 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
             : s
         );
       });
-
-      // Enviar atualização para o servidor
+      
+      // Enviar para o servidor
       await apiRequest(
         "PATCH", 
         `/api/startups/${startup.id}/status`, 
         { status_id: destination.droppableId }
       );
-
-      // Atualizar a query cache
+      
+      // Atualizar a cache
       await queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
-
+      
       toast({
-        title: "Success",
-        description: "Card moved successfully",
+        title: "Sucesso",
+        description: "Card movido com sucesso!",
       });
     } catch (error) {
-      console.error('Error moving card:', error);
-      // Reverter para os dados antigos em caso de erro
+      console.error('Erro ao mover card:', error);
+      // Reverter para os dados antigos
       queryClient.setQueryData(['/api/startups'], oldData);
       toast({
-        title: "Error",
-        description: "Failed to move card",
+        title: "Erro",
+        description: "Falha ao mover o card. Tente novamente.",
         variant: "destructive",
       });
     }
   };
 
+  // Manipulador para excluir um startup
   const handleDeleteStartup = async () => {
     if (!deleteStartupId) return;
-
+    
     const oldData = queryClient.getQueryData<Startup[]>(['/api/startups']);
-
+    
     try {
+      // Atualizar UI primeiro
       queryClient.setQueryData(['/api/startups'], (old: Startup[] | undefined) => {
         if (!old) return old;
         return old.filter(s => s.id !== deleteStartupId);
       });
-
+      
+      // Enviar para o servidor
       await apiRequest("DELETE", `/api/startups/${deleteStartupId}`);
-
+      
       toast({
-        title: "Success",
-        description: "Startup deleted successfully",
+        title: "Sucesso",
+        description: "Startup excluído com sucesso",
       });
     } catch (error) {
+      // Reverter em caso de erro
       queryClient.setQueryData(['/api/startups'], oldData);
       toast({
-        title: "Error",
-        description: "Failed to delete startup",
+        title: "Erro",
+        description: "Falha ao excluir startup",
         variant: "destructive",
       });
     }
-
+    
     setDeleteStartupId(null);
   };
 
+  // Exibir carregamento se não tiver colunas
   if (!columns.length) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -230,7 +211,7 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DragDropContext onDragEnd={handleDragEnd}>
           <div className="kanban-board flex space-x-4 overflow-x-auto pb-4">
             {columns.map(column => (
               <Droppable key={column.id} droppableId={column.id}>
@@ -240,6 +221,7 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                     {...provided.droppableProps}
                     className="kanban-column flex-shrink-0 w-80 bg-white rounded-lg shadow"
                   >
+                    {/* Cabeçalho da coluna */}
                     <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
                       <h3 className="text-md font-medium text-gray-700 flex items-center">
                         <span style={{ backgroundColor: column.color }} className="w-3 h-3 rounded-full mr-2"></span>
@@ -249,11 +231,13 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                         </span>
                       </h3>
                     </div>
+                    
+                    {/* Cards da coluna */}
                     <div className="p-2 min-h-[400px]">
                       {columnStartupsMap[column.id]?.map((startup, index) => (
                         <Draggable
                           key={startup.id}
-                          draggableId={draggableMap[startup.id] || String(startup.id)}
+                          draggableId={getStartupDraggableId(startup.id)}
                           index={index}
                         >
                           {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
@@ -293,17 +277,18 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
         </DragDropContext>
       </div>
 
+      {/* Diálogo de confirmação para excluir */}
       <AlertDialog open={!!deleteStartupId} onOpenChange={() => setDeleteStartupId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Startup</AlertDialogTitle>
+            <AlertDialogTitle>Excluir Startup</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this startup? This action cannot be undone.
+              Tem certeza que deseja excluir este startup? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteStartup}>Delete</AlertDialogAction>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteStartup}>Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
