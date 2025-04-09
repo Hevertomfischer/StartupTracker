@@ -15,16 +15,21 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
-import { 
-  DragDropContext, 
-  Droppable, 
-  Draggable, 
-  DropResult,
-  resetServerContext
-} from "react-beautiful-dnd";
-
-// Reseta o contexto para evitar incompatibilidades de ID em hot reloads
-resetServerContext();
+import {
+  DndContext,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  UniqueIdentifier,
+  useDroppable
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 
 type KanbanBoardProps = {
   startups: Startup[];
@@ -40,6 +45,27 @@ type KanbanColumn = {
 export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   const { toast } = useToast();
   const [deleteStartupId, setDeleteStartupId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+  const [lastUpdatedColumn, setLastUpdatedColumn] = useState<string | null>(null);
+  const [lastMovedStartupId, setLastMovedStartupId] = useState<string | null>(null);
+  
+  // Configuração dos sensores para detectar ações de arrastar
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      // Delay maior para evitar detecção acidental
+      activationConstraint: {
+        delay: 150,
+        tolerance: 5,
+      },
+    }),
+    useSensor(TouchSensor, {
+      // Delay maior para dispositivos touch
+      activationConstraint: {
+        delay: 300,
+        tolerance: 8,
+      },
+    })
+  );
 
   // Buscar as colunas de status
   const { data: statuses } = useQuery({
@@ -78,62 +104,58 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     }
   }, [startups, columns]);
 
+  // Encontrar um startup pelo ID
+  const findStartupById = useCallback((id: UniqueIdentifier) => {
+    const startupId = String(id);
+    return startups.find(s => s.id === startupId);
+  }, [startups]);
+
+  // Manipulador para quando começamos a arrastar
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const { active } = event;
+    
+    console.log('Drag start:', { active });
+    
+    setActiveId(active.id);
+  }, []);
+  
   // Manipulador para quando o arrastar termina
-  const handleDragEnd = useCallback(async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
     
-    console.log('Drag end:', { destination, source, draggableId });
+    console.log('Drag end:', { active, over });
     
-    // Se não tiver destino ou o destino for o mesmo que a origem (mesma coluna e posição)
-    if (!destination || 
-        (destination.droppableId === source.droppableId && 
-         destination.index === source.index)) {
+    setActiveId(null);
+    
+    // Se não tiver destino, não faz nada
+    if (!over) return;
+    
+    const startupId = String(active.id);
+    const newStatusId = String(over.id);
+    
+    // Obtenha o startup que foi arrastado
+    const startup = startups.find(s => s.id === startupId);
+    
+    if (!startup) {
+      console.error('Startup not found with ID:', startupId);
+      toast({
+        title: "Erro",
+        description: "Não foi possível encontrar o item arrastado.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Não faça nada se a coluna de destino é a mesma que a atual
+    if (startup.status_id === newStatusId) {
       return;
     }
 
     try {
-      // Primeiro verificamos se a coluna de destino existe
-      const targetColumn = columns.find(col => col.id === destination.droppableId);
-      if (!targetColumn) {
-        console.error(`Coluna de destino não encontrada: ${destination.droppableId}`);
-        console.log('Colunas disponíveis:', columns.map(c => ({ id: c.id, name: c.name })));
-        toast({
-          title: "Erro",
-          description: "Coluna de destino não encontrada",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Extrair ID original do startup do draggableId (formato 'startup-xxxxxx')
-      const startupId = draggableId.startsWith('startup-') 
-        ? draggableId.substring(8) // Remove 'startup-' do início
-        : draggableId;
-        
-      console.log('Extracted startup ID:', startupId);
-      console.log('Available startup IDs in state:', startups.map(s => s.id));
-      
-      // Encontrar o startup pelo ID
-      const startup = startups.find(s => s.id === startupId);
-      
-      if (!startup) {
-        console.error('Startup not found with ID:', startupId);
-        console.log('All available startup IDs:', startups.map(s => s.id));
-        toast({
-          title: "Erro",
-          description: "Não foi possível encontrar o item arrastado.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      // Status de destino
-      const newStatusId = destination.droppableId;
-      
       console.log('Moving startup:', {
         startupId: startup.id,
         startupName: startup.name,
-        fromStatus: source.droppableId,
+        fromStatus: startup.status_id,
         toStatus: newStatusId
       });
       
@@ -150,14 +172,13 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
         );
       });
       
-      // Montar corpo da requisição - esta API é diferente da API de atualização completa
-      // Ela usa apenas o campo status_id
+      // Montar corpo da requisição
       const requestBody = { status_id: newStatusId };
       
       console.log('Sending PATCH request to:', `/api/startups/${startup.id}/status`);
       console.log('With body:', requestBody);
       
-      // Atualizar no servidor usando a API específica para atualização de status
+      // Atualizar no servidor
       await apiRequest(
         "PATCH", 
         `/api/startups/${startup.id}/status`, 
@@ -177,17 +198,13 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
       });
     } catch (error) {
       console.error('Error moving card:', error);
-      // Para erros específicos do react-beautiful-dnd, não vamos mostrar o toast
-      // pois já há mensagens de erro no console
-      if (!String(error).includes('Invariant failed')) {
-        toast({
-          title: "Erro",
-          description: "Falha ao mover o card",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Erro",
+        description: "Falha ao mover o card",
+        variant: "destructive",
+      });
     }
-  }, [startups, toast, columns]);
+  }, [startups, toast]);
 
   // Manipulador para excluir um startup
   const handleDeleteStartup = async () => {
@@ -222,69 +239,6 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     setDeleteStartupId(null);
   };
 
-  // Exibir carregamento se não tiver colunas
-  if (!columns.length) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
-
-  // Para evitar problemas com o ID, vou criar um cache de IDs estável para as colunas
-  const [stableColumnIds] = useState<Record<string, string>>(() => 
-    columns.reduce((acc, col) => ({ ...acc, [col.id]: `column-${col.id}` }), {} as Record<string, string>)
-  );
-  
-  // Também criaremos IDs estáveis para os startups para garantir consistência entre renderizações
-  const [stableStartupIds, setStableStartupIds] = useState<Record<string, string>>(() => {
-    return startups.reduce((acc, startup) => {
-      return { ...acc, [startup.id]: `startup-${startup.id}` };
-    }, {} as Record<string, string>);
-  });
-  
-  // Atualizar os IDs estáveis quando os startups mudam
-  useEffect(() => {
-    if (startups.length > 0) {
-      // Garantir que todos os startups atuais tenham IDs estáveis
-      const updatedIds = { ...stableStartupIds };
-      let hasChanged = false;
-      
-      startups.forEach(startup => {
-        if (!updatedIds[startup.id]) {
-          updatedIds[startup.id] = `startup-${startup.id}`;
-          hasChanged = true;
-          console.log(`Added missing stable ID for startup ${startup.id}`);
-        }
-      });
-      
-      if (hasChanged) {
-        setStableStartupIds(updatedIds);
-      }
-    }
-  }, [startups, stableStartupIds]);
-  
-  // Estado para armazenar a última coluna que recebeu um card (para feedback visual)
-  const [lastUpdatedColumn, setLastUpdatedColumn] = useState<string | null>(null);
-  
-  // Estado para armazenar o ID do último startup movido (para animação nos cards)
-  const [lastMovedStartupId, setLastMovedStartupId] = useState<string | null>(null);
-  
-  // Hook para atualizar os IDs estáveis quando as colunas mudam
-  useEffect(() => {
-    if (columns.length > 0) {
-      console.log('Stable column IDs:', stableColumnIds);
-    }
-  }, [columns, stableColumnIds]);
-  
-  // Hook para monitorar os IDs estáveis dos startups
-  useEffect(() => {
-    if (startups.length > 0) {
-      console.log('Stable startup IDs:', stableStartupIds);
-      console.log('Current startup IDs:', startups.map(s => s.id));
-    }
-  }, [startups, stableStartupIds]);
-  
   // Efeito para limpar o lastUpdatedColumn após 2 segundos
   useEffect(() => {
     if (lastUpdatedColumn) {
@@ -307,113 +261,64 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     }
   }, [lastMovedStartupId]);
   
-  // Cria versões estáveis dos IDs das colunas para o Droppable
-  const getStableColumnId = useCallback((columnId: string) => {
-    // Se o ID estável não existir, vamos criar um (isso deve ser raro)
-    if (!stableColumnIds[columnId]) {
-      console.log(`Creating new stable ID for column ${columnId}`);
-      return `column-${columnId}`;
-    }
-    return stableColumnIds[columnId];
-  }, [stableColumnIds]);
+  // Startup ativo (sendo arrastado)
+  const activeStartup = useMemo(() => 
+    activeId ? findStartupById(activeId) : null
+  , [activeId, findStartupById]);
   
-  // Helper para obter IDs estáveis para os startups
-  const getStableStartupId = useCallback((startupId: string) => {
-    // Se o ID estável não existir, vamos criar um
-    if (!stableStartupIds[startupId]) {
-      console.log(`Creating new stable ID for startup ${startupId}`);
-      return `startup-${startupId}`;
-    }
-    return stableStartupIds[startupId];
-  }, [stableStartupIds]);
+  // Exibir carregamento se não tiver colunas
+  if (!columns.length) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
   
   return (
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <DragDropContext onDragEnd={handleDragEnd}>
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          modifiers={[restrictToWindowEdges]}
+        >
           <div className="kanban-board flex space-x-4 overflow-x-auto pb-4">
             {columns.map(column => {
               // Obter startups para esta coluna
               const columnStartups = getStartupsForColumn(column.id);
               
-              // Usar ID estável para o Droppable
-              const stableId = getStableColumnId(column.id);
-              
               return (
-                <Droppable 
-                  droppableId={column.id} 
+                <DroppableColumn
                   key={column.id}
-                >
-                  {(provided) => (
-                    <div
-                      className={`kanban-column flex-shrink-0 w-80 bg-white rounded-lg shadow transition-all duration-300 ease-in-out ${
-                        lastUpdatedColumn === column.id ? 'ring-4 ring-blue-400 shadow-lg scale-102' : ''
-                      }`}
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      data-column-id={column.id}
-                    >
-                      <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
-                        <h3 className="text-md font-medium text-gray-700 flex items-center">
-                          <span 
-                            style={{ backgroundColor: column.color }} 
-                            className="w-3 h-3 rounded-full mr-2"
-                          />
-                          {column.name}
-                          <span className="ml-2 text-xs text-gray-500 bg-gray-200 rounded-full px-2 py-0.5">
-                            {columnStartups.length}
-                          </span>
-                        </h3>
-                      </div>
-                      
-                      <div className="p-2 min-h-[400px]">
-                        {columnStartups.map((startup, index) => {
-                          // Usar ID estável para garantir consistência
-                          const draggableId = getStableStartupId(startup.id);
-                          
-                          return (
-                            <Draggable 
-                              key={draggableId} 
-                              draggableId={draggableId} 
-                              index={index}
-                            >
-                              {(provided, snapshot) => (
-                                <div
-                                  ref={provided.innerRef}
-                                  {...provided.draggableProps}
-                                  {...provided.dragHandleProps}
-                                  data-startup-id={startup.id}
-                                  style={{
-                                    ...provided.draggableProps.style,
-                                    opacity: snapshot.isDragging ? 0.8 : 1,
-                                  }}
-                                  className={`mb-2 transition-all duration-300 ease-in-out ${
-                                    snapshot.isDragging 
-                                      ? 'shadow-lg z-50' 
-                                      : lastMovedStartupId === startup.id
-                                        ? 'shadow-md bg-blue-50 ring-2 ring-blue-300 scale-102'
-                                        : 'hover:shadow-md'
-                                  }`}
-                                >
-                                  <StartupCard 
-                                    startup={startup} 
-                                    onClick={() => onCardClick(startup)}
-                                    onDelete={() => setDeleteStartupId(startup.id)}
-                                  />
-                                </div>
-                              )}
-                            </Draggable>
-                          );
-                        })}
-                        {provided.placeholder}
-                      </div>
-                    </div>
-                  )}
-                </Droppable>
+                  id={column.id}
+                  name={column.name}
+                  color={column.color}
+                  startups={columnStartups}
+                  isHighlighted={lastUpdatedColumn === column.id}
+                  onCardClick={onCardClick}
+                  onDeleteCard={setDeleteStartupId}
+                  lastMovedStartupId={lastMovedStartupId}
+                />
               );
             })}
           </div>
-        </DragDropContext>
+          
+          {activeStartup && (
+            <DragOverlay 
+              adjustScale={true} 
+              zIndex={100}
+              className="opacity-80"
+            >
+              <StartupCard 
+                startup={activeStartup} 
+                onClick={() => {}} 
+                onDelete={() => {}}
+              />
+            </DragOverlay>
+          )}
+        </DndContext>
       </div>
 
       <AlertDialog open={!!deleteStartupId} onOpenChange={() => setDeleteStartupId(null)}>
@@ -431,5 +336,123 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+type DroppableColumnProps = {
+  id: string;
+  name: string;
+  color: string;
+  startups: Startup[];
+  isHighlighted: boolean;
+  onCardClick: (startup: Startup) => Promise<void>;
+  onDeleteCard: (id: string) => void;
+  lastMovedStartupId: string | null;
+};
+
+function DroppableColumn({ 
+  id, 
+  name, 
+  color, 
+  startups, 
+  isHighlighted,
+  onCardClick, 
+  onDeleteCard,
+  lastMovedStartupId 
+}: DroppableColumnProps) {
+  const { setNodeRef } = useDroppable({ id });
+  
+  // IDs dos startups desta coluna
+  const startupIds = useMemo(() => startups.map(s => s.id), [startups]);
+  
+  return (
+    <div 
+      ref={setNodeRef}
+      className={`kanban-column flex-shrink-0 w-80 bg-white rounded-lg shadow transition-all duration-300 ease-in-out ${
+        isHighlighted ? 'ring-4 ring-blue-400 shadow-lg scale-102' : ''
+      }`}
+      data-column-id={id}
+    >
+      <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
+        <h3 className="text-md font-medium text-gray-700 flex items-center">
+          <span 
+            style={{ backgroundColor: color }} 
+            className="w-3 h-3 rounded-full mr-2"
+          />
+          {name}
+          <span className="ml-2 text-xs text-gray-500 bg-gray-200 rounded-full px-2 py-0.5">
+            {startups.length}
+          </span>
+        </h3>
+      </div>
+      
+      <div className="p-2 min-h-[400px]">
+        <SortableContext items={startupIds} strategy={verticalListSortingStrategy}>
+          {startups.map(startup => (
+            <DraggableCard
+              key={startup.id}
+              startup={startup}
+              onClick={() => onCardClick(startup)}
+              onDelete={() => onDeleteCard(startup.id)}
+              isHighlighted={lastMovedStartupId === startup.id}
+            />
+          ))}
+        </SortableContext>
+      </div>
+    </div>
+  );
+}
+
+type DraggableCardProps = {
+  startup: Startup;
+  onClick: () => void;
+  onDelete: () => void;
+  isHighlighted: boolean;
+};
+
+function DraggableCard({ startup, onClick, onDelete, isHighlighted }: DraggableCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({
+    id: startup.id,
+    data: {
+      type: 'startup',
+      startup
+    }
+  });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 10 : 'auto',
+  };
+  
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      data-startup-id={startup.id}
+      className={`mb-2 transition-all duration-300 ease-in-out ${
+        isDragging 
+          ? 'shadow-lg' 
+          : isHighlighted
+            ? 'shadow-md bg-blue-50 ring-2 ring-blue-300 scale-102'
+            : 'hover:shadow-md'
+      }`}
+    >
+      <StartupCard 
+        startup={startup} 
+        onClick={onClick}
+        onDelete={onDelete}
+      />
+    </div>
   );
 }
