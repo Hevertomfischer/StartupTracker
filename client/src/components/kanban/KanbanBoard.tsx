@@ -157,6 +157,10 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
       // Revalidar dados
       await queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
       
+      // Definir coluna atualizada e startup movido para efeitos visuais
+      setLastUpdatedColumn(newStatusId);
+      setLastMovedStartupId(startup.id);
+      
       toast({
         title: "Sucesso",
         description: "Card movido com sucesso",
@@ -222,12 +226,40 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     columns.reduce((acc, col) => ({ ...acc, [col.id]: `column-${col.id}` }), {} as Record<string, string>)
   );
   
+  // Estado para armazenar a última coluna que recebeu um card (para feedback visual)
+  const [lastUpdatedColumn, setLastUpdatedColumn] = useState<string | null>(null);
+  
+  // Estado para armazenar o ID do último startup movido (para animação nos cards)
+  const [lastMovedStartupId, setLastMovedStartupId] = useState<string | null>(null);
+  
   // Hook para atualizar os IDs estáveis quando as colunas mudam
   useEffect(() => {
     if (columns.length > 0) {
       console.log('Stable column IDs:', stableColumnIds);
     }
   }, [columns, stableColumnIds]);
+  
+  // Efeito para limpar o lastUpdatedColumn após 2 segundos
+  useEffect(() => {
+    if (lastUpdatedColumn) {
+      const timer = setTimeout(() => {
+        setLastUpdatedColumn(null);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [lastUpdatedColumn]);
+  
+  // Efeito para limpar o lastMovedStartupId após 2 segundos
+  useEffect(() => {
+    if (lastMovedStartupId) {
+      const timer = setTimeout(() => {
+        setLastMovedStartupId(null);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [lastMovedStartupId]);
   
   // Cria versões estáveis dos IDs das colunas para o Droppable
   const getStableColumnId = useCallback((columnId: string) => {
@@ -258,7 +290,9 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                 >
                   {(provided) => (
                     <div
-                      className="kanban-column flex-shrink-0 w-80 bg-white rounded-lg shadow"
+                      className={`kanban-column flex-shrink-0 w-80 bg-white rounded-lg shadow transition-all duration-300 ease-in-out ${
+                        lastUpdatedColumn === column.id ? 'ring-4 ring-blue-400 shadow-lg scale-102' : ''
+                      }`}
                       ref={provided.innerRef}
                       {...provided.droppableProps}
                       data-column-id={column.id}
@@ -297,10 +331,12 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                                     ...provided.draggableProps.style,
                                     opacity: snapshot.isDragging ? 0.8 : 1,
                                   }}
-                                  className={`mb-2 ${
+                                  className={`mb-2 transition-all duration-300 ease-in-out ${
                                     snapshot.isDragging 
                                       ? 'shadow-lg z-50' 
-                                      : 'hover:shadow-md'
+                                      : lastMovedStartupId === startup.id
+                                        ? 'shadow-md bg-blue-50 ring-2 ring-blue-300 scale-102'
+                                        : 'hover:shadow-md'
                                   }`}
                                 >
                                   <StartupCard 
