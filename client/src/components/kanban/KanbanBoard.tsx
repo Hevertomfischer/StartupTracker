@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { 
   DragDropContext, 
   Droppable, 
@@ -28,11 +28,6 @@ type KanbanColumn = {
   color: string;
 };
 
-// Função auxiliar para gerar IDs estáveis para o Draggable
-const getStartupDraggableId = (id: string): string => {
-  return `startup-${id}`;
-};
-
 export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   const { toast } = useToast();
   const [deleteStartupId, setDeleteStartupId] = useState<string | null>(null);
@@ -50,7 +45,7 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   });
 
   // Organizar as colunas por ordem
-  const columns: KanbanColumn[] = useMemo(() => {
+  const columns = useMemo(() => {
     if (!statuses) return [];
     return [...statuses]
       .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -62,109 +57,78 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   }, [statuses]);
 
   // Mapear os startups para as colunas
-  const columnStartupsMap = useMemo(() => {
-    const map: Record<string, Startup[]> = {};
-    
-    // Inicializar todas as colunas com arrays vazios
-    columns.forEach(column => {
-      map[column.id] = [];
-    });
-    
-    // Adicionar os startups às colunas corretas
-    startups.forEach(startup => {
-      const statusId = startup.status_id;
-      if (statusId && map[statusId]) {
-        map[statusId].push(startup);
-      }
-    });
-    
-    return map;
-  }, [columns, startups]);
+  const getStartupsForColumn = useCallback((columnId: string) => {
+    return startups.filter(startup => startup.status_id === columnId);
+  }, [startups]);
 
   // Manipulador para quando o arrastar termina
-  const handleDragEnd = async (result: DropResult) => {
+  const handleDragEnd = useCallback(async (result: DropResult) => {
     const { destination, source, draggableId } = result;
     
-    // Log de debugging detalhado
-    console.log('Drag result:', { 
-      destination, 
-      source, 
-      draggableId,
-    });
+    console.log('Drag end:', { destination, source, draggableId });
     
-    // Verificar se o destino é válido
-    if (!destination) {
-      console.log('Card dropped outside of a valid area.');
+    // Se não tiver destino ou o destino for o mesmo que a origem (mesma coluna e posição)
+    if (!destination || 
+        (destination.droppableId === source.droppableId && 
+         destination.index === source.index)) {
       return;
     }
-    
-    // Verificar se o card foi largado na mesma posição
-    if (destination.droppableId === source.droppableId && 
-        destination.index === source.index) {
-      console.log('Card dropped in the same position. No action needed.');
-      return;
-    }
-    
-    // Extrair o ID do startup do draggableId
-    const startupIdMatch = draggableId.match(/^startup-(.+)$/);
-    
-    if (!startupIdMatch) {
-      console.error('Invalid draggable ID format:', draggableId);
-      return;
-    }
-    
-    const startupId = startupIdMatch[1];
-    
+
     // Encontrar o startup pelo ID
-    const startup = startups.find(s => s.id === startupId);
+    const startup = startups.find(s => `draggable-${s.id}` === draggableId);
     
     if (!startup) {
-      console.error('Startup not found with ID:', startupId);
-      console.log('Available startups:', startups.map(s => s.id));
+      console.error('Startup not found with draggable ID:', draggableId);
+      toast({
+        title: "Erro",
+        description: "Não foi possível encontrar o item arrastado.",
+        variant: "destructive",
+      });
       return;
     }
     
-    console.log('Found startup:', startup);
+    // Status de destino
+    const newStatusId = destination.droppableId;
     
-    // Guardar os dados antigos para caso de erro
+    // Backup para caso de erro
     const oldData = queryClient.getQueryData<Startup[]>(['/api/startups']);
     
     try {
-      // Atualizar localmente para UI responsiva
+      // Atualizar UI primeiro (otimista)
       queryClient.setQueryData(['/api/startups'], (old: Startup[] | undefined) => {
         if (!old) return old;
         return old.map(s => 
           s.id === startup.id 
-            ? { ...s, status_id: destination.droppableId } 
+            ? { ...s, status_id: newStatusId } 
             : s
         );
       });
       
-      // Enviar para o servidor
+      // Atualizar no servidor
       await apiRequest(
         "PATCH", 
         `/api/startups/${startup.id}/status`, 
-        { status_id: destination.droppableId }
+        { status_id: newStatusId }
       );
       
-      // Atualizar a cache
+      // Revalidar dados
       await queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
       
       toast({
         title: "Sucesso",
-        description: "Card movido com sucesso!",
+        description: "Card movido com sucesso",
       });
     } catch (error) {
-      console.error('Erro ao mover card:', error);
-      // Reverter para os dados antigos
+      console.error('Error moving card:', error);
+      // Desfazer mudanças em caso de erro
       queryClient.setQueryData(['/api/startups'], oldData);
       toast({
         title: "Erro",
-        description: "Falha ao mover o card. Tente novamente.",
+        description: "Falha ao mover o card",
         variant: "destructive",
       });
     }
-  };
+  }, [startups, toast]);
 
   // Manipulador para excluir um startup
   const handleDeleteStartup = async () => {
@@ -213,71 +177,74 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="kanban-board flex space-x-4 overflow-x-auto pb-4">
-            {columns.map(column => (
-              <Droppable key={column.id} droppableId={column.id}>
-                {(provided: DroppableProvided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="kanban-column flex-shrink-0 w-80 bg-white rounded-lg shadow"
-                  >
-                    {/* Cabeçalho da coluna */}
-                    <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
-                      <h3 className="text-md font-medium text-gray-700 flex items-center">
-                        <span style={{ backgroundColor: column.color }} className="w-3 h-3 rounded-full mr-2"></span>
-                        {column.name}
-                        <span className="ml-2 text-xs text-gray-500 bg-gray-200 rounded-full px-2 py-0.5">
-                          {columnStartupsMap[column.id]?.length || 0}
-                        </span>
-                      </h3>
+            {columns.map(column => {
+              // Obter startups para esta coluna
+              const columnStartups = getStartupsForColumn(column.id);
+              
+              return (
+                <Droppable droppableId={column.id} key={column.id}>
+                  {(provided) => (
+                    <div
+                      className="kanban-column flex-shrink-0 w-80 bg-white rounded-lg shadow"
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                    >
+                      <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
+                        <h3 className="text-md font-medium text-gray-700 flex items-center">
+                          <span 
+                            style={{ backgroundColor: column.color }} 
+                            className="w-3 h-3 rounded-full mr-2"
+                          />
+                          {column.name}
+                          <span className="ml-2 text-xs text-gray-500 bg-gray-200 rounded-full px-2 py-0.5">
+                            {columnStartups.length}
+                          </span>
+                        </h3>
+                      </div>
+                      
+                      <div className="p-2 min-h-[400px]">
+                        {columnStartups.map((startup, index) => (
+                          <Draggable 
+                            key={startup.id} 
+                            draggableId={`draggable-${startup.id}`} 
+                            index={index}
+                          >
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                {...provided.dragHandleProps}
+                                style={{
+                                  ...provided.draggableProps.style,
+                                  opacity: snapshot.isDragging ? 0.8 : 1,
+                                }}
+                                className={`mb-2 ${
+                                  snapshot.isDragging 
+                                    ? 'shadow-lg z-50' 
+                                    : 'hover:shadow-md'
+                                }`}
+                                data-startup-id={startup.id}
+                              >
+                                <StartupCard 
+                                  startup={startup} 
+                                  onClick={() => onCardClick(startup)}
+                                  onDelete={() => setDeleteStartupId(startup.id)}
+                                />
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </div>
                     </div>
-                    
-                    {/* Cards da coluna */}
-                    <div className="p-2 min-h-[400px]">
-                      {columnStartupsMap[column.id]?.map((startup, index) => (
-                        <Draggable
-                          key={startup.id}
-                          draggableId={getStartupDraggableId(startup.id)}
-                          index={index}
-                        >
-                          {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              style={{
-                                ...provided.draggableProps.style,
-                                transition: 'all 0.2s ease-in-out',
-                                transform: snapshot.isDragging
-                                  ? `${provided.draggableProps.style?.transform} scale(1.02)`
-                                  : provided.draggableProps.style?.transform,
-                              }}
-                              className={`mb-2 ${
-                                snapshot.isDragging 
-                                  ? 'opacity-75 shadow-lg' 
-                                  : 'hover:shadow-md'
-                              }`}
-                            >
-                              <StartupCard 
-                                startup={startup} 
-                                onClick={() => onCardClick(startup)}
-                                onDelete={() => setDeleteStartupId(startup.id)}
-                              />
-                            </div>
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </div>
-                  </div>
-                )}
-              </Droppable>
-            ))}
+                  )}
+                </Droppable>
+              );
+            })}
           </div>
         </DragDropContext>
       </div>
 
-      {/* Diálogo de confirmação para excluir */}
       <AlertDialog open={!!deleteStartupId} onOpenChange={() => setDeleteStartupId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
