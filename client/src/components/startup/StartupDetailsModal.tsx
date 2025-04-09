@@ -15,7 +15,6 @@ import { useQuery } from "@tanstack/react-query";
 import { X, Calendar, MapPin, Users, BarChart3, TrendingUp, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
