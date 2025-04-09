@@ -4,7 +4,9 @@ import {
   type Startup, 
   type InsertStartup, 
   type StartupMember,
-  type InsertStartupMember 
+  type InsertStartupMember,
+  type StartupHistory,
+  type StartupStatusHistory
 } from "@shared/schema";
 
 // Get all startups
@@ -105,5 +107,21 @@ export function useAddTeamMember() {
         queryKey: ['/api/startups', variables.startupId, 'members'] 
       });
     }
+  });
+}
+
+// Get startup history
+export function useStartupHistory(startupId: string | undefined) {
+  return useQuery<StartupHistory[]>({ 
+    queryKey: ['/api/startups', startupId, 'history'],
+    enabled: !!startupId
+  });
+}
+
+// Get startup status history
+export function useStartupStatusHistory(startupId: string | undefined) {
+  return useQuery<StartupStatusHistory[]>({ 
+    queryKey: ['/api/startups', startupId, 'status-history'],
+    enabled: !!startupId
   });
 }

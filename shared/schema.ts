@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, uuid, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // Status table
 export const statuses = pgTable("statuses", {
@@ -94,6 +95,28 @@ export const startupMembers = pgTable("startup_members", {
   linkedin: text("linkedin"),
 });
 
+// Startup history table to track changes
+export const startupHistory = pgTable("startup_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  startup_id: uuid("startup_id").notNull().references(() => startups.id),
+  field_name: text("field_name").notNull(),
+  old_value: text("old_value"),
+  new_value: text("new_value").notNull(),
+  changed_at: timestamp("changed_at").defaultNow().notNull(),
+  changed_by: uuid("changed_by").references(() => users.id),
+});
+
+// Startup status history table to track time spent in each status
+export const startupStatusHistory = pgTable("startup_status_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  startup_id: uuid("startup_id").notNull().references(() => startups.id),
+  status_id: uuid("status_id").notNull().references(() => statuses.id),
+  status_name: text("status_name").notNull(),
+  start_date: timestamp("start_date").defaultNow().notNull(),
+  end_date: timestamp("end_date"),
+  duration_minutes: integer("duration_minutes"),
+});
+
 // Zod Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -121,6 +144,17 @@ export const updateStartupStatusSchema = z.object({
   status_id: z.string().uuid(),
 });
 
+export const insertStartupHistorySchema = createInsertSchema(startupHistory).omit({
+  id: true,
+  changed_at: true,
+});
+
+export const insertStartupStatusHistorySchema = createInsertSchema(startupStatusHistory).omit({
+  id: true,
+  start_date: true,
+  duration_minutes: true,
+});
+
 // TypeScript Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -133,6 +167,12 @@ export type Startup = typeof startups.$inferSelect;
 
 export type InsertStartupMember = z.infer<typeof insertStartupMemberSchema>;
 export type StartupMember = typeof startupMembers.$inferSelect;
+
+export type InsertStartupHistory = z.infer<typeof insertStartupHistorySchema>;
+export type StartupHistory = typeof startupHistory.$inferSelect;
+
+export type InsertStartupStatusHistory = z.infer<typeof insertStartupStatusHistorySchema>;
+export type StartupStatusHistory = typeof startupStatusHistory.$inferSelect;
 
 // Status Enum (for default statuses)
 export const StatusEnum = {
@@ -163,3 +203,28 @@ export const SectorEnum = {
   CLEANTECH: "cleantech",
   OTHER: "other",
 } as const;
+
+// Define relations
+export const startupsRelations = relations(startups, ({ many }) => ({
+  history: many(startupHistory),
+  statusHistory: many(startupStatusHistory),
+  members: many(startupMembers),
+}));
+
+export const startupHistoryRelations = relations(startupHistory, ({ one }) => ({
+  startup: one(startups, {
+    fields: [startupHistory.startup_id],
+    references: [startups.id],
+  }),
+}));
+
+export const startupStatusHistoryRelations = relations(startupStatusHistory, ({ one }) => ({
+  startup: one(startups, {
+    fields: [startupStatusHistory.startup_id],
+    references: [startups.id],
+  }),
+  status: one(statuses, {
+    fields: [startupStatusHistory.status_id],
+    references: [statuses.id],
+  }),
+}));

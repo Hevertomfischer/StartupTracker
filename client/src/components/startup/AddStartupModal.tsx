@@ -39,6 +39,7 @@ import {
   PriorityEnum,
   type Status
 } from "@shared/schema";
+import { StartupHistoryPanel } from "@/components/startup/StartupHistoryPanel";
 import { X } from "lucide-react";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -287,12 +288,13 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
             </DialogDescription>
             
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid grid-cols-5 mb-4">
+              <TabsList className="grid grid-cols-6 mb-4">
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
                 <TabsTrigger value="ceo">CEO</TabsTrigger>
                 <TabsTrigger value="metrics">Metrics</TabsTrigger>
                 <TabsTrigger value="location">Location</TabsTrigger>
                 <TabsTrigger value="details">Details</TabsTrigger>
+                {isEditing && <TabsTrigger value="history">History</TabsTrigger>}
               </TabsList>
               
               {/* Basic Info Tab */}
@@ -811,6 +813,13 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
                   )}
                 />
               </TabsContent>
+              
+              {/* History Tab - Only shown when editing */}
+              {isEditing && startup && (
+                <TabsContent value="history" className="space-y-4">
+                  <StartupHistoryPanel startup={startup} />
+                </TabsContent>
+              )}
             </Tabs>
             
             <DialogFooter className="mt-5 gap-2">

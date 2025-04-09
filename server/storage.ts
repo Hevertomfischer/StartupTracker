@@ -10,7 +10,13 @@ import {
   type InsertStartupMember,
   statuses,
   type Status,
-  type InsertStatus
+  type InsertStatus,
+  startupHistory,
+  type StartupHistory,
+  type InsertStartupHistory,
+  startupStatusHistory,
+  type StartupStatusHistory,
+  type InsertStartupStatusHistory
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, sql } from "drizzle-orm";
@@ -39,6 +45,15 @@ export interface IStorage {
   // Startup member operations
   getStartupMembers(startupId: string): Promise<StartupMember[]>;
   createStartupMember(member: InsertStartupMember): Promise<StartupMember>;
+  
+  // Startup history operations
+  getStartupHistory(startupId: string): Promise<StartupHistory[]>;
+  createStartupHistoryEntry(entry: InsertStartupHistory): Promise<StartupHistory>;
+  
+  // Startup status history operations
+  getStartupStatusHistory(startupId: string): Promise<StartupStatusHistory[]>;
+  createStartupStatusHistoryEntry(entry: InsertStartupStatusHistory): Promise<StartupStatusHistory>;
+  updateStartupStatusHistoryEntry(id: string, endDate: Date): Promise<StartupStatusHistory | undefined>;
   
   // Seed data
   seedDatabase(): Promise<void>;
@@ -115,11 +130,35 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateStartup(id: string, updateData: Partial<InsertStartup>): Promise<Startup | undefined> {
+    // Busca a startup antes da atualização para comparar os campos
+    const oldStartup = await this.getStartup(id);
+    if (!oldStartup) {
+      return undefined;
+    }
+    
     // Always update the updated_at timestamp
     const dataWithTimestamp = {
       ...updateData,
       updated_at: new Date()
     };
+    
+    // Registra o histórico para cada campo que está sendo alterado
+    for (const [key, newValue] of Object.entries(updateData)) {
+      // Ignoramos o status_id pois ele é tratado separadamente no updateStartupStatus
+      if (key === 'status_id' || key === 'updated_at') continue;
+      
+      const oldValue = (oldStartup as any)[key];
+      
+      // Só registra se o valor realmente mudou
+      if (newValue !== oldValue && (newValue || oldValue)) {
+        await this.createStartupHistoryEntry({
+          startup_id: id,
+          field_name: key,
+          old_value: oldValue ? String(oldValue) : 'Não definido',
+          new_value: newValue ? String(newValue) : 'Não definido'
+        });
+      }
+    }
     
     const [updatedStartup] = await db
       .update(startups)
@@ -130,6 +169,51 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateStartupStatus(id: string, status_id: string): Promise<Startup | undefined> {
+    // Busca a startup antes da atualização para obter o status anterior
+    const oldStartup = await this.getStartup(id);
+    if (!oldStartup) {
+      return undefined;
+    }
+    
+    // Busca os detalhes dos status (anterior e novo)
+    const oldStatus = oldStartup.status_id ? await this.getStatus(oldStartup.status_id) : null;
+    const newStatus = await this.getStatus(status_id);
+    
+    if (!newStatus) {
+      console.error("Status not found:", status_id);
+      return undefined;
+    }
+    
+    // Se havia status anterior, fecha o registro de tempo no histórico
+    if (oldStatus) {
+      // Busca o último registro de histórico de status aberto para esta startup
+      const statusHistoryEntries = await this.getStartupStatusHistory(id);
+      const openEntry = statusHistoryEntries.find(entry => !entry.end_date && entry.status_id === oldStatus.id);
+      
+      if (openEntry) {
+        // Fecha o registro com a data atual
+        const now = new Date();
+        await this.updateStartupStatusHistoryEntry(openEntry.id, now);
+      }
+    }
+    
+    // Cria um novo registro de histórico de status
+    const now = new Date();
+    await this.createStartupStatusHistoryEntry({
+      startup_id: id,
+      status_id: status_id,
+      status_name: newStatus.name
+    });
+    
+    // Registra a mudança no histórico geral
+    await this.createStartupHistoryEntry({
+      startup_id: id,
+      field_name: 'status_id',
+      old_value: oldStatus ? `${oldStatus.name} (${oldStatus.id})` : 'Nenhum',
+      new_value: `${newStatus.name} (${newStatus.id})`
+    });
+    
+    // Atualiza o status da startup
     return this.updateStartup(id, { status_id });
   }
   
@@ -152,6 +236,64 @@ export class DatabaseStorage implements IStorage {
       .values(insertMember)
       .returning();
     return member;
+  }
+  
+  // Startup history operations
+  async getStartupHistory(startupId: string): Promise<StartupHistory[]> {
+    return await db
+      .select()
+      .from(startupHistory)
+      .where(eq(startupHistory.startup_id, startupId))
+      .orderBy(desc(startupHistory.changed_at));
+  }
+  
+  async createStartupHistoryEntry(entry: InsertStartupHistory): Promise<StartupHistory> {
+    const [historyEntry] = await db
+      .insert(startupHistory)
+      .values(entry)
+      .returning();
+    return historyEntry;
+  }
+  
+  // Startup status history operations
+  async getStartupStatusHistory(startupId: string): Promise<StartupStatusHistory[]> {
+    return await db
+      .select()
+      .from(startupStatusHistory)
+      .where(eq(startupStatusHistory.startup_id, startupId))
+      .orderBy(desc(startupStatusHistory.start_date));
+  }
+  
+  async createStartupStatusHistoryEntry(entry: InsertStartupStatusHistory): Promise<StartupStatusHistory> {
+    const [historyEntry] = await db
+      .insert(startupStatusHistory)
+      .values(entry)
+      .returning();
+    return historyEntry;
+  }
+  
+  async updateStartupStatusHistoryEntry(id: string, endDate: Date): Promise<StartupStatusHistory | undefined> {
+    // Calcular a duração em minutos
+    const [entry] = await db.select().from(startupStatusHistory).where(eq(startupStatusHistory.id, id));
+    
+    if (!entry) {
+      return undefined;
+    }
+    
+    const startDate = new Date(entry.start_date);
+    const durationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
+    
+    // Atualizar o registro com a data de fim e duração
+    const [updatedEntry] = await db
+      .update(startupStatusHistory)
+      .set({ 
+        end_date: endDate,
+        duration_minutes: durationMinutes
+      })
+      .where(eq(startupStatusHistory.id, id))
+      .returning();
+      
+    return updatedEntry;
   }
   
   // Seed data
@@ -229,7 +371,21 @@ export class DatabaseStorage implements IStorage {
         ];
         
         for (const startup of demoStartups) {
-          await db.insert(startups).values(startup);
+          // Insere a startup
+          const [newStartup] = await db.insert(startups).values(startup).returning();
+          
+          // Cria um registro inicial no histórico de status
+          if (newStartup && newStartup.status_id) {
+            const status = await this.getStatus(newStartup.status_id);
+            if (status) {
+              await db.insert(startupStatusHistory).values({
+                startup_id: newStartup.id,
+                status_id: newStartup.status_id,
+                status_name: status.name,
+                start_date: newStartup.created_at
+              });
+            }
+          }
         }
       }
     }

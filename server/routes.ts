@@ -260,6 +260,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to create startup member" });
     }
   });
+  
+  // Startup history routes
+  app.get("/api/startups/:id/history", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const history = await storage.getStartupHistory(id);
+      return res.status(200).json(history);
+    } catch (error) {
+      console.error("Error fetching startup history:", error);
+      return res.status(500).json({ message: "Failed to fetch startup history" });
+    }
+  });
+  
+  // Startup status history routes
+  app.get("/api/startups/:id/status-history", async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const statusHistory = await storage.getStartupStatusHistory(id);
+      return res.status(200).json(statusHistory);
+    } catch (error) {
+      console.error("Error fetching startup status history:", error);
+      return res.status(500).json({ message: "Failed to fetch startup status history" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
