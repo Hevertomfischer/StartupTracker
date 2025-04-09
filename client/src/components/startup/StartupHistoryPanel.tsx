@@ -36,23 +36,37 @@ export function StartupHistoryPanel({ startup }: StartupHistoryPanelProps) {
   
   // Formatar data e hora
   const formatDateTime = (date: string | Date) => {
-    return format(new Date(date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    try {
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) {
+        return "Data inválida";
+      }
+      return format(dateObj, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    } catch (error) {
+      console.error("Erro ao formatar data:", error, date);
+      return "Data inválida";
+    }
   };
   
   // Formatar duração
   const formatDuration = (minutes?: number | null) => {
-    if (!minutes) return "N/A";
-    
-    const days = Math.floor(minutes / (24 * 60));
-    const hours = Math.floor((minutes % (24 * 60)) / 60);
-    const mins = minutes % 60;
-    
-    const parts = [];
-    if (days > 0) parts.push(`${days} dia${days !== 1 ? 's' : ''}`);
-    if (hours > 0) parts.push(`${hours} hora${hours !== 1 ? 's' : ''}`);
-    if (mins > 0) parts.push(`${mins} minuto${mins !== 1 ? 's' : ''}`);
-    
-    return parts.join(', ');
+    try {
+      if (!minutes || isNaN(minutes)) return "N/A";
+      
+      const days = Math.floor(minutes / (24 * 60));
+      const hours = Math.floor((minutes % (24 * 60)) / 60);
+      const mins = Math.floor(minutes % 60);
+      
+      const parts = [];
+      if (days > 0) parts.push(`${days} dia${days !== 1 ? 's' : ''}`);
+      if (hours > 0) parts.push(`${hours} hora${hours !== 1 ? 's' : ''}`);
+      if (mins > 0) parts.push(`${mins} minuto${mins !== 1 ? 's' : ''}`);
+      
+      return parts.length > 0 ? parts.join(', ') : "Menos de 1 minuto";
+    } catch (error) {
+      console.error("Erro ao formatar duração:", error, minutes);
+      return "N/A";
+    }
   };
   
   return (
