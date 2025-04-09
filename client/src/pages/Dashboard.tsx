@@ -3,7 +3,6 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNavigation } from "@/components/layout/TopNavigation";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { FilterToolbar } from "@/components/startup/FilterToolbar";
-import { StartupDetailsModal } from "@/components/startup/StartupDetailsModal";
 import { AddStartupModal } from "@/components/startup/AddStartupModal";
 import { StatusManagementModal } from "@/components/status/StatusManagementModal";
 import { useStartups } from "@/hooks/use-startup";
@@ -150,10 +149,11 @@ export default function Dashboard() {
 
       {/* Modals */}
       {selectedStartup && (
-        <StartupDetailsModal 
+        <AddStartupModal 
           open={showStartupModal} 
           startup={selectedStartup} 
           onClose={closeStartupDetails} 
+          isEditing={true}
         />
       )}
       <AddStartupModal 

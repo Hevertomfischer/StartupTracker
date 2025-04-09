@@ -48,6 +48,8 @@ import { useToast } from "@/hooks/use-toast";
 type AddStartupModalProps = {
   open: boolean;
   onClose: () => void;
+  startup?: any; // Startup to edit (optional)
+  isEditing?: boolean;
 };
 
 // Extended schema with required fields
@@ -86,7 +88,7 @@ const formSchema = insertStartupSchema.extend({
   observations: z.string().optional(),
 });
 
-export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
+export function AddStartupModal({ open, onClose, startup, isEditing = false }: AddStartupModalProps) {
   const { toast } = useToast();
   
   // Fetch statuses for the dropdown
@@ -129,13 +131,51 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
     },
   });
   
+  // Initialize form with startup data if editing
+  useEffect(() => {
+    if (isEditing && startup) {
+      // Reset the form with startup data
+      const defaultValues = {
+        name: startup.name || "",
+        description: startup.description || "",
+        sector: startup.sector || "tech",
+        status_id: startup.status_id || "",
+        priority: startup.priority || "medium",
+        business_model: startup.business_model || "",
+        website: startup.website || "",
+        ceo_name: startup.ceo_name || "",
+        ceo_email: startup.ceo_email || "",
+        ceo_whatsapp: startup.ceo_whatsapp || "",
+        ceo_linkedin: startup.ceo_linkedin || "",
+        city: startup.city || "",
+        state: startup.state || "",
+        mrr: startup.mrr,
+        client_count: startup.client_count,
+        total_revenue_last_year: startup.total_revenue_last_year,
+        partner_count: startup.partner_count,
+        tam: startup.tam,
+        sam: startup.sam,
+        som: startup.som,
+        founding_date: startup.founding_date || "",
+        observations: startup.observations || "",
+      };
+      
+      // Update the form with the startup data
+      Object.entries(defaultValues).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          form.setValue(key as any, value);
+        }
+      });
+    }
+  }, [form, startup, isEditing, open]);
+  
   // Set the default status when statuses are loaded
   useEffect(() => {
-    if (statuses.length > 0 && !form.getValues().status_id) {
-      // Use the first status as default
+    if (statuses.length > 0 && !form.getValues().status_id && !isEditing) {
+      // Use the first status as default for new startups
       form.setValue('status_id', statuses[0].id);
     }
-  }, [statuses, form]);
+  }, [statuses, form, isEditing]);
   
   const createStartupMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
@@ -161,8 +201,35 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
     },
   });
   
+  const updateStartupMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof formSchema>) => {
+      const response = await apiRequest("PATCH", `/api/startups/${startup?.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
+      onClose();
+      toast({
+        title: "Startup updated",
+        description: "The startup has been successfully updated!",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating startup:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update startup. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+  
   const onSubmit = (data: z.infer<typeof formSchema>) => {
-    createStartupMutation.mutate(data);
+    if (isEditing && startup) {
+      updateStartupMutation.mutate(data);
+    } else {
+      createStartupMutation.mutate(data);
+    }
   };
 
   return (
@@ -182,14 +249,17 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
         
         <DialogHeader>
           <DialogTitle className="text-lg font-medium text-gray-700">
-            Add New Startup
+            {isEditing ? "Edit Startup" : "Add New Startup"}
           </DialogTitle>
         </DialogHeader>
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 mt-4">
             <DialogDescription className="text-sm text-gray-500">
-              Fill in the details to add a new startup to your board.
+              {isEditing 
+                ? "Update the details of this startup." 
+                : "Fill in the details to add a new startup to your board."
+              }
             </DialogDescription>
             
             <Tabs defaultValue="basic" className="w-full">
@@ -731,9 +801,12 @@ export function AddStartupModal({ open, onClose }: AddStartupModalProps) {
               <Button 
                 type="submit"
                 className="w-full sm:w-auto"
-                disabled={createStartupMutation.isPending}
+                disabled={createStartupMutation.isPending || updateStartupMutation.isPending}
               >
-                {createStartupMutation.isPending ? "Adding..." : "Add Startup"}
+                {createStartupMutation.isPending || updateStartupMutation.isPending 
+                  ? (isEditing ? "Saving..." : "Adding...") 
+                  : (isEditing ? "Save Changes" : "Add Startup")
+                }
               </Button>
             </DialogFooter>
           </form>
