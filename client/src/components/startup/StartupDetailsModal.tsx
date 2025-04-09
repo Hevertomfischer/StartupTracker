@@ -15,6 +15,17 @@ import { useQuery } from "@tanstack/react-query";
 import { X, Calendar, MapPin, Users, BarChart3, TrendingUp, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
+import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { StartupSchema } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+
 type StartupDetailsModalProps = {
   open: boolean;
   startup: Startup;
@@ -52,11 +63,25 @@ const getPriorityStyles = (priority: string | null) => {
   return styles[priority as keyof typeof styles] || styles.medium;
 };
 
-export function StartupDetailsModal({ 
-  open, 
-  startup, 
-  onClose 
-}: StartupDetailsModalProps) {
+export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsModalProps) {
+  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  
+  const form = useForm({
+    resolver: zodResolver(StartupSchema),
+    defaultValues: startup
+  });
+
+  const onSubmit = async (data: Startup) => {
+    try {
+      await apiRequest("PATCH", `/api/startups/${startup.id}`, data);
+      await queryClient.invalidateQueries(["/api/startups"]);
+      setIsEditing(false);
+      onClose();
+    } catch (error) {
+      console.error("Failed to update startup:", error);
+    }
+  };
   const sectorStyle = getSectorStyles(startup.sector);
   const priorityStyle = getPriorityStyles(startup.priority);
   
@@ -76,6 +101,7 @@ export function StartupDetailsModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
+          {!isEditing ? (
         <div className="absolute top-0 right-0 pt-4 pr-4">
           <Button 
             variant="ghost" 
@@ -224,9 +250,25 @@ export function StartupDetailsModal({
         </div>
         
         <DialogFooter className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-            Close
-          </Button>
+          {isEditing ? (
+            <>
+              <Button onClick={form.handleSubmit(onSubmit)} className="ml-2">
+                Save Changes
+              </Button>
+              <Button variant="outline" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={() => setIsEditing(true)} className="ml-2">
+                Edit
+              </Button>
+              <Button variant="outline" onClick={onClose}>
+                Close
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

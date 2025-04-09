@@ -19,7 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 type KanbanBoardProps = {
   startups: Startup[];
-  onCardClick: (startup: Startup) => void;
+  onCardClick: (startup: Startup) => Promise<void>;
 };
 
 type KanbanColumn = {

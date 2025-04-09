@@ -24,7 +24,7 @@ export default function Dashboard() {
     priority: ""
   });
   
-  const openStartupDetails = (startup: Startup) => {
+  const openStartupDetails = async (startup: Startup) => {
     setSelectedStartup(startup);
     setShowStartupModal(true);
   };
