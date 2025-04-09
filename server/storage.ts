@@ -130,91 +130,144 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateStartup(id: string, updateData: Partial<InsertStartup>): Promise<Startup | undefined> {
-    // Busca a startup antes da atualização para comparar os campos
-    const oldStartup = await this.getStartup(id);
-    if (!oldStartup) {
-      return undefined;
-    }
-    
-    // Always update the updated_at timestamp
-    const dataWithTimestamp = {
-      ...updateData,
-      updated_at: new Date()
-    };
-    
-    // Registra o histórico para cada campo que está sendo alterado
-    for (const [key, newValue] of Object.entries(updateData)) {
-      // Ignoramos o status_id pois ele é tratado separadamente no updateStartupStatus
-      if (key === 'status_id' || key === 'updated_at') continue;
-      
-      const oldValue = (oldStartup as any)[key];
-      
-      // Só registra se o valor realmente mudou
-      if (newValue !== oldValue && (newValue || oldValue)) {
-        await this.createStartupHistoryEntry({
-          startup_id: id,
-          field_name: key,
-          old_value: oldValue ? String(oldValue) : 'Não definido',
-          new_value: newValue ? String(newValue) : 'Não definido'
-        });
+    try {
+      // Busca a startup antes da atualização para comparar os campos
+      const oldStartup = await this.getStartup(id);
+      if (!oldStartup) {
+        console.log(`Startup não encontrada: ${id}`);
+        return undefined;
       }
+      
+      console.log(`Atualizando startup ${id} com dados:`, updateData);
+      
+      // Always update the updated_at timestamp
+      const dataWithTimestamp = {
+        ...updateData,
+        updated_at: new Date()
+      };
+      
+      // Registra o histórico para cada campo que está sendo alterado
+      for (const [key, newValue] of Object.entries(updateData)) {
+        // Ignoramos o status_id pois ele é tratado separadamente no updateStartupStatus
+        if (key === 'status_id' || key === 'updated_at') continue;
+        
+        const oldValue = (oldStartup as any)[key];
+        
+        // Só registra se o valor realmente mudou
+        if (newValue !== oldValue && (newValue || oldValue)) {
+          console.log(`Registrando alteração no campo ${key}:`, { oldValue, newValue });
+          
+          try {
+            const now = new Date();
+            await db.insert(startupHistory).values({
+              startup_id: id,
+              field_name: key,
+              old_value: oldValue !== null && oldValue !== undefined ? String(oldValue) : 'Não definido',
+              new_value: newValue !== null && newValue !== undefined ? String(newValue) : 'Não definido',
+              changed_at: now
+            });
+            console.log(`Alteração registrada para o campo ${key}`);
+          } catch (error) {
+            console.error(`Erro ao registrar histórico para o campo ${key}:`, error);
+          }
+        }
+      }
+      
+      const [updatedStartup] = await db
+        .update(startups)
+        .set(dataWithTimestamp)
+        .where(eq(startups.id, id))
+        .returning();
+      
+      console.log(`Startup ${id} atualizada com sucesso`);
+      return updatedStartup;
+    } catch (error) {
+      console.error(`Erro ao atualizar startup ${id}:`, error);
+      throw error;
     }
-    
-    const [updatedStartup] = await db
-      .update(startups)
-      .set(dataWithTimestamp)
-      .where(eq(startups.id, id))
-      .returning();
-    return updatedStartup;
   }
   
   async updateStartupStatus(id: string, status_id: string): Promise<Startup | undefined> {
-    // Busca a startup antes da atualização para obter o status anterior
-    const oldStartup = await this.getStartup(id);
-    if (!oldStartup) {
-      return undefined;
-    }
-    
-    // Busca os detalhes dos status (anterior e novo)
-    const oldStatus = oldStartup.status_id ? await this.getStatus(oldStartup.status_id) : null;
-    const newStatus = await this.getStatus(status_id);
-    
-    if (!newStatus) {
-      console.error("Status not found:", status_id);
-      return undefined;
-    }
-    
-    // Se havia status anterior, fecha o registro de tempo no histórico
-    if (oldStatus) {
-      // Busca o último registro de histórico de status aberto para esta startup
-      const statusHistoryEntries = await this.getStartupStatusHistory(id);
-      const openEntry = statusHistoryEntries.find(entry => !entry.end_date && entry.status_id === oldStatus.id);
+    try {
+      console.log(`Atualizando status da startup ${id} para ${status_id}`);
       
-      if (openEntry) {
-        // Fecha o registro com a data atual
-        const now = new Date();
-        await this.updateStartupStatusHistoryEntry(openEntry.id, now);
+      // Busca a startup antes da atualização para obter o status anterior
+      const oldStartup = await this.getStartup(id);
+      if (!oldStartup) {
+        console.log(`Startup não encontrada: ${id}`);
+        return undefined;
       }
+      
+      // Busca os detalhes dos status (anterior e novo)
+      const oldStatus = oldStartup.status_id ? await this.getStatus(oldStartup.status_id) : null;
+      const newStatus = await this.getStatus(status_id);
+      
+      if (!newStatus) {
+        console.error(`Status não encontrado: ${status_id}`);
+        return undefined;
+      }
+      
+      console.log(`Alterando status de ${oldStatus?.name || 'Nenhum'} para ${newStatus.name}`);
+      
+      // Se havia status anterior, fecha o registro de tempo no histórico
+      if (oldStatus) {
+        // Busca o último registro de histórico de status aberto para esta startup
+        const statusHistoryEntries = await this.getStartupStatusHistory(id);
+        const openEntry = statusHistoryEntries.find(entry => !entry.end_date && entry.status_id === oldStatus.id);
+        
+        if (openEntry) {
+          // Fecha o registro com a data atual
+          const now = new Date();
+          console.log(`Fechando registro de status anterior (${openEntry.id}) com timestamp ${now.toISOString()}`);
+          await this.updateStartupStatusHistoryEntry(openEntry.id, now);
+        } else {
+          console.log(`Nenhum registro aberto encontrado para o status anterior ${oldStatus.id}`);
+        }
+      }
+      
+      // Cria um novo registro de histórico de status
+      const now = new Date();
+      try {
+        console.log(`Criando novo registro no histórico de status para ${newStatus.name}`);
+        await db.insert(startupStatusHistory).values({
+          startup_id: id,
+          status_id: status_id,
+          status_name: newStatus.name,
+          start_date: now
+        });
+      } catch (error) {
+        console.error(`Erro ao criar registro de histórico de status:`, error);
+      }
+      
+      // Registra a mudança no histórico geral
+      try {
+        console.log(`Registrando alteração de status no histórico geral`);
+        await db.insert(startupHistory).values({
+          startup_id: id,
+          field_name: 'status_id',
+          old_value: oldStatus ? `${oldStatus.name} (${oldStatus.id})` : 'Nenhum',
+          new_value: `${newStatus.name} (${newStatus.id})`
+        });
+      } catch (error) {
+        console.error(`Erro ao registrar alteração de status no histórico geral:`, error);
+      }
+      
+      // Atualiza o status da startup sem registrar no histórico novamente
+      const [updatedStartup] = await db
+        .update(startups)
+        .set({ 
+          status_id: status_id,
+          updated_at: now
+        })
+        .where(eq(startups.id, id))
+        .returning();
+      
+      console.log(`Status da startup ${id} atualizado com sucesso`);
+      return updatedStartup;
+    } catch (error) {
+      console.error(`Erro ao atualizar status da startup ${id}:`, error);
+      throw error;
     }
-    
-    // Cria um novo registro de histórico de status
-    const now = new Date();
-    await this.createStartupStatusHistoryEntry({
-      startup_id: id,
-      status_id: status_id,
-      status_name: newStatus.name
-    });
-    
-    // Registra a mudança no histórico geral
-    await this.createStartupHistoryEntry({
-      startup_id: id,
-      field_name: 'status_id',
-      old_value: oldStatus ? `${oldStatus.name} (${oldStatus.id})` : 'Nenhum',
-      new_value: `${newStatus.name} (${newStatus.id})`
-    });
-    
-    // Atualiza o status da startup
-    return this.updateStartup(id, { status_id });
   }
   
   async deleteStartup(id: string): Promise<boolean> {
