@@ -107,6 +107,9 @@ export const insertStartupSchema = createInsertSchema(startups).omit({
   id: true,
   created_at: true,
   updated_at: true,
+}).extend({
+  // Allow founding_date to be null
+  founding_date: z.string().nullable().optional(),
 });
 
 export const insertStartupMemberSchema = createInsertSchema(startupMembers).omit({

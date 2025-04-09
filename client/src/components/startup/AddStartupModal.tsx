@@ -82,8 +82,8 @@ const formSchema = insertStartupSchema.extend({
   sam: z.coerce.number().optional(),
   som: z.coerce.number().optional(),
   
-  // Dates - keep as string for compatibility with HTML date input
-  founding_date: z.string().optional(),
+  // Dates - use string or null for compatibility
+  founding_date: z.string().optional().or(z.null()),
   
   observations: z.string().optional(),
 });
@@ -225,10 +225,34 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
   });
   
   const onSubmit = (data: z.infer<typeof formSchema>) => {
+    // Prepare data for submission
+    const submissionData = { ...data };
+    
+    // Handle `founding_date` - convert empty string to null
+    // or properly formatted date string to avoid database validation errors
+    if (submissionData.founding_date === "") {
+      submissionData.founding_date = null;
+    } else if (submissionData.founding_date) {
+      // Make sure date is in ISO format for API
+      try {
+        const dateObj = new Date(submissionData.founding_date);
+        if (!isNaN(dateObj.getTime())) {
+          submissionData.founding_date = dateObj.toISOString();
+        } else {
+          submissionData.founding_date = null;
+        }
+      } catch (error) {
+        console.error("Invalid date:", error);
+        submissionData.founding_date = null;
+      }
+    }
+
+    console.log("Submitting data:", submissionData);
+    
     if (isEditing && startup) {
-      updateStartupMutation.mutate(data);
+      updateStartupMutation.mutate(submissionData);
     } else {
-      createStartupMutation.mutate(data);
+      createStartupMutation.mutate(submissionData);
     }
   };
 

@@ -112,13 +112,14 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
         );
       });
       
-      // Montar corpo da requisição
+      // Montar corpo da requisição - esta API é diferente da API de atualização completa
+      // Ela usa apenas o campo status_id
       const requestBody = { status_id: newStatusId };
       
       console.log('Sending PATCH request to:', `/api/startups/${startup.id}/status`);
       console.log('With body:', requestBody);
       
-      // Atualizar no servidor
+      // Atualizar no servidor usando a API específica para atualização de status
       await apiRequest(
         "PATCH", 
         `/api/startups/${startup.id}/status`, 
