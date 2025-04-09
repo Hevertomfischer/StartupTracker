@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { 
   DragDropContext, 
   Droppable, 
@@ -32,6 +32,19 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   const { toast } = useToast();
   const [draggingStartupId, setDraggingStartupId] = useState<string | null>(null);
   const [deleteStartupId, setDeleteStartupId] = useState<string | null>(null);
+  const [draggableMap, setDraggableMap] = useState<Record<string, string>>({});
+
+  // Inicializa um mapa de IDs para garantir consistência
+  useEffect(() => {
+    const map: Record<string, string> = {};
+    startups.forEach(startup => {
+      map[startup.id] = String(startup.id);
+    });
+    setDraggableMap(map);
+    
+    // Log para debugging
+    console.log("Draggable IDs map initialized:", map);
+  }, [startups]);
 
   const { data: statuses } = useQuery({
     queryKey: ['/api/statuses'],
@@ -66,6 +79,10 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   }, [columns, startups]);
 
   const handleDragStart = (result: any) => {
+    console.log('🔄 Drag start:', { 
+      draggableId: result.draggableId,
+      source: result.source
+    });
     setDraggingStartupId(result.draggableId);
   };
 
@@ -74,26 +91,65 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
 
     const { destination, source, draggableId } = result;
 
-    // Para debugging
-    console.log('Drag result:', { destination, source, draggableId });
+    // Log mais detalhado para debugging
+    console.log('Drag result:', { 
+      destination, 
+      source, 
+      draggableId,
+      draggableIdType: typeof draggableId
+    });
     
     if (!destination || 
         (destination.droppableId === source.droppableId && 
          destination.index === source.index)) {
+      console.log('Dropping in same position or outside valid area. Ignoring.');
       return;
     }
 
-    // Encontrar o startup pelo ID
-    // Converter de string para o formato original ID
-    const startup = startups.find(s => s.id === draggableId);
+    // Tentar encontrar o startup de várias maneiras para robustez
+    let startup = startups.find(s => String(s.id) === draggableId);
+    
+    // Se não encontrar pelo método padrão, tentar outras alternativas
     if (!startup) {
-      console.error('Startup not found:', draggableId);
-      console.log('Available startups:', startups.map(s => s.id));
+      // Tentar encontrar pelo ID no mapa
+      for (const [originalId, mappedId] of Object.entries(draggableMap)) {
+        if (mappedId === draggableId) {
+          startup = startups.find(s => s.id === originalId);
+          if (startup) {
+            console.log('✅ Startup encontrado usando o draggableMap:', startup);
+            break;
+          }
+        }
+      }
+    }
+    
+    // Se ainda não encontrou, registrar erro detalhado
+    if (!startup) {
+      console.error('❌ Startup não encontrado com ID:', draggableId);
+      console.log('🔍 Informações de depuração:');
+      console.log('- draggableId:', draggableId, 'tipo:', typeof draggableId);
+      console.log('- draggableMap:', draggableMap);
+      console.log('- Startups disponíveis:');
+      startups.forEach(s => {
+        console.log(`  ID: ${s.id}, Tipo: ${typeof s.id}, Correspondência: ${String(s.id) === draggableId}`);
+      });
+      
+      // Notificar o usuário sobre o erro
+      toast({
+        title: "Erro de Arrastar e Soltar",
+        description: "Não foi possível encontrar o card arrastado. Tente novamente.",
+        variant: "destructive",
+      });
       return;
     }
     
-    // Log de debugging
-    console.log('Found startup:', startup);
+    // Log de sucesso detalhado
+    console.log('✅ Startup encontrado:', { 
+      id: startup.id, 
+      name: startup.name,
+      source_status: source.droppableId,
+      destination_status: destination.droppableId 
+    });
 
     const oldData = queryClient.getQueryData<Startup[]>(['/api/startups']);
 
@@ -197,7 +253,7 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
                       {columnStartupsMap[column.id]?.map((startup, index) => (
                         <Draggable
                           key={startup.id}
-                          draggableId={String(startup.id)}
+                          draggableId={draggableMap[startup.id] || String(startup.id)}
                           index={index}
                         >
                           {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
