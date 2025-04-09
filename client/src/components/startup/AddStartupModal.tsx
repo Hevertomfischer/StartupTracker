@@ -179,8 +179,8 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
   
   const createStartupMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      const response = await apiRequest("POST", "/api/startups", data);
-      return response.json();
+      // apiRequest já retorna os dados JSON processados
+      return await apiRequest("POST", "/api/startups", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
@@ -203,8 +203,8 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
   
   const updateStartupMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      const response = await apiRequest("PATCH", `/api/startups/${startup?.id}`, data);
-      return response.json();
+      // apiRequest já retorna os dados JSON processados
+      return await apiRequest("PATCH", `/api/startups/${startup?.id}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
