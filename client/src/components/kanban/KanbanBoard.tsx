@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { StartupCard } from "./StartupCard";
 import { type Startup, type Status } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -56,6 +56,14 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   const getStartupsForColumn = useCallback((columnId: string) => {
     return startups.filter(startup => startup.status_id === columnId);
   }, [startups]);
+  
+  // Log de diagnóstico para verificar IDs de colunas e startups
+  useEffect(() => {
+    if (startups.length > 0 && columns.length > 0) {
+      console.log('Colunas disponíveis:', columns.map(c => c.id));
+      console.log('Startups status_ids:', startups.map(s => s.status_id));
+    }
+  }, [startups, columns]);
 
   // Manipulador para quando o arrastar termina
   const handleDragEnd = useCallback(async (result: DropResult) => {
@@ -70,38 +78,51 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
       return;
     }
 
-    // Extrair ID original do startup do draggableId
-    const startupId = draggableId;
-    console.log('Extracted startup ID:', startupId);
-    
-    // Encontrar o startup pelo ID
-    const startup = startups.find(s => s.id === startupId);
-    
-    if (!startup) {
-      console.error('Startup not found with ID:', startupId);
-      console.log('All available startup IDs:', startups.map(s => s.id));
-      toast({
-        title: "Erro",
-        description: "Não foi possível encontrar o item arrastado.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Status de destino
-    const newStatusId = destination.droppableId;
-    
-    console.log('Moving startup:', {
-      startupId: startup.id,
-      startupName: startup.name,
-      fromStatus: source.droppableId,
-      toStatus: newStatusId
-    });
-    
-    // Backup para caso de erro
-    const oldData = queryClient.getQueryData<Startup[]>(['/api/startups']);
-    
     try {
+      // Primeiro verificamos se a coluna de destino existe
+      const targetColumn = columns.find(col => col.id === destination.droppableId);
+      if (!targetColumn) {
+        console.error(`Coluna de destino não encontrada: ${destination.droppableId}`);
+        console.log('Colunas disponíveis:', columns.map(c => ({ id: c.id, name: c.name })));
+        toast({
+          title: "Erro",
+          description: "Coluna de destino não encontrada",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Extrair ID original do startup do draggableId
+      const startupId = draggableId;
+      console.log('Extracted startup ID:', startupId);
+      
+      // Encontrar o startup pelo ID
+      const startup = startups.find(s => s.id === startupId);
+      
+      if (!startup) {
+        console.error('Startup not found with ID:', startupId);
+        console.log('All available startup IDs:', startups.map(s => s.id));
+        toast({
+          title: "Erro",
+          description: "Não foi possível encontrar o item arrastado.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Status de destino
+      const newStatusId = targetColumn.id;
+      
+      console.log('Moving startup:', {
+        startupId: startup.id,
+        startupName: startup.name,
+        fromStatus: source.droppableId,
+        toStatus: newStatusId
+      });
+      
+      // Backup para caso de erro
+      const oldData = queryClient.getQueryData<Startup[]>(['/api/startups']);
+      
       // Atualizar UI primeiro (otimista)
       queryClient.setQueryData(['/api/startups'], (old: Startup[] | undefined) => {
         if (!old) return old;
@@ -135,15 +156,17 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
       });
     } catch (error) {
       console.error('Error moving card:', error);
-      // Desfazer mudanças em caso de erro
-      queryClient.setQueryData(['/api/startups'], oldData);
-      toast({
-        title: "Erro",
-        description: "Falha ao mover o card",
-        variant: "destructive",
-      });
+      // Para erros específicos do react-beautiful-dnd, não vamos mostrar o toast
+      // pois já há mensagens de erro no console
+      if (!String(error).includes('Invariant failed')) {
+        toast({
+          title: "Erro",
+          description: "Falha ao mover o card",
+          variant: "destructive",
+        });
+      }
     }
-  }, [startups, toast]);
+  }, [startups, toast, columns]);
 
   // Manipulador para excluir um startup
   const handleDeleteStartup = async () => {
