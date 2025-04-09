@@ -133,6 +133,17 @@ export const insertStartupSchema = createInsertSchema(startups).omit({
 }).extend({
   // Allow founding_date to be null
   founding_date: z.string().nullable().optional(),
+  // Ensure numeric fields can be strings or numbers
+  mrr: z.union([z.string(), z.number()]).nullable().optional(),
+  accumulated_revenue_current_year: z.union([z.string(), z.number()]).nullable().optional(),
+  total_revenue_last_year: z.union([z.string(), z.number()]).nullable().optional(),
+  total_revenue_previous_year: z.union([z.string(), z.number()]).nullable().optional(),
+  tam: z.union([z.string(), z.number()]).nullable().optional(),
+  sam: z.union([z.string(), z.number()]).nullable().optional(),
+  som: z.union([z.string(), z.number()]).nullable().optional(),
+  // Ensure integer fields can be strings or numbers
+  client_count: z.union([z.string(), z.number()]).nullable().optional(),
+  partner_count: z.union([z.string(), z.number()]).nullable().optional(),
 });
 
 export const insertStartupMemberSchema = createInsertSchema(startupMembers).omit({

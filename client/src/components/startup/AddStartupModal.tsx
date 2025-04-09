@@ -72,16 +72,18 @@ const formSchema = insertStartupSchema.extend({
   city: z.string().optional(),
   state: z.string().optional(),
   
-  // Financial Metrics - using coerce for proper number conversion
-  mrr: z.coerce.number().optional(),
-  client_count: z.coerce.number().int().optional(),
-  total_revenue_last_year: z.coerce.number().optional(),
-  partner_count: z.coerce.number().int().optional(),
+  // Financial Metrics - accept string or number
+  mrr: z.union([z.string(), z.number()]).nullable().optional(),
+  client_count: z.union([z.string(), z.number()]).nullable().optional(),
+  accumulated_revenue_current_year: z.union([z.string(), z.number()]).nullable().optional(),
+  total_revenue_last_year: z.union([z.string(), z.number()]).nullable().optional(),
+  total_revenue_previous_year: z.union([z.string(), z.number()]).nullable().optional(),
+  partner_count: z.union([z.string(), z.number()]).nullable().optional(),
   
   // Market Metrics
-  tam: z.coerce.number().optional(),
-  sam: z.coerce.number().optional(),
-  som: z.coerce.number().optional(),
+  tam: z.union([z.string(), z.number()]).nullable().optional(),
+  sam: z.union([z.string(), z.number()]).nullable().optional(),
+  som: z.union([z.string(), z.number()]).nullable().optional(),
   
   // Dates - use string or null for compatibility
   founding_date: z.string().optional().or(z.null()),
