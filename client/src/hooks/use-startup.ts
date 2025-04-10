@@ -135,7 +135,7 @@ export function useStartupStatusHistory(startupId: string | undefined) {
     queryKey: ['/api/startups', startupId, 'status-history'],
     queryFn: async ({ queryKey }) => {
       if (!startupId) return [];
-      return await apiRequest(`/api/startups/${startupId}/status-history`, { method: 'GET' });
+      return await apiRequest('GET', `/api/startups/${startupId}/status-history`);
     },
     enabled: !!startupId,
     retry: 1
