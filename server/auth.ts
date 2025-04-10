@@ -1,13 +1,12 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import { Express, Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser, UserRoleEnum } from "@shared/schema";
-import connectPg from "connect-pg-simple";
-import { pool } from "./db";
+import createMemoryStore from "memorystore";
 
 declare global {
   namespace Express {
@@ -31,11 +30,9 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  const PostgresSessionStore = connectPg(session);
-  const sessionStore = new PostgresSessionStore({ 
-    pool,
-    tableName: "user_sessions",
-    createTableIfMissing: true 
+  const MemoryStore = createMemoryStore(session);
+  const sessionStore = new MemoryStore({
+    checkPeriod: 86400000 // prune expired entries every 24h
   });
 
   const sessionSettings: session.SessionOptions = {
@@ -121,7 +118,7 @@ export function setupAuth(app: Express) {
 /**
  * Middleware para verificar se o usuário está autenticado
  */
-export function isAuthenticated(req, res, next) {
+export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   if (req.isAuthenticated()) {
     return next();
   }
@@ -132,7 +129,7 @@ export function isAuthenticated(req, res, next) {
  * Middleware para verificar se o usuário possui o perfil necessário
  */
 export function hasRole(roles: string[]) {
-  return (req, res, next) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Authentication required" });
     }
@@ -148,13 +145,13 @@ export function hasRole(roles: string[]) {
 /**
  * Middleware para verificar se o usuário é administrador
  */
-export function isAdmin(req, res, next) {
+export function isAdmin(req: Request, res: Response, next: NextFunction) {
   return hasRole([UserRoleEnum.ADMIN])(req, res, next);
 }
 
 /**
  * Middleware para verificar se o usuário é investidor
  */
-export function isInvestor(req, res, next) {
+export function isInvestor(req: Request, res: Response, next: NextFunction) {
   return hasRole([UserRoleEnum.ADMIN, UserRoleEnum.INVESTOR])(req, res, next);
 }

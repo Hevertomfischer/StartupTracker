@@ -12,6 +12,9 @@ import { fromZodError } from "zod-validation-error";
 import { setupAuth, isAuthenticated, isAdmin, isInvestor } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication
+  setupAuth(app);
+  
   // Initialize database with seed data
   try {
     await storage.seedDatabase();
@@ -21,7 +24,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Status routes
-  app.get("/api/statuses", async (req: Request, res: Response) => {
+  app.get("/api/statuses", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const statuses = await storage.getStatuses();
       return res.status(200).json(statuses);
@@ -31,7 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/statuses/:id", async (req: Request, res: Response) => {
+  app.get("/api/statuses/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
       const status = await storage.getStatus(id);
@@ -45,7 +48,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/statuses", async (req: Request, res: Response) => {
+  app.post("/api/statuses", isAdmin, async (req: Request, res: Response) => {
     try {
       const data = insertStatusSchema.parse(req.body);
       const status = await storage.createStatus(data);
@@ -60,7 +63,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/statuses/:id", async (req: Request, res: Response) => {
+  app.patch("/api/statuses/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
       const data = insertStatusSchema.partial().parse(req.body);
@@ -79,7 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/statuses/:id", async (req: Request, res: Response) => {
+  app.delete("/api/statuses/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
       const success = await storage.deleteStatus(id);
