@@ -117,7 +117,12 @@ export function useStartupHistory(startupId: string | undefined) {
   
   return useQuery<StartupHistory[]>({ 
     queryKey: ['/api/startups', startupId, 'history'],
-    enabled: !!startupId
+    queryFn: async ({ queryKey }) => {
+      if (!startupId) return [];
+      return await apiRequest('GET', `/api/startups/${startupId}/history`);
+    },
+    enabled: !!startupId,
+    retry: 1
   });
 }
 
@@ -128,6 +133,11 @@ export function useStartupStatusHistory(startupId: string | undefined) {
   
   return useQuery<StartupStatusHistory[]>({ 
     queryKey: ['/api/startups', startupId, 'status-history'],
-    enabled: !!startupId
+    queryFn: async ({ queryKey }) => {
+      if (!startupId) return [];
+      return await apiRequest(`/api/startups/${startupId}/status-history`, { method: 'GET' });
+    },
+    enabled: !!startupId,
+    retry: 1
   });
 }

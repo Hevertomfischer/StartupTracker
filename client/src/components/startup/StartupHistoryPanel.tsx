@@ -41,7 +41,9 @@ export function StartupHistoryPanel({ startup }: StartupHistoryPanelProps) {
   const statusHistoryError = statusHistoryResult.error;
 
   console.log("History Data:", historyData);
+  console.log("History Data Type:", Array.isArray(historyData) ? "Array" : typeof historyData);
   console.log("Status History Data:", statusHistoryData);
+  console.log("Status History Data Type:", Array.isArray(statusHistoryData) ? "Array" : typeof statusHistoryData);
   console.log("History Error:", historyError);
   console.log("Status History Error:", statusHistoryError);
   
