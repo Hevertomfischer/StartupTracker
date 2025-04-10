@@ -35,7 +35,7 @@ import { Loader2 } from "lucide-react";
 
 // Formulário de login
 const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
+  username: z.string().email("Email inválido"), // Passport usa 'username'
   password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
 });
 
@@ -46,13 +46,17 @@ function LoginForm() {
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
 
   function onSubmit(data: LoginFormData) {
-    loginMutation.mutate(data);
+    // Enviamos como username por causa do Passport.js
+    loginMutation.mutate({
+      username: data.username,
+      password: data.password
+    });
   }
 
   return (

@@ -78,8 +78,11 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
+      console.log("Registro - Corpo da requisição:", req.body);
+      
       const existingUser = await storage.getUserByEmail(req.body.email);
       if (existingUser) {
+        console.log("Registro - Email já existe:", req.body.email);
         return res.status(400).json({ message: "Email already exists" });
       }
 
@@ -88,18 +91,47 @@ export function setupAuth(app: Express) {
         ...req.body,
         password: hashedPassword,
       });
+      
+      console.log("Registro - Usuário criado com sucesso:", { id: user.id, email: user.email, role: user.role });
 
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Registro - Erro no login automático:", err);
+          return next(err);
+        }
+        console.log("Registro - Login automático realizado com sucesso");
         res.status(201).json(user);
       });
     } catch (error) {
+      console.error("Registro - Erro:", error);
       next(error);
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.status(200).json(req.user);
+  app.post("/api/login", (req, res, next) => {
+    console.log("Login - Tentativa com email:", req.body.email || req.body.username);
+    
+    passport.authenticate("local", (err: any, user: SelectUser | false, info: any) => {
+      if (err) {
+        console.error("Login - Erro de autenticação:", err);
+        return next(err);
+      }
+      
+      if (!user) {
+        console.log("Login - Usuário não encontrado ou senha incorreta");
+        return res.status(401).json({ message: info?.message || "Invalid credentials" });
+      }
+      
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Login - Erro ao fazer login:", err);
+          return next(err);
+        }
+        
+        console.log("Login - Sucesso para usuário:", { id: user.id, email: user.email, role: user.role });
+        return res.status(200).json(user);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
@@ -110,8 +142,14 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    res.json(req.user);
+    console.log("GET /api/user - isAuthenticated:", req.isAuthenticated());
+    if (req.isAuthenticated()) {
+      console.log("GET /api/user - Usuário autenticado:", { id: req.user.id, email: req.user.email, role: req.user.role });
+      return res.json(req.user);
+    } else {
+      console.log("GET /api/user - Usuário não autenticado");
+      return res.status(401).json({ message: "Not authenticated" });
+    }
   });
 }
 

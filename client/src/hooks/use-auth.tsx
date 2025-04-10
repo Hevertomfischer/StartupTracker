@@ -18,7 +18,7 @@ type AuthContextType = {
 };
 
 type LoginData = {
-  email: string;
+  username: string; // Nome do campo usado pelo passport-local
   password: string;
 };
 
