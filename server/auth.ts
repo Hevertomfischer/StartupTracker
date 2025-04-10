@@ -98,7 +98,9 @@ export function setupAuth(app: Express) {
       const existingUser = await storage.getUserByEmail(req.body.email);
       if (existingUser) {
         console.log("Registro - Email já existe:", req.body.email);
-        return res.status(400).json({ message: "Email already exists" });
+        return res.status(400).json({ 
+          message: "Este e-mail já está cadastrado. Por favor, utilize outro e-mail ou faça login com sua conta existente." 
+        });
       }
 
       const hashedPassword = await hashPassword(req.body.password);
@@ -134,7 +136,11 @@ export function setupAuth(app: Express) {
       
       if (!user) {
         console.log("Login - Usuário não encontrado ou senha incorreta");
-        return res.status(401).json({ message: info?.message || "Invalid credentials" });
+        return res.status(401).json({ 
+          message: info?.message === "Usuário não encontrado" 
+            ? "E-mail não encontrado. Por favor, verifique se o e-mail está correto ou crie uma nova conta." 
+            : "Senha incorreta. Por favor, verifique sua senha e tente novamente."
+        });
       }
       
       req.login(user, (err) => {
@@ -163,7 +169,7 @@ export function setupAuth(app: Express) {
       return res.json(req.user);
     } else {
       console.log("GET /api/user - Usuário não autenticado");
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.status(401).json({ message: "Usuário não autenticado. Por favor, faça login para continuar." });
     }
   });
 }
@@ -175,7 +181,7 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
   if (req.isAuthenticated()) {
     return next();
   }
-  res.status(401).json({ message: "Authentication required" });
+  res.status(401).json({ message: "Autenticação necessária. Por favor, faça login para acessar este recurso." });
 }
 
 /**
@@ -184,14 +190,14 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
 export function hasRole(roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Authentication required" });
+      return res.status(401).json({ message: "Autenticação necessária. Por favor, faça login para acessar este recurso." });
     }
     
     if (roles.includes(req.user.role)) {
       return next();
     }
     
-    res.status(403).json({ message: "Access denied. Insufficient permissions." });
+    res.status(403).json({ message: "Acesso negado. Você não possui permissões suficientes para acessar este recurso." });
   };
 }
 
