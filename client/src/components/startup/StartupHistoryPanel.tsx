@@ -29,12 +29,16 @@ export function StartupHistoryPanel({ startup }: StartupHistoryPanelProps) {
   console.log("Startup ID:", startup.id);
   
   // Carregar histórico
-  const { data: historyData, isLoading: isHistoryLoading, error: historyError } = 
-    useStartupHistory(startup.id);
+  const historyResult = useStartupHistory(startup.id);
+  const historyData = historyResult.data || [];
+  const isHistoryLoading = historyResult.isLoading;
+  const historyError = historyResult.error;
   
   // Carregar histórico de status
-  const { data: statusHistoryData, isLoading: isStatusHistoryLoading, error: statusHistoryError } = 
-    useStartupStatusHistory(startup.id);
+  const statusHistoryResult = useStartupStatusHistory(startup.id);
+  const statusHistoryData = statusHistoryResult.data || [];
+  const isStatusHistoryLoading = statusHistoryResult.isLoading;
+  const statusHistoryError = statusHistoryResult.error;
 
   console.log("History Data:", historyData);
   console.log("Status History Data:", statusHistoryData);

@@ -112,32 +112,22 @@ export function useAddTeamMember() {
 
 // Get startup history
 export function useStartupHistory(startupId: string | undefined) {
+  const endpoint = startupId ? `/api/startups/${startupId}/history` : null;
+  console.log("Endpoint história:", endpoint);
+  
   return useQuery<StartupHistory[]>({ 
     queryKey: ['/api/startups', startupId, 'history'],
-    enabled: !!startupId,
-    staleTime: 0, // Garantir que sempre busca dados frescos
-    retry: 2,
-    onError: (error) => {
-      console.error("Erro ao buscar histórico da startup:", error);
-    },
-    onSuccess: (data) => {
-      console.log("Histórico carregado com sucesso:", data?.length || 0, "registros");
-    }
+    enabled: !!startupId
   });
 }
 
 // Get startup status history
 export function useStartupStatusHistory(startupId: string | undefined) {
+  const endpoint = startupId ? `/api/startups/${startupId}/status-history` : null;
+  console.log("Endpoint histórico de status:", endpoint);
+  
   return useQuery<StartupStatusHistory[]>({ 
     queryKey: ['/api/startups', startupId, 'status-history'],
-    enabled: !!startupId,
-    staleTime: 0, // Garantir que sempre busca dados frescos
-    retry: 2,
-    onError: (error) => {
-      console.error("Erro ao buscar histórico de status da startup:", error);
-    },
-    onSuccess: (data) => {
-      console.log("Histórico de status carregado com sucesso:", data?.length || 0, "registros");
-    }
+    enabled: !!startupId
   });
 }

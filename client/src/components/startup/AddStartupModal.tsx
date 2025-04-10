@@ -819,6 +819,9 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
               {/* History Tab - Only shown when editing */}
               {isEditing && startup && (
                 <TabsContent value="history" className="space-y-4">
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-500">ID da Startup: {startup.id}</p>
+                  </div>
                   <StartupHistoryPanel startup={startup} />
                 </TabsContent>
               )}
