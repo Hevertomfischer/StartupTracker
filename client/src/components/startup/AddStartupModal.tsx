@@ -289,7 +289,7 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
               }
             </DialogDescription>
             
-            <Tabs defaultValue="basic" className="w-full">
+            <Tabs defaultValue={isEditing ? "history" : "basic"} className="w-full">
               <TabsList className="grid grid-cols-6 mb-4">
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
                 <TabsTrigger value="ceo">CEO</TabsTrigger>
