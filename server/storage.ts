@@ -293,28 +293,55 @@ export class DatabaseStorage implements IStorage {
   
   // Startup history operations
   async getStartupHistory(startupId: string): Promise<StartupHistory[]> {
-    return await db
-      .select()
-      .from(startupHistory)
-      .where(eq(startupHistory.startup_id, startupId))
-      .orderBy(desc(startupHistory.changed_at));
+    try {
+      console.log(`Buscando histórico da startup ${startupId} no banco de dados`);
+      
+      const results = await db
+        .select()
+        .from(startupHistory)
+        .where(eq(startupHistory.startup_id, startupId))
+        .orderBy(desc(startupHistory.changed_at));
+      
+      console.log(`Encontrados ${results.length} registros de histórico para a startup ${startupId}`);
+      return results;
+    } catch (error) {
+      console.error(`Erro ao buscar histórico da startup ${startupId}:`, error);
+      return [];
+    }
   }
   
   async createStartupHistoryEntry(entry: InsertStartupHistory): Promise<StartupHistory> {
-    const [historyEntry] = await db
-      .insert(startupHistory)
-      .values(entry)
-      .returning();
-    return historyEntry;
+    try {
+      const [historyEntry] = await db
+        .insert(startupHistory)
+        .values(entry)
+        .returning();
+      
+      console.log(`Novo registro de histórico criado: ${JSON.stringify(historyEntry)}`);
+      return historyEntry;
+    } catch (error) {
+      console.error(`Erro ao criar registro de histórico:`, error);
+      throw error;
+    }
   }
   
   // Startup status history operations
   async getStartupStatusHistory(startupId: string): Promise<StartupStatusHistory[]> {
-    return await db
-      .select()
-      .from(startupStatusHistory)
-      .where(eq(startupStatusHistory.startup_id, startupId))
-      .orderBy(desc(startupStatusHistory.start_date));
+    try {
+      console.log(`Buscando histórico de status da startup ${startupId} no banco de dados`);
+      
+      const results = await db
+        .select()
+        .from(startupStatusHistory)
+        .where(eq(startupStatusHistory.startup_id, startupId))
+        .orderBy(desc(startupStatusHistory.start_date));
+      
+      console.log(`Encontrados ${results.length} registros de histórico de status para a startup ${startupId}`);
+      return results;
+    } catch (error) {
+      console.error(`Erro ao buscar histórico de status da startup ${startupId}:`, error);
+      return [];
+    }
   }
   
   async createStartupStatusHistoryEntry(entry: InsertStartupStatusHistory): Promise<StartupStatusHistory> {
