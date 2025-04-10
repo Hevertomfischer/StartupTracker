@@ -40,10 +40,13 @@ export function StartupHistoryPanel({ startup }: StartupHistoryPanelProps) {
   const isStatusHistoryLoading = statusHistoryResult.isLoading;
   const statusHistoryError = statusHistoryResult.error;
 
+  console.log("Startup ID no painel de histórico:", startup.id);
   console.log("History Data:", historyData);
   console.log("History Data Type:", Array.isArray(historyData) ? "Array" : typeof historyData);
+  console.log("History Data Length:", Array.isArray(historyData) ? historyData.length : 0);
   console.log("Status History Data:", statusHistoryData);
   console.log("Status History Data Type:", Array.isArray(statusHistoryData) ? "Array" : typeof statusHistoryData);
+  console.log("Status History Data Length:", Array.isArray(statusHistoryData) ? statusHistoryData.length : 0);
   console.log("History Error:", historyError);
   console.log("Status History Error:", statusHistoryError);
   
