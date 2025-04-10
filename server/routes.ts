@@ -318,14 +318,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const status = await storage.getStatus(startup.status_id);
           if (status) {
             // Criar um registro de histórico de status para teste
-            const now = new Date();
-            const startDate = new Date(now.getTime() - (24 * 60 * 60 * 1000)); // 1 dia atrás
-            
             await storage.createStartupStatusHistoryEntry({
               startup_id: id,
               status_id: startup.status_id,
-              status_name: status.name,
-              start_date: startDate
+              status_name: status.name
             });
             
             // Buscar novamente

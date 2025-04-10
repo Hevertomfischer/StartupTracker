@@ -162,7 +162,6 @@ export const insertStartupHistorySchema = createInsertSchema(startupHistory).omi
 
 export const insertStartupStatusHistorySchema = createInsertSchema(startupStatusHistory).omit({
   id: true,
-  start_date: true,
   duration_minutes: true,
 });
 
