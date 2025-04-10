@@ -52,15 +52,30 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
+    new LocalStrategy({
+      usernameField: 'username', // Campo padrão do Passport
+      passwordField: 'password'
+    }, async (username, password, done) => {
       try {
+        console.log("Estratégia Local - Tentando autenticar com:", username);
+        // Suporta login tanto com username quanto email
         const user = await storage.getUserByEmail(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
-          return done(null, false);
-        } else {
-          return done(null, user);
+        
+        if (!user) {
+          console.log("Estratégia Local - Usuário não encontrado");
+          return done(null, false, { message: "Usuário não encontrado" });
         }
+        
+        const passwordMatch = await comparePasswords(password, user.password);
+        if (!passwordMatch) {
+          console.log("Estratégia Local - Senha incorreta");
+          return done(null, false, { message: "Senha incorreta" });
+        }
+        
+        console.log("Estratégia Local - Autenticação bem-sucedida:", user.email);
+        return done(null, user);
       } catch (err) {
+        console.error("Estratégia Local - Erro:", err);
         return done(err);
       }
     }),
