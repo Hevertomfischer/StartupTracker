@@ -114,7 +114,15 @@ export function useAddTeamMember() {
 export function useStartupHistory(startupId: string | undefined) {
   return useQuery<StartupHistory[]>({ 
     queryKey: ['/api/startups', startupId, 'history'],
-    enabled: !!startupId
+    enabled: !!startupId,
+    staleTime: 0, // Garantir que sempre busca dados frescos
+    retry: 2,
+    onError: (error) => {
+      console.error("Erro ao buscar histórico da startup:", error);
+    },
+    onSuccess: (data) => {
+      console.log("Histórico carregado com sucesso:", data?.length || 0, "registros");
+    }
   });
 }
 
@@ -122,6 +130,14 @@ export function useStartupHistory(startupId: string | undefined) {
 export function useStartupStatusHistory(startupId: string | undefined) {
   return useQuery<StartupStatusHistory[]>({ 
     queryKey: ['/api/startups', startupId, 'status-history'],
-    enabled: !!startupId
+    enabled: !!startupId,
+    staleTime: 0, // Garantir que sempre busca dados frescos
+    retry: 2,
+    onError: (error) => {
+      console.error("Erro ao buscar histórico de status da startup:", error);
+    },
+    onSuccess: (data) => {
+      console.log("Histórico de status carregado com sucesso:", data?.length || 0, "registros");
+    }
   });
 }

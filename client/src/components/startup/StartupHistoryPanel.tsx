@@ -26,13 +26,20 @@ interface StartupHistoryPanelProps {
 }
 
 export function StartupHistoryPanel({ startup }: StartupHistoryPanelProps) {
+  console.log("Startup ID:", startup.id);
+  
   // Carregar histórico
-  const { data: historyData, isLoading: isHistoryLoading } = 
+  const { data: historyData, isLoading: isHistoryLoading, error: historyError } = 
     useStartupHistory(startup.id);
   
   // Carregar histórico de status
-  const { data: statusHistoryData, isLoading: isStatusHistoryLoading } = 
+  const { data: statusHistoryData, isLoading: isStatusHistoryLoading, error: statusHistoryError } = 
     useStartupStatusHistory(startup.id);
+
+  console.log("History Data:", historyData);
+  console.log("Status History Data:", statusHistoryData);
+  console.log("History Error:", historyError);
+  console.log("Status History Error:", statusHistoryError);
   
   // Formatar data e hora
   const formatDateTime = (date: string | Date) => {
