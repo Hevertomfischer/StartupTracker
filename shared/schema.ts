@@ -81,6 +81,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
+  role: text("role").notNull().default("associate"),
 });
 
 // Startup team members
@@ -120,6 +121,9 @@ export const startupStatusHistory = pgTable("startup_status_history", {
 // Zod Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+}).extend({
+  role: z.enum(["admin", "investor", "associate"]).default("associate"),
+  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
 export const insertStatusSchema = createInsertSchema(statuses).omit({
@@ -213,6 +217,15 @@ export const SectorEnum = {
   CLEANTECH: "cleantech",
   OTHER: "other",
 } as const;
+
+// User Role Enum
+export const UserRoleEnum = {
+  ADMIN: "admin",
+  INVESTOR: "investor",
+  ASSOCIATE: "associate",
+} as const;
+
+// Relations
 
 // Define relations
 export const startupsRelations = relations(startups, ({ many }) => ({

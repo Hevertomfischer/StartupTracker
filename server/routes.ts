@@ -9,6 +9,7 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { setupAuth, isAuthenticated, isAdmin, isInvestor } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize database with seed data
