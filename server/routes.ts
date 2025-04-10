@@ -97,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all startups
-  app.get("/api/startups", async (req: Request, res: Response) => {
+  app.get("/api/startups", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const startups = await storage.getStartups();
       return res.status(200).json(startups);
@@ -108,7 +108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get a single startup
-  app.get("/api/startups/:id", async (req: Request, res: Response) => {
+  app.get("/api/startups/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
       
@@ -125,7 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new startup
-  app.post("/api/startups", async (req: Request, res: Response) => {
+  app.post("/api/startups", isAdmin, async (req: Request, res: Response) => {
     try {
       const data = insertStartupSchema.parse(req.body);
       const startup = await storage.createStartup(data);
@@ -141,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update a startup
-  app.patch("/api/startups/:id", async (req: Request, res: Response) => {
+  app.patch("/api/startups/:id", isInvestor, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
       
@@ -164,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update startup status (special endpoint for Kanban drag and drop)
-  app.patch("/api/startups/:id/status", async (req: Request, res: Response) => {
+  app.patch("/api/startups/:id/status", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
       const { status_id } = req.body;
@@ -208,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a startup
-  app.delete("/api/startups/:id", async (req: Request, res: Response) => {
+  app.delete("/api/startups/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
 
@@ -225,7 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get startup members
-  app.get("/api/startups/:id/members", async (req: Request, res: Response) => {
+  app.get("/api/startups/:id/members", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const startupId = req.params.id;
       
@@ -238,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add startup member
-  app.post("/api/startups/:id/members", async (req: Request, res: Response) => {
+  app.post("/api/startups/:id/members", isInvestor, async (req: Request, res: Response) => {
     try {
       const startupId = req.params.id;
       
@@ -266,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Startup history routes
-  app.get("/api/startups/:id/history", async (req: Request, res: Response) => {
+  app.get("/api/startups/:id/history", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       console.log(`Buscando histórico para startup ID: ${id}`);
@@ -303,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Startup status history routes
-  app.get("/api/startups/:id/status-history", async (req: Request, res: Response) => {
+  app.get("/api/startups/:id/status-history", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       console.log(`Buscando histórico de status para startup ID: ${id}`);
