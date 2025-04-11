@@ -109,8 +109,27 @@ export function setupAuth(app: Express) {
         password: hashedPassword,
       });
       
-      console.log("Registro - Usuário criado com sucesso:", { id: user.id, email: user.email, role: user.role });
+      console.log("Registro - Usuário criado com sucesso:", { id: user.id, email: user.email });
 
+      // Atribuir o perfil de Associado por padrão para novos usuários
+      try {
+        // Buscar o perfil de Associado
+        const roles = await storage.getUserRoles();
+        const associateRole = roles.find(role => role.name === "Associado");
+        
+        if (associateRole) {
+          // Atribuir o perfil ao usuário
+          await storage.assignRoleToUser({
+            user_id: user.id,
+            role_id: associateRole.id
+          });
+          
+          console.log(`Atribuído perfil 'Associado' ao novo usuário ${user.id}`);
+        }
+      } catch (error) {
+        console.error("Erro ao atribuir perfil ao novo usuário:", error);
+      }
+      
       req.login(user, (err) => {
         if (err) {
           console.error("Registro - Erro no login automático:", err);
@@ -125,34 +144,70 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", async (req, res, next) => {
     console.log("Login - Tentativa com email:", req.body.email || req.body.username);
     
-    passport.authenticate("local", (err: any, user: SelectUser | false, info: any) => {
-      if (err) {
-        console.error("Login - Erro de autenticação:", err);
-        return next(err);
+    try {
+      const authResult = await new Promise<{ user?: SelectUser, err?: any, info?: any }>((resolve) => {
+        passport.authenticate("local", (err: any, user: SelectUser | false, info: any) => {
+          resolve({ user: user || undefined, err, info });
+        })(req, res, next);
+      });
+      
+      if (authResult.err) {
+        console.error("Login - Erro de autenticação:", authResult.err);
+        return next(authResult.err);
       }
       
-      if (!user) {
+      if (!authResult.user) {
         console.log("Login - Usuário não encontrado ou senha incorreta");
         return res.status(401).json({ 
-          message: info?.message === "Usuário não encontrado" 
+          message: authResult.info?.message === "Usuário não encontrado" 
             ? "E-mail não encontrado. Por favor, verifique se o e-mail está correto ou crie uma nova conta." 
             : "Senha incorreta. Por favor, verifique sua senha e tente novamente."
         });
       }
       
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Login - Erro ao fazer login:", err);
-          return next(err);
-        }
-        
-        console.log("Login - Sucesso para usuário:", { id: user.id, email: user.email, role: user.role });
-        return res.status(200).json(user);
+      // Autenticar o usuário
+      await new Promise<void>((resolve, reject) => {
+        req.login(authResult.user, (err) => {
+          if (err) {
+            console.error("Login - Erro ao fazer login:", err);
+            reject(err);
+            return;
+          }
+          resolve();
+        });
       });
-    })(req, res, next);
+      
+      console.log("Login - Sucesso para usuário:", { id: authResult.user.id, email: authResult.user.email });
+      
+      try {
+        // Buscar os perfis do usuário para incluir na resposta
+        const userRoleAssignments = await storage.getUserRoleAssignments(authResult.user.id);
+        const userRoleIds = userRoleAssignments.map(assignment => assignment.role_id);
+        const userRoles = await Promise.all(
+          userRoleIds.map(roleId => storage.getUserRole(roleId))
+        );
+        
+        // Filtrar undefined e obter apenas nomes para resposta
+        const roleNames = userRoles
+          .filter(role => role !== undefined)
+          .map(role => role!.name);
+        
+        // Incluir perfis na resposta
+        return res.status(200).json({
+          ...authResult.user,
+          roles: roleNames
+        });
+      } catch (error) {
+        console.error("Erro ao buscar perfis do usuário:", error);
+        return res.status(200).json(authResult.user);
+      }
+    } catch (error) {
+      console.error("Erro durante o processo de login:", error);
+      return res.status(500).json({ message: "Erro interno durante o processo de login." });
+    }
   });
 
   app.post("/api/logout", (req, res, next) => {
@@ -162,14 +217,60 @@ export function setupAuth(app: Express) {
     });
   });
 
-  app.get("/api/user", (req, res) => {
+  app.get("/api/user", async (req, res) => {
     console.log("GET /api/user - isAuthenticated:", req.isAuthenticated());
     if (req.isAuthenticated()) {
-      console.log("GET /api/user - Usuário autenticado:", { id: req.user.id, email: req.user.email, role: req.user.role });
-      return res.json(req.user);
+      console.log("GET /api/user - Usuário autenticado:", { id: req.user.id, email: req.user.email });
+      
+      try {
+        // Buscar os perfis do usuário
+        const userRoleAssignments = await storage.getUserRoleAssignments(req.user.id);
+        const userRoleIds = userRoleAssignments.map(assignment => assignment.role_id);
+        const userRoles = await Promise.all(
+          userRoleIds.map(roleId => storage.getUserRole(roleId))
+        );
+        
+        // Filtrar undefined e obter apenas nomes
+        const roleNames = userRoles
+          .filter(role => role !== undefined)
+          .map(role => role!.name);
+        
+        // Incluir perfis na resposta
+        return res.json({
+          ...req.user,
+          roles: roleNames
+        });
+      } catch (error) {
+        console.error("Erro ao buscar perfis do usuário:", error);
+        return res.json(req.user);
+      }
     } else {
       console.log("GET /api/user - Usuário não autenticado");
       return res.status(401).json({ message: "Usuário não autenticado. Por favor, faça login para continuar." });
+    }
+  });
+  
+  // Endpoint para obter os perfis do usuário autenticado
+  app.get("/api/user/roles", isAuthenticated, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Usuário não autenticado." });
+      }
+      
+      // Buscar os perfis do usuário
+      const userRoleAssignments = await storage.getUserRoleAssignments(req.user.id);
+      const userRoleIds = userRoleAssignments.map(assignment => assignment.role_id);
+      const userRoles = await Promise.all(
+        userRoleIds.map(roleId => storage.getUserRole(roleId))
+      );
+      
+      // Filtrar undefined
+      const roles = userRoles.filter(role => role !== undefined);
+      
+      return res.json(roles);
+    } catch (error) {
+      console.error("Erro ao buscar perfis do usuário:", error);
+      return res.status(500).json({ message: "Erro interno ao buscar perfis do usuário." });
     }
   });
 }
@@ -185,19 +286,47 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
 }
 
 /**
- * Middleware para verificar se o usuário possui o perfil necessário
+ * Middleware para verificar se o usuário possui um dos perfis especificados
  */
-export function hasRole(roles: string[]) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.isAuthenticated()) {
+export function hasRole(roleNames: string[]) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated() || !req.user) {
       return res.status(401).json({ message: "Autenticação necessária. Por favor, faça login para acessar este recurso." });
     }
     
-    if (roles.includes(req.user.role)) {
-      return next();
+    try {
+      // Obtém as atribuições de perfil do usuário
+      const userRoleAssignments = await storage.getUserRoleAssignments(req.user.id);
+      
+      if (userRoleAssignments.length === 0) {
+        return res.status(403).json({ message: "Acesso negado. Você não possui nenhum perfil atribuído." });
+      }
+      
+      // Obtém os perfis do usuário
+      const userRoleIds = userRoleAssignments.map(assignment => assignment.role_id);
+      const userRoles = await Promise.all(
+        userRoleIds.map(roleId => storage.getUserRole(roleId))
+      );
+      
+      // Filtra roles undefined e obtém nomes
+      const userRoleNames = userRoles
+        .filter(role => role !== undefined)
+        .map(role => role!.name);
+      
+      // Verifica se o usuário possui pelo menos um dos perfis necessários
+      const hasRequiredRole = roleNames.some(roleName => 
+        userRoleNames.includes(roleName)
+      );
+      
+      if (hasRequiredRole) {
+        return next();
+      }
+      
+      res.status(403).json({ message: "Acesso negado. Você não possui permissões suficientes para acessar este recurso." });
+    } catch (error) {
+      console.error("Erro ao verificar perfis do usuário:", error);
+      res.status(500).json({ message: "Erro interno ao verificar permissões de acesso." });
     }
-    
-    res.status(403).json({ message: "Acesso negado. Você não possui permissões suficientes para acessar este recurso." });
   };
 }
 
@@ -205,12 +334,37 @@ export function hasRole(roles: string[]) {
  * Middleware para verificar se o usuário é administrador
  */
 export function isAdmin(req: Request, res: Response, next: NextFunction) {
-  return hasRole([UserRoleEnum.ADMIN])(req, res, next);
+  return hasRole(["Administrador"])(req, res, next);
 }
 
 /**
- * Middleware para verificar se o usuário é investidor
+ * Middleware para verificar se o usuário é investidor (ou administrador)
  */
 export function isInvestor(req: Request, res: Response, next: NextFunction) {
-  return hasRole([UserRoleEnum.ADMIN, UserRoleEnum.INVESTOR])(req, res, next);
+  return hasRole(["Administrador", "Investidor"])(req, res, next);
+}
+
+/**
+ * Middleware para verificar se o usuário tem acesso a uma página específica
+ */
+export function hasPageAccess(pagePath: string) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated() || !req.user) {
+      return res.status(401).json({ message: "Autenticação necessária. Por favor, faça login para acessar este recurso." });
+    }
+    
+    try {
+      // Verifica se o usuário tem acesso à página solicitada
+      const hasAccess = await storage.checkUserPageAccess(req.user.id, pagePath);
+      
+      if (hasAccess) {
+        return next();
+      }
+      
+      return res.status(403).json({ message: "Acesso negado. Você não possui permissão para acessar esta página." });
+    } catch (error) {
+      console.error(`Erro ao verificar acesso à página ${pagePath}:`, error);
+      return res.status(500).json({ message: "Erro interno ao verificar permissões de acesso." });
+    }
+  };
 }
