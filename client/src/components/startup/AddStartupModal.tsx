@@ -95,6 +95,7 @@ const formSchema = insertStartupSchema.extend({
 
 export function AddStartupModal({ open, onClose, startup, isEditing = false }: AddStartupModalProps) {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Fetch statuses for the dropdown
   const { data: statuses = [] } = useQuery<Status[]>({
@@ -197,52 +198,79 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
   
   const createStartupMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      // apiRequest já retorna os dados JSON processados
-      return await apiRequest("POST", "/api/startups", data);
+      try {
+        return await apiRequest("POST", "/api/startups", data);
+      } catch (error) {
+        console.error("Error in create mutation:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
       form.reset();
-      onClose();
+      setIsSubmitting(false);
+      // Fecha o modal APENAS após sucesso na operação, prevenindo fechamentos prematuros
       toast({
-        title: "Startup added",
-        description: "The startup has been successfully added!",
+        title: "Startup adicionada",
+        description: "A startup foi adicionada com sucesso!",
       });
+      // Atrasa levemente o fechamento para garantir que os efeitos visuais sejam concluídos
+      setTimeout(() => {
+        onClose();
+      }, 500);
     },
     onError: (error) => {
+      setIsSubmitting(false);
       console.error("Error adding startup:", error);
       toast({
-        title: "Error",
-        description: "Failed to add startup. Please try again.",
+        title: "Erro",
+        description: "Falha ao adicionar startup. Por favor, tente novamente.",
         variant: "destructive",
       });
     },
   });
   
   const updateStartupMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof formSchema>) => {
-      // apiRequest já retorna os dados JSON processados
-      return await apiRequest("PATCH", `/api/startups/${startup?.id}`, data);
+    mutationFn: async (data: any) => {
+      try {
+        return await apiRequest("PATCH", `/api/startups/${startup?.id}`, data);
+      } catch (error) {
+        console.error("Error in update mutation:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
-      onClose();
+      setIsSubmitting(false);
+      // Fecha o modal APENAS após sucesso na operação, prevenindo fechamentos prematuros
       toast({
-        title: "Startup updated",
-        description: "The startup has been successfully updated!",
+        title: "Startup atualizada",
+        description: "A startup foi atualizada com sucesso!",
       });
+      // Atrasa levemente o fechamento para garantir que os efeitos visuais sejam concluídos
+      setTimeout(() => {
+        onClose();
+      }, 500);
     },
     onError: (error) => {
+      setIsSubmitting(false);
       console.error("Error updating startup:", error);
       toast({
-        title: "Error",
-        description: "Failed to update startup. Please try again.",
+        title: "Erro",
+        description: "Falha ao atualizar startup. Por favor, tente novamente.",
         variant: "destructive",
       });
     },
   });
   
   const onSubmit = (data: z.infer<typeof formSchema>) => {
+    // Impede múltiplas submissões
+    if (isSubmitting) {
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
     // Prepare data for submission
     const submissionData = { ...data };
     
@@ -267,10 +295,20 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
 
     console.log("Submitting data:", submissionData);
     
-    if (isEditing && startup) {
-      updateStartupMutation.mutate(submissionData);
-    } else {
-      createStartupMutation.mutate(submissionData);
+    try {
+      if (isEditing && startup) {
+        updateStartupMutation.mutate(submissionData);
+      } else {
+        createStartupMutation.mutate(submissionData);
+      }
+    } catch (error) {
+      console.error("Error during submission:", error);
+      setIsSubmitting(false);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao processar seu formulário. Tente novamente.",
+        variant: "destructive"
+      });
     }
   };
 
