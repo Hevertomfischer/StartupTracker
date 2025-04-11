@@ -269,13 +269,19 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
         description: "A startup foi atualizada com sucesso!",
       });
       
-      // Atrasa levemente o fechamento para garantir que as operações são concluídas
-      setTimeout(() => {
-        if (!isClosingRef.current) {
-          isClosingRef.current = true;
-          onClose();
-        }
-      }, 500);
+      // Não fechar automaticamente se estiver na aba de "team" ou "history"
+      if (activeTab !== "team" && activeTab !== "history") {
+        console.log("Fechando modal após atualização bem-sucedida (não está na aba team/history)");
+        // Atrasa levemente o fechamento para garantir que as operações são concluídas
+        setTimeout(() => {
+          if (!isClosingRef.current) {
+            isClosingRef.current = true;
+            onClose();
+          }
+        }, 1000);
+      } else {
+        console.log("Modal mantido aberto - usuário está na aba:", activeTab);
+      }
     },
     onError: (error) => {
       setIsSubmitting(false);
