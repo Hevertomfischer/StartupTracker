@@ -5,10 +5,17 @@ import {
   Users,
   Calendar,
   BarChart,
-  Settings
+  Settings,
+  UserCog
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 export function Sidebar() {
+  const { user } = useAuth();
+  const userRoles = user?.roles || [];
+  const isAdmin = userRoles.includes('Administrador');
+  
+  // Link base
   const links = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard, current: window.location.pathname === '/' },
     { name: 'Startups', href: '#', icon: Rocket, current: false },
@@ -17,6 +24,16 @@ export function Sidebar() {
     { name: 'Analytics', href: '#', icon: BarChart, current: false },
     { name: 'Settings', href: '#', icon: Settings, current: false },
   ];
+  
+  // Adiciona o link de gestão de usuários para administradores
+  if (isAdmin) {
+    links.push({ 
+      name: 'Usuários', 
+      href: '/users', 
+      icon: UserCog, 
+      current: window.location.pathname === '/users' 
+    });
+  }
 
   return (
     <div className="flex flex-col w-64 bg-white border-r border-gray-200">
@@ -47,13 +64,15 @@ export function Sidebar() {
         <div className="flex items-center">
           <div className="flex-shrink-0">
             <Avatar className="h-10 w-10">
-              <AvatarImage src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="User" />
-              <AvatarFallback>TC</AvatarFallback>
+              <AvatarImage src="" alt="User" />
+              <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-gray-700">Tom Cook</p>
-            <p className="text-xs font-medium text-gray-500">Product Manager</p>
+            <p className="text-sm font-medium text-gray-700">{user?.name || 'Usuário'}</p>
+            <p className="text-xs font-medium text-gray-500">
+              {userRoles.length > 0 ? userRoles.join(', ') : 'Sem perfil atribuído'}
+            </p>
           </div>
         </div>
       </div>

@@ -235,7 +235,9 @@ export const insertRolePagePermissionSchema = createInsertSchema(rolePagePermiss
 
 // TypeScript Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export type User = typeof users.$inferSelect & {
+  roles?: string[]; // Adicionamos a propriedade roles para armazenar os perfis do usuário
+};
 
 export type InsertStatus = z.infer<typeof insertStatusSchema>;
 export type Status = typeof statuses.$inferSelect;
