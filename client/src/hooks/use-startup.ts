@@ -17,7 +17,7 @@ export function useStartups() {
 }
 
 // Get a specific startup
-export function useStartup(id: number | undefined) {
+export function useStartup(id: string | number | undefined) {
   return useQuery<Startup>({ 
     queryKey: ['/api/startups', id],
     enabled: !!id
@@ -25,7 +25,7 @@ export function useStartup(id: number | undefined) {
 }
 
 // Get startup members
-export function useStartupMembers(startupId: number | undefined) {
+export function useStartupMembers(startupId: string | number | undefined) {
   return useQuery<StartupMember[]>({ 
     queryKey: ['/api/startups', startupId, 'members'],
     enabled: !!startupId
@@ -92,15 +92,15 @@ export function useAddTeamMember() {
       startupId, 
       member 
     }: { 
-      startupId: number, 
-      member: Omit<InsertStartupMember, 'startupId'> 
+      startupId: string | number, 
+      member: any 
     }) => {
       const response = await apiRequest(
         "POST", 
         `/api/startups/${startupId}/members`, 
         member
       );
-      return response.json() as Promise<StartupMember>;
+      return response;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ 

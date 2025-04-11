@@ -111,7 +111,10 @@ export default function TeamManagement() {
     try {
       await addTeamMemberMutation.mutateAsync({
         startupId: selectedStartupId,
-        member: data
+        member: {
+          ...data,
+          startup_id: selectedStartupId
+        }
       });
       
       setIsAddMemberOpen(false);
