@@ -94,6 +94,7 @@ export const startupMembers = pgTable("startup_members", {
   email: text("email"),
   phone: text("phone"),
   linkedin: text("linkedin"),
+  captable_percentage: numeric("captable_percentage").default("0").notNull(),
   observations: text("observations"),
 });
 
@@ -153,6 +154,10 @@ export const insertStartupSchema = createInsertSchema(startups).omit({
 
 export const insertStartupMemberSchema = createInsertSchema(startupMembers).omit({
   id: true,
+}).extend({
+  captable_percentage: z.union([z.string(), z.number()]).transform(val => 
+    typeof val === 'string' ? Number(val) || 0 : val
+  ).default(0),
 });
 
 export const updateStartupStatusSchema = z.object({

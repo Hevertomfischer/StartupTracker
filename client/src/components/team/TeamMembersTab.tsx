@@ -47,6 +47,7 @@ const addMemberSchema = z.object({
   phone: z.string().optional(),
   linkedin: z.string().url("URL do LinkedIn inválida").optional().or(z.literal("")),
   photo_url: z.string().url("URL da foto inválida").optional().or(z.literal("")),
+  captable_percentage: z.number().default(0).or(z.string().transform(val => val === '' ? 0 : Number(val))),
   observations: z.string().optional(),
 });
 
@@ -101,6 +102,7 @@ export function TeamMembersTab({
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Cargo</TableHead>
+              <TableHead>% Captable</TableHead>
               <TableHead>Contato</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -116,6 +118,7 @@ export function TeamMembersTab({
                   {member.name}
                 </TableCell>
                 <TableCell>{member.role}</TableCell>
+                <TableCell>{member.captable_percentage ?? 0}%</TableCell>
                 <TableCell>
                   {member.email && <div className="text-xs">{member.email}</div>}
                   {member.phone && <div className="text-xs">{member.phone}</div>}
@@ -160,6 +163,8 @@ export function TeamMembersTab({
                 phone: formData.get('phone') as string,
                 linkedin: formData.get('linkedin') as string,
                 photo_url: formData.get('photo_url') as string,
+                captable_percentage: formData.get('captable_percentage') ? 
+                  Number(formData.get('captable_percentage')) : 0,
                 observations: formData.get('observations') as string,
                 startup_id: startup?.id
               };
@@ -263,6 +268,22 @@ export function TeamMembersTab({
                   id="photo_url"
                   name="photo_url"
                   placeholder="https://exemplo.com/foto.jpg"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label htmlFor="captable_percentage" className="text-sm font-medium">
+                  % do Captable
+                </label>
+                <Input
+                  id="captable_percentage"
+                  name="captable_percentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="0"
+                  defaultValue="0"
                 />
               </div>
               
