@@ -185,7 +185,7 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
         }
       });
     }
-  }, [form, startup, isEditing, open]);
+  }, [form, startup, isEditing]);
   
   // Set the default status when statuses are loaded
   useEffect(() => {
@@ -275,7 +275,14 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="max-w-lg">
         <div className="absolute top-0 right-0 pt-4 pr-4">
           <Button 
