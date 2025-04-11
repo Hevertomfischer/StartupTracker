@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -42,7 +42,7 @@ import {
 } from "@shared/schema";
 import { StartupHistoryPanel } from "@/components/startup/StartupHistoryPanel";
 import { TeamMembersTab } from "@/components/team/TeamMembersTab";
-import { X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
