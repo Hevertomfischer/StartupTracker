@@ -133,6 +133,18 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     const startupId = String(active.id);
     const newStatusId = String(over.id);
     
+    // Verifica se o ID do status existe nas colunas
+    const isValidStatus = columns.some(col => col.id === newStatusId);
+    if (!isValidStatus) {
+      console.error('Invalid status ID:', newStatusId);
+      toast({
+        title: "Erro",
+        description: "Coluna de destino inválida",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // Obtenha o startup que foi arrastado
     const startup = startups.find(s => s.id === startupId);
     
