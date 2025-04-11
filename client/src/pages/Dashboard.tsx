@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TopNavigation } from "@/components/layout/TopNavigation";
-import { KanbanBoard } from "@/components/kanban/KanbanBoard";
+// import { KanbanBoard } from "@/components/kanban/KanbanBoard";
+import { SimpleKanbanBoard } from "@/components/kanban/SimpleKanbanBoard";
 import { FilterToolbar } from "@/components/startup/FilterToolbar";
 import { AddStartupModalNew } from "@/components/startup/AddStartupModalNew";
 import { StatusManagementModal } from "@/components/status/StatusManagementModal";
@@ -138,7 +139,7 @@ export default function Dashboard() {
                 </div>
               </div>
             ) : (
-              <KanbanBoard 
+              <SimpleKanbanBoard 
                 startups={filteredStartups} 
                 onCardClick={openStartupDetails} 
               />
