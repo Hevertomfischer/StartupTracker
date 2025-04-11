@@ -130,12 +130,33 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     // Se não tiver destino, não faz nada
     if (!over) return;
     
+    // Obtenha o ID do startup que está sendo arrastado
     const startupId = String(active.id);
-    const newStatusId = String(over.id);
+    
+    // Verificando se estamos movendo para uma coluna ou outro elemento
+    const overId = String(over.id);
+    
+    // Primeiro, vamos checar se o over.id é uma coluna válida
+    let newStatusId = "";
+    const isColumn = columns.some(col => col.id === overId);
+    
+    if (isColumn) {
+      // Se for uma coluna válida, usamos o ID diretamente
+      newStatusId = overId;
+    } else {
+      // Se não for uma coluna, verificamos se o over.data possui informações da coluna
+      // Este é o caso quando arrastamos sobre outro card em vez da coluna diretamente
+      if (over.data?.current?.type === 'startup') {
+        const overStartup = over.data.current.startup;
+        if (overStartup && overStartup.status_id) {
+          newStatusId = overStartup.status_id;
+        }
+      }
+    }
     
     // Verifica se o ID do status existe nas colunas
     const isValidStatus = columns.some(col => col.id === newStatusId);
-    if (!isValidStatus) {
+    if (!isValidStatus || !newStatusId) {
       console.error('Invalid status ID:', newStatusId);
       toast({
         title: "Erro",
