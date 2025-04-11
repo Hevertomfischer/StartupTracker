@@ -112,9 +112,15 @@ export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsMo
     <Dialog 
       open={open} 
       onOpenChange={(isOpen) => {
-        if (!isOpen && !isClosingRef.current) {
+        if (!isOpen) {
           onClose();
         }
+      }}
+      onInteractOutside={(e) => {
+        e.preventDefault();
+      }}
+      onEscapeKeyDown={(e) => {
+        e.preventDefault();
       }}
     >
       <DialogContent className="max-w-lg">
