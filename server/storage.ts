@@ -16,7 +16,20 @@ import {
   type InsertStartupHistory,
   startupStatusHistory,
   type StartupStatusHistory,
-  type InsertStartupStatusHistory
+  type InsertStartupStatusHistory,
+  // Novas importações para gerenciamento de usuários e permissões
+  userRoles,
+  type UserRole,
+  type InsertUserRole,
+  userRoleAssignments,
+  type UserRoleAssignment,
+  type InsertUserRoleAssignment,
+  systemPages,
+  type SystemPage,
+  type InsertSystemPage,
+  rolePagePermissions,
+  type RolePagePermission,
+  type InsertRolePagePermission
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, sql } from "drizzle-orm";
@@ -24,8 +37,41 @@ import { eq, desc, asc, sql } from "drizzle-orm";
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUsers(): Promise<User[]>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
+  deactivateUser(id: string): Promise<User | undefined>;
+  
+  // User Role operations
+  getUserRoles(): Promise<UserRole[]>;
+  getUserRole(id: string): Promise<UserRole | undefined>;
+  createUserRole(role: InsertUserRole): Promise<UserRole>;
+  updateUserRole(id: string, role: Partial<InsertUserRole>): Promise<UserRole | undefined>;
+  deleteUserRole(id: string): Promise<boolean>;
+  
+  // User Role Assignment operations
+  getUserRoleAssignments(userId: string): Promise<UserRoleAssignment[]>;
+  getUsersByRole(roleId: string): Promise<User[]>;
+  assignRoleToUser(assignment: InsertUserRoleAssignment): Promise<UserRoleAssignment>;
+  removeRoleFromUser(userId: string, roleId: string): Promise<boolean>;
+  
+  // System Page operations
+  getSystemPages(): Promise<SystemPage[]>;
+  getSystemPage(id: string): Promise<SystemPage | undefined>;
+  createSystemPage(page: InsertSystemPage): Promise<SystemPage>;
+  updateSystemPage(id: string, page: Partial<InsertSystemPage>): Promise<SystemPage | undefined>;
+  deleteSystemPage(id: string): Promise<boolean>;
+  
+  // Role Page Permission operations
+  getRolePagePermissions(roleId: string): Promise<RolePagePermission[]>;
+  getPagePermissions(pageId: string): Promise<RolePagePermission[]>;
+  assignPageToRole(permission: InsertRolePagePermission): Promise<RolePagePermission>;
+  removePageFromRole(roleId: string, pageId: string): Promise<boolean>;
+  
+  // User Page Permission check
+  getUserAccessiblePages(userId: string): Promise<SystemPage[]>;
+  checkUserPageAccess(userId: string, pagePath: string): Promise<boolean>;
   
   // Status operations
   getStatuses(): Promise<Status[]>;

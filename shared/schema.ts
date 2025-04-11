@@ -81,7 +81,43 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
-  role: text("role").notNull().default("associate"),
+  active: boolean("active").notNull().default(true),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// Tabela para armazenar perfis de usuários
+export const userRoles = pgTable("user_roles", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Tabela de relacionamento entre usuários e perfis (muitos-para-muitos)
+export const userRoleAssignments = pgTable("user_role_assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  user_id: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role_id: uuid("role_id").notNull().references(() => userRoles.id, { onDelete: "cascade" }),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Tabela para armazenar páginas/recursos do sistema
+export const systemPages = pgTable("system_pages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull().unique(),
+  path: text("path").notNull().unique(),
+  description: text("description"),
+  icon: text("icon"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Tabela de permissões de acesso (quais perfis podem acessar quais páginas)
+export const rolePagePermissions = pgTable("role_page_permissions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  role_id: uuid("role_id").notNull().references(() => userRoles.id, { onDelete: "cascade" }),
+  page_id: uuid("page_id").notNull().references(() => systemPages.id, { onDelete: "cascade" }),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 // Startup team members
@@ -123,8 +159,9 @@ export const startupStatusHistory = pgTable("startup_status_history", {
 // Zod Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
+  created_at: true,
+  updated_at: true,
 }).extend({
-  role: z.enum(["admin", "investor", "associate"]).default("associate"),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
@@ -175,6 +212,27 @@ export const insertStartupStatusHistorySchema = createInsertSchema(startupStatus
   duration_minutes: true,
 });
 
+// Schemas para gestão de usuários e permissões
+export const insertUserRoleSchema = createInsertSchema(userRoles).omit({
+  id: true,
+  created_at: true,
+});
+
+export const insertUserRoleAssignmentSchema = createInsertSchema(userRoleAssignments).omit({
+  id: true,
+  created_at: true,
+});
+
+export const insertSystemPageSchema = createInsertSchema(systemPages).omit({
+  id: true,
+  created_at: true,
+});
+
+export const insertRolePagePermissionSchema = createInsertSchema(rolePagePermissions).omit({
+  id: true,
+  created_at: true,
+});
+
 // TypeScript Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -193,6 +251,18 @@ export type StartupHistory = typeof startupHistory.$inferSelect;
 
 export type InsertStartupStatusHistory = z.infer<typeof insertStartupStatusHistorySchema>;
 export type StartupStatusHistory = typeof startupStatusHistory.$inferSelect;
+
+export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
+export type UserRole = typeof userRoles.$inferSelect;
+
+export type InsertUserRoleAssignment = z.infer<typeof insertUserRoleAssignmentSchema>;
+export type UserRoleAssignment = typeof userRoleAssignments.$inferSelect;
+
+export type InsertSystemPage = z.infer<typeof insertSystemPageSchema>;
+export type SystemPage = typeof systemPages.$inferSelect;
+
+export type InsertRolePagePermission = z.infer<typeof insertRolePagePermissionSchema>;
+export type RolePagePermission = typeof rolePagePermissions.$inferSelect;
 
 // Status Enum (for default statuses)
 export const StatusEnum = {
@@ -255,5 +325,41 @@ export const startupStatusHistoryRelations = relations(startupStatusHistory, ({ 
   status: one(statuses, {
     fields: [startupStatusHistory.status_id],
     references: [statuses.id],
+  }),
+}));
+
+// Relações para as novas tabelas de gerenciamento de usuários e permissões
+export const usersRelations = relations(users, ({ many }) => ({
+  roleAssignments: many(userRoleAssignments),
+}));
+
+export const userRolesRelations = relations(userRoles, ({ many }) => ({
+  userAssignments: many(userRoleAssignments),
+  pagePermissions: many(rolePagePermissions),
+}));
+
+export const userRoleAssignmentsRelations = relations(userRoleAssignments, ({ one }) => ({
+  user: one(users, {
+    fields: [userRoleAssignments.user_id],
+    references: [users.id],
+  }),
+  role: one(userRoles, {
+    fields: [userRoleAssignments.role_id],
+    references: [userRoles.id],
+  }),
+}));
+
+export const systemPagesRelations = relations(systemPages, ({ many }) => ({
+  rolePermissions: many(rolePagePermissions),
+}));
+
+export const rolePagePermissionsRelations = relations(rolePagePermissions, ({ one }) => ({
+  role: one(userRoles, {
+    fields: [rolePagePermissions.role_id],
+    references: [userRoles.id],
+  }),
+  page: one(systemPages, {
+    fields: [rolePagePermissions.page_id],
+    references: [systemPages.id],
   }),
 }));
