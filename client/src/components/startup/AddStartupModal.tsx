@@ -117,6 +117,10 @@ const formSchema = insertStartupSchema.extend({
 
 export function AddStartupModal({ open, onClose, startup, isEditing = false }: AddStartupModalProps) {
   const { toast } = useToast();
+  const [teamMembers, setTeamMembers] = useState<StartupMember[]>([]);
+  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
+  const [isDeleteMemberDialogOpen, setIsDeleteMemberDialogOpen] = useState(false);
   
   // Fetch statuses for the dropdown
   const { data: statuses = [] } = useQuery<Status[]>({
@@ -125,6 +129,19 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
       const response = await fetch('/api/statuses');
       if (!response.ok) {
         throw new Error('Failed to fetch statuses');
+      }
+      return response.json();
+    }
+  });
+  
+  // Fetch team members if editing an existing startup
+  const { data: members = [], isLoading: isLoadingMembers } = useQuery<StartupMember[]>({
+    queryKey: ['/api/startups', startup?.id, 'members'],
+    enabled: !!startup?.id && isEditing,
+    queryFn: async () => {
+      const response = await fetch(`/api/startups/${startup.id}/members`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch team members');
       }
       return response.json();
     }
