@@ -168,6 +168,11 @@ export function setupAuth(app: Express) {
         });
       }
       
+      // Verificar se o usuário existe antes de fazer login
+      if (!authResult.user) {
+        return res.status(401).json({ message: "Erro na autenticação. Usuário não encontrado." });
+      }
+      
       // Autenticar o usuário
       await new Promise<void>((resolve, reject) => {
         req.login(authResult.user, (err) => {

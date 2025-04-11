@@ -41,20 +41,23 @@ export function ProtectedRoute({
   }
 
   // Se houver roles definidas, verifica se o usuário tem permissão
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return (
-      <Route path={path}>
-        {() => (
-          <div className="flex flex-col items-center justify-center min-h-screen p-4">
-            <h1 className="text-2xl font-bold mb-4">Acesso Negado</h1>
-            <p className="text-center text-muted-foreground mb-6">
-              Você não tem permissão para acessar esta página.
-            </p>
-            <Redirect to="/" />
-          </div>
-        )}
-      </Route>
-    );
+  if (allowedRoles && user.roles) {
+    const hasPermission = user.roles.some(role => allowedRoles.includes(role));
+    if (!hasPermission) {
+      return (
+        <Route path={path}>
+          {() => (
+            <div className="flex flex-col items-center justify-center min-h-screen p-4">
+              <h1 className="text-2xl font-bold mb-4">Acesso Negado</h1>
+              <p className="text-center text-muted-foreground mb-6">
+                Você não tem permissão para acessar esta página.
+              </p>
+              <Redirect to="/" />
+            </div>
+          )}
+        </Route>
+      );
+    }
   }
 
   return <Route path={path} component={ComponentWrapper} />;
@@ -72,7 +75,7 @@ export function AdminRoute({
     <ProtectedRoute 
       path={path} 
       component={component} 
-      allowedRoles={["admin"]} 
+      allowedRoles={["Administrador"]} 
     />
   );
 }
@@ -89,7 +92,7 @@ export function InvestorRoute({
     <ProtectedRoute 
       path={path} 
       component={component} 
-      allowedRoles={["admin", "investor"]} 
+      allowedRoles={["Administrador", "Investidor"]} 
     />
   );
 }
