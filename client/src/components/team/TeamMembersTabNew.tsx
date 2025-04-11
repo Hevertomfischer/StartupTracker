@@ -77,9 +77,14 @@ export function TeamMembersTabNew({
 
   // Função para adicionar membro
   const handleAddMember = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
+    // Interromper a propagação do evento para impedir fechamento do modal
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("Handleando submit do formulário de membro");
     
     if (!startup?.id || isSubmitting) {
+      console.log("Startup ID ausente ou submissão em andamento, abortando");
       return;
     }
     
@@ -88,6 +93,7 @@ export function TeamMembersTabNew({
     try {
       const formData = new FormData(e.currentTarget);
       
+      // Capturar dados do formulário
       const memberData = {
         name: formData.get('name') as string,
         role: formData.get('role') as string,
@@ -101,8 +107,11 @@ export function TeamMembersTabNew({
         startup_id: startup?.id
       };
       
+      console.log("Dados do membro capturados:", memberData);
+      
       // Validação básica
       if (!memberData.name || !memberData.role) {
+        console.log("Validação falhou: nome ou cargo ausente");
         toast({
           title: "Campos obrigatórios",
           description: "Nome e cargo são campos obrigatórios",
@@ -112,8 +121,12 @@ export function TeamMembersTabNew({
         return;
       }
       
+      console.log("Enviando solicitação para API");
+      
       // Enviar para a API
       await apiRequest("POST", `/api/startups/${startup?.id}/members`, memberData);
+      
+      console.log("Membro adicionado com sucesso");
       
       // Atualizar lista de membros
       queryClient.invalidateQueries({ 
@@ -125,16 +138,18 @@ export function TeamMembersTabNew({
         description: "O membro foi adicionado com sucesso à equipe",
       });
       
-      // Resetar form e fechar diálogo
+      // Resetar form
       if (formRef.current) {
         formRef.current.reset();
       }
       
-      // Fechar o diálogo com um pequeno atraso
+      // Fechar o diálogo com um pequeno atraso para garantir
+      // que a mensagem de sucesso seja vista
       setTimeout(() => {
         setIsAddMemberDialogOpen(false);
         setIsSubmitting(false);
-      }, 300);
+      }, 1000); // Aumentado para 1 segundo para evitar fechamento prematuro
+      
     } catch (error) {
       console.error("Erro ao adicionar membro:", error);
       toast({
@@ -258,6 +273,7 @@ export function TeamMembersTabNew({
       {/* Diálogo para adicionar novo membro */}
       <Dialog 
         open={parentIsOpen && isAddMemberDialogOpen} 
+        modal={true}
         onOpenChange={(open) => {
           if (!isSubmitting) {
             setIsAddMemberDialogOpen(open);
@@ -266,15 +282,19 @@ export function TeamMembersTabNew({
       >
         <DialogContent 
           className="max-w-md"
+          // Impedir fechamento ao pressionar ESC
           onEscapeKeyDown={(e) => {
-            if (isSubmitting) {
-              e.preventDefault();
-            }
+            console.log("Tecla ESC pressionada, prevenindo fechamento");
+            e.preventDefault();
           }}
+          // Impedir fechamento ao clicar fora
           onPointerDownOutside={(e) => {
-            if (isSubmitting) {
-              e.preventDefault();
-            }
+            console.log("Clique fora do diálogo, prevenindo fechamento");
+            e.preventDefault();
+          }}
+          // Impedir que o evento se propague
+          onClick={(e) => {
+            e.stopPropagation();
           }}
         >
           <DialogHeader>
