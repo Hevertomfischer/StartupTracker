@@ -224,6 +224,10 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
       }
     },
     onSuccess: () => {
+      // Impedir fechamento durante a exibição do toast
+      setIsToastShowing(true);
+      setShouldPreventClosing(true);
+      
       queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
       setIsSubmitting(false);
       
@@ -236,12 +240,21 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
       // Para criação de startup, sempre fechamos o modal pois é preciso salvar primeiro 
       // antes de poder adicionar membros da equipe
       console.log("Fechando modal após adição bem-sucedida de nova startup");
+      
+      // Aguardar um pouco após exibir o toast antes de iniciar o fechamento
       setTimeout(() => {
-        if (!isClosingRef.current) {
-          isClosingRef.current = true;
-          onClose();
-        }
-      }, 1000);
+        setIsToastShowing(false);
+        
+        // Agora programamos o fechamento com um atraso
+        setTimeout(() => {
+          if (!isClosingRef.current) {
+            // Liberamos o controle de fechamento
+            setShouldPreventClosing(false);
+            isClosingRef.current = true;
+            onClose();
+          }
+        }, 700);
+      }, 800);
     },
     onError: (error) => {
       setIsSubmitting(false);
@@ -264,6 +277,10 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
       }
     },
     onSuccess: () => {
+      // Impedir fechamento durante a exibição do toast
+      setIsToastShowing(true);
+      setShouldPreventClosing(true);
+      
       queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
       setIsSubmitting(false);
       
@@ -276,15 +293,28 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
       // Não fechar automaticamente se estiver na aba de "team" ou "history"
       if (activeTab !== "team" && activeTab !== "history") {
         console.log("Fechando modal após atualização bem-sucedida (não está na aba team/history)");
-        // Atrasa levemente o fechamento para garantir que as operações são concluídas
+        
+        // Aguardar um pouco após exibir o toast antes de iniciar o fechamento
         setTimeout(() => {
-          if (!isClosingRef.current) {
-            isClosingRef.current = true;
-            onClose();
-          }
-        }, 1000);
+          setIsToastShowing(false);
+          
+          // Agora programamos o fechamento com um atraso
+          setTimeout(() => {
+            if (!isClosingRef.current) {
+              // Liberamos o controle de fechamento
+              setShouldPreventClosing(false);
+              isClosingRef.current = true;
+              onClose();
+            }
+          }, 700);
+        }, 800);
       } else {
         console.log("Modal mantido aberto - usuário está na aba:", activeTab);
+        // Mesmo mantendo o modal aberto, resolvemos o estado do toast após um tempo
+        setTimeout(() => {
+          setIsToastShowing(false);
+          setShouldPreventClosing(false);
+        }, 1500);
       }
     },
     onError: (error) => {
@@ -348,11 +378,19 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
   }, [isSubmitting, isEditing, startup, updateStartupMutation, createStartupMutation, toast]);
   
   const handleCloseModal = useCallback(() => {
-    if (!isSubmitting && !isClosingRef.current) {
+    // Não permitir fechamento se estiver em submissão, ou durante a exibição de toast, 
+    // ou quando solicitamos explicitamente prevenir o fechamento
+    if (!isSubmitting && !isToastShowing && !shouldPreventClosing && !isClosingRef.current) {
+      console.log("Fechando modal via handleCloseModal");
       isClosingRef.current = true;
       onClose();
+    } else {
+      console.log(
+        "Fechamento impedido:", 
+        { isSubmitting, isToastShowing, shouldPreventClosing, isClosingRef: isClosingRef.current }
+      );
     }
-  }, [isSubmitting, onClose]);
+  }, [isSubmitting, isToastShowing, shouldPreventClosing, onClose]);
 
   return (
     <Dialog 
@@ -360,13 +398,22 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
       modal={true}
       // Impedir fechamento automático quando é definido por código
       onOpenChange={(isOpen) => {
-        console.log("Dialog onOpenChange:", { isOpen, isSubmitting, isClosingByRef: isClosingRef.current });
+        console.log("Dialog onOpenChange:", { 
+          isOpen, 
+          isSubmitting, 
+          isToastShowing, 
+          shouldPreventClosing,
+          isClosingByRef: isClosingRef.current 
+        });
         
-        // Só permitir fechamento se não estiver em submissão e for fechado deliberadamente
-        if (!isOpen && !isSubmitting && !isClosingRef.current) {
+        // Verificamos várias condições que podem impedir o fechamento do modal
+        if (!isOpen && !isSubmitting && !isToastShowing && !shouldPreventClosing && !isClosingRef.current) {
           console.log("Fechando o modal via onOpenChange");
           isClosingRef.current = true;
           onClose();
+        } else if (!isOpen) {
+          // Se tentarem fechar o modal quando não deveria, apenas logamos
+          console.log("Tentativa de fechamento via onOpenChange impedida");
         }
       }}
     >
