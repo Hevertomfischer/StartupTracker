@@ -62,7 +62,8 @@ const getPriorityStyles = (priority: string | null) => {
 
 export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsModalProps) {
   const queryClient = useQueryClient();
-  const [isEditing, setIsEditing] = useState(true); // Começamos em modo de edição
+  const [isEditing, setIsEditing] = useState(false);
+  const isClosingRef = useRef(false);
   
   // Garantir que os valores são strings vazias em vez de null
   const defaultValues = {
@@ -108,7 +109,14 @@ export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsMo
   });
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        if (!isOpen && !isClosingRef.current) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="max-w-lg">
         {!isEditing ? (
           <>
