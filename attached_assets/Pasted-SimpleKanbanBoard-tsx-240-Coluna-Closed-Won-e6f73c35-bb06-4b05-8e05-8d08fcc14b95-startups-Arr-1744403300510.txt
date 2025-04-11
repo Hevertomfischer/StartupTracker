@@ -1,0 +1,42 @@
+SimpleKanbanBoard.tsx:240 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): 
+{startups: Array(0)}
+SimpleKanbanBoard.tsx:240 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): 
+{startups: Array(0)}
+SimpleKanbanBoard.tsx:69 Colunas disponíveis: 
+(7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+SimpleKanbanBoard.tsx:70 Startups status_ids: 
+(4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05']
+SimpleKanbanBoard.tsx:240 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): 
+{startups: Array(0)}
+SimpleKanbanBoard.tsx:240 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): 
+{startups: Array(1)}
+SimpleKanbanBoard.tsx:240 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): 
+{startups: Array(2)}
+SimpleKanbanBoard.tsx:240 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): 
+{startups: Array(1)}
+SimpleKanbanBoard.tsx:240 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): 
+{startups: Array(0)}
+SimpleKanbanBoard.tsx:240 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): 
+{startups: Array(0)}
+SimpleKanbanBoard.tsx:240 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): 
+{startups: Array(0)}
+SimpleKanbanBoard.tsx:69 Colunas disponíveis: 
+(7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+SimpleKanbanBoard.tsx:70 Startups status_ids: 
+(4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05']
+SimpleKanbanBoard.tsx:240 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): 
+{startups: Array(0)}
+SimpleKanbanBoard.tsx:240 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): 
+{startups: Array(1)}
+SimpleKanbanBoard.tsx:240 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): 
+{startups: Array(2)}
+SimpleKanbanBoard.tsx:240 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): 
+{startups: Array(1)}
+SimpleKanbanBoard.tsx:240 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): 
+{startups: Array(0)}
+SimpleKanbanBoard.tsx:240 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): 
+{startups: Array(0)}
+SimpleKanbanBoard.tsx:240 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): 
+{startups: Array(0)}
+﻿
+
