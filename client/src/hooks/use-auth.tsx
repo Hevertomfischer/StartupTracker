@@ -42,10 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
-      toast({
-        title: "Login bem-sucedido",
-        description: `Bem-vindo, ${user.name || user.email}!`,
-      });
+      // Toast removido para login com sucesso
     },
     onError: (error: Error) => {
       toast({

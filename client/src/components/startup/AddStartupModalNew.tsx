@@ -238,11 +238,9 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
       queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
       setIsSubmitting(false);
       
-      // Mostra mensagem de sucesso
-      toast({
-        title: "Startup adicionada",
-        description: "A startup foi adicionada com sucesso!",
-      });
+      // Mensagem de sucesso removida
+      // Continuamos sinalizando que o toast estaria sendo exibido
+      // para evitar problemas com a lógica de fechamento
       
       // Para criação de startup, sempre fechamos o modal pois é preciso salvar primeiro 
       // antes de poder adicionar membros da equipe
@@ -305,11 +303,9 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
       queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
       setIsSubmitting(false);
       
-      // Mostra mensagem de sucesso
-      toast({
-        title: "Startup atualizada",
-        description: "A startup foi atualizada com sucesso!",
-      });
+      // Mensagem de sucesso removida
+      // Continuamos sinalizando que o toast estaria sendo exibido
+      // para evitar problemas com a lógica de fechamento
       
       if (shouldKeepOpen) {
         // NUNCA fecha o modal quando está nas abas team ou history
