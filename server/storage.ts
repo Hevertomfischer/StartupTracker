@@ -112,6 +112,10 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(asc(users.name));
+  }
+
   async getUserByEmail(email: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;
@@ -120,6 +124,268 @@ export class DatabaseStorage implements IStorage {
   async createUser(user: InsertUser): Promise<User> {
     const [newUser] = await db.insert(users).values(user).returning();
     return newUser;
+  }
+  
+  async updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        ...userData,
+        updated_at: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+  
+  async deactivateUser(id: string): Promise<User | undefined> {
+    const [deactivatedUser] = await db
+      .update(users)
+      .set({ 
+        active: false,
+        updated_at: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return deactivatedUser;
+  }
+  
+  // User Role operations
+  async getUserRoles(): Promise<UserRole[]> {
+    return await db.select().from(userRoles).orderBy(asc(userRoles.name));
+  }
+  
+  async getUserRole(id: string): Promise<UserRole | undefined> {
+    const [role] = await db.select().from(userRoles).where(eq(userRoles.id, id));
+    return role || undefined;
+  }
+  
+  async createUserRole(role: InsertUserRole): Promise<UserRole> {
+    const [newRole] = await db.insert(userRoles).values(role).returning();
+    return newRole;
+  }
+  
+  async updateUserRole(id: string, roleData: Partial<InsertUserRole>): Promise<UserRole | undefined> {
+    const [updatedRole] = await db
+      .update(userRoles)
+      .set(roleData)
+      .where(eq(userRoles.id, id))
+      .returning();
+    return updatedRole;
+  }
+  
+  async deleteUserRole(id: string): Promise<boolean> {
+    const result = await db.delete(userRoles).where(eq(userRoles.id, id));
+    return result.count > 0;
+  }
+  
+  // User Role Assignment operations
+  async getUserRoleAssignments(userId: string): Promise<UserRoleAssignment[]> {
+    return await db
+      .select()
+      .from(userRoleAssignments)
+      .where(eq(userRoleAssignments.user_id, userId));
+  }
+  
+  async getUsersByRole(roleId: string): Promise<User[]> {
+    // Usando uma subconsulta para obter IDs de usuários com o papel especificado
+    const userIds = await db
+      .select({ userId: userRoleAssignments.user_id })
+      .from(userRoleAssignments)
+      .where(eq(userRoleAssignments.role_id, roleId));
+    
+    if (userIds.length === 0) return [];
+    
+    // Obtendo os detalhes completos dos usuários
+    return await db
+      .select()
+      .from(users)
+      .where(
+        sql`${users.id} IN (${userIds.map(u => u.userId).join(',')})`
+      )
+      .orderBy(asc(users.name));
+  }
+  
+  async assignRoleToUser(assignment: InsertUserRoleAssignment): Promise<UserRoleAssignment> {
+    // Verificar se a associação já existe
+    const existing = await db
+      .select()
+      .from(userRoleAssignments)
+      .where(
+        sql`${userRoleAssignments.user_id} = ${assignment.user_id} AND 
+            ${userRoleAssignments.role_id} = ${assignment.role_id}`
+      );
+    
+    if (existing.length > 0) {
+      return existing[0];
+    }
+    
+    // Criar nova associação
+    const [newAssignment] = await db
+      .insert(userRoleAssignments)
+      .values(assignment)
+      .returning();
+    
+    return newAssignment;
+  }
+  
+  async removeRoleFromUser(userId: string, roleId: string): Promise<boolean> {
+    const result = await db
+      .delete(userRoleAssignments)
+      .where(
+        sql`${userRoleAssignments.user_id} = ${userId} AND 
+            ${userRoleAssignments.role_id} = ${roleId}`
+      );
+    
+    return result.count > 0;
+  }
+  
+  // System Page operations
+  async getSystemPages(): Promise<SystemPage[]> {
+    return await db.select().from(systemPages).orderBy(asc(systemPages.name));
+  }
+  
+  async getSystemPage(id: string): Promise<SystemPage | undefined> {
+    const [page] = await db.select().from(systemPages).where(eq(systemPages.id, id));
+    return page || undefined;
+  }
+  
+  async createSystemPage(page: InsertSystemPage): Promise<SystemPage> {
+    const [newPage] = await db.insert(systemPages).values(page).returning();
+    return newPage;
+  }
+  
+  async updateSystemPage(id: string, pageData: Partial<InsertSystemPage>): Promise<SystemPage | undefined> {
+    const [updatedPage] = await db
+      .update(systemPages)
+      .set(pageData)
+      .where(eq(systemPages.id, id))
+      .returning();
+    return updatedPage;
+  }
+  
+  async deleteSystemPage(id: string): Promise<boolean> {
+    const result = await db.delete(systemPages).where(eq(systemPages.id, id));
+    return result.count > 0;
+  }
+  
+  // Role Page Permission operations
+  async getRolePagePermissions(roleId: string): Promise<RolePagePermission[]> {
+    return await db
+      .select()
+      .from(rolePagePermissions)
+      .where(eq(rolePagePermissions.role_id, roleId));
+  }
+  
+  async getPagePermissions(pageId: string): Promise<RolePagePermission[]> {
+    return await db
+      .select()
+      .from(rolePagePermissions)
+      .where(eq(rolePagePermissions.page_id, pageId));
+  }
+  
+  async assignPageToRole(permission: InsertRolePagePermission): Promise<RolePagePermission> {
+    // Verificar se a permissão já existe
+    const existing = await db
+      .select()
+      .from(rolePagePermissions)
+      .where(
+        sql`${rolePagePermissions.role_id} = ${permission.role_id} AND 
+            ${rolePagePermissions.page_id} = ${permission.page_id}`
+      );
+    
+    if (existing.length > 0) {
+      return existing[0];
+    }
+    
+    // Criar nova permissão
+    const [newPermission] = await db
+      .insert(rolePagePermissions)
+      .values(permission)
+      .returning();
+    
+    return newPermission;
+  }
+  
+  async removePageFromRole(roleId: string, pageId: string): Promise<boolean> {
+    const result = await db
+      .delete(rolePagePermissions)
+      .where(
+        sql`${rolePagePermissions.role_id} = ${roleId} AND 
+            ${rolePagePermissions.page_id} = ${pageId}`
+      );
+    
+    return result.count > 0;
+  }
+  
+  // User Page Permission check
+  async getUserAccessiblePages(userId: string): Promise<SystemPage[]> {
+    // Consulta para obter todos os papéis do usuário
+    const userRoles = await this.getUserRoleAssignments(userId);
+    
+    if (userRoles.length === 0) {
+      return []; // Usuário sem papéis não tem acesso a nenhuma página
+    }
+    
+    // Array com os IDs dos papéis do usuário
+    const roleIds = userRoles.map(assignment => assignment.role_id);
+    
+    // Consulta para obter todos os IDs de páginas associadas a esses papéis
+    const pagePermissions = await db
+      .select()
+      .from(rolePagePermissions)
+      .where(
+        sql`${rolePagePermissions.role_id} IN (${roleIds.join(',')})`
+      );
+    
+    if (pagePermissions.length === 0) {
+      return []; // Nenhuma página associada aos papéis do usuário
+    }
+    
+    // Array com os IDs das páginas acessíveis
+    const pageIds = pagePermissions.map(permission => permission.page_id);
+    
+    // Consulta para obter os detalhes completos das páginas
+    return await db
+      .select()
+      .from(systemPages)
+      .where(
+        sql`${systemPages.id} IN (${pageIds.join(',')})`
+      )
+      .orderBy(asc(systemPages.name));
+  }
+  
+  async checkUserPageAccess(userId: string, pagePath: string): Promise<boolean> {
+    // Primeiro, busca a página pelo seu caminho
+    const [page] = await db
+      .select()
+      .from(systemPages)
+      .where(eq(systemPages.path, pagePath));
+    
+    if (!page) {
+      return false; // A página não existe
+    }
+    
+    // Consulta para obter todos os papéis do usuário
+    const userRoles = await this.getUserRoleAssignments(userId);
+    
+    if (userRoles.length === 0) {
+      return false; // Usuário sem papéis não tem acesso
+    }
+    
+    // Array com os IDs dos papéis do usuário
+    const roleIds = userRoles.map(assignment => assignment.role_id);
+    
+    // Verificar se existe pelo menos uma permissão que associe um papel do usuário à página
+    const [permission] = await db
+      .select()
+      .from(rolePagePermissions)
+      .where(
+        sql`${rolePagePermissions.page_id} = ${page.id} AND
+            ${rolePagePermissions.role_id} IN (${roleIds.join(',')})`
+      );
+    
+    return !!permission; // Retorna true se encontrou uma permissão, false caso contrário
   }
 
   // Status operations
@@ -437,6 +703,111 @@ export class DatabaseStorage implements IStorage {
         { name: "Closed Won", color: "#22C55E", order: 5 },
         { name: "Closed Lost", color: "#EF4444", order: 6 }
       ]);
+    }
+    
+    // Verificar se já temos perfis de usuário
+    const existingRoles = await db.select().from(userRoles);
+    if (existingRoles.length === 0) {
+      console.log("Criando perfis de usuário padrão...");
+      // Criar perfis padrão
+      const roleValues = [
+        { 
+          name: "Administrador", 
+          description: "Acesso completo ao sistema, incluindo gerenciamento de usuários e configurações" 
+        },
+        { 
+          name: "Investidor", 
+          description: "Pode visualizar e editar startups, adicionar membros de equipe, mas não pode excluir" 
+        },
+        { 
+          name: "Associado", 
+          description: "Acesso somente leitura às startups e seus dados" 
+        }
+      ];
+      
+      await db.insert(userRoles).values(roleValues);
+      console.log("Perfis padrão criados com sucesso.");
+    }
+    
+    // Verificar se já temos páginas do sistema
+    const existingPages = await db.select().from(systemPages);
+    if (existingPages.length === 0) {
+      console.log("Criando páginas do sistema...");
+      // Criar páginas padrão
+      const pageValues = [
+        { 
+          name: "Dashboard", 
+          path: "/", 
+          description: "Página inicial com visão geral",
+          icon: "dashboard"
+        },
+        { 
+          name: "Gestão de Startups", 
+          path: "/startups", 
+          description: "Gerenciamento completo de startups",
+          icon: "building"
+        },
+        { 
+          name: "Configurações", 
+          path: "/settings", 
+          description: "Configurações do sistema",
+          icon: "settings"
+        },
+        { 
+          name: "Gerenciamento de Usuários", 
+          path: "/users", 
+          description: "Gerenciamento de usuários e permissões",
+          icon: "users"
+        }
+      ];
+      
+      await db.insert(systemPages).values(pageValues);
+      console.log("Páginas do sistema criadas com sucesso.");
+      
+      // Obter IDs dos perfis e páginas para associação
+      const roles = await db.select().from(userRoles);
+      const pages = await db.select().from(systemPages);
+      
+      if (roles.length > 0 && pages.length > 0) {
+        console.log("Configurando permissões de acesso às páginas...");
+        
+        const adminRole = roles.find(role => role.name === "Administrador");
+        const investorRole = roles.find(role => role.name === "Investidor");
+        const associateRole = roles.find(role => role.name === "Associado");
+        
+        const dashboardPage = pages.find(page => page.path === "/");
+        const startupsPage = pages.find(page => page.path === "/startups");
+        const settingsPage = pages.find(page => page.path === "/settings");
+        const usersPage = pages.find(page => page.path === "/users");
+        
+        // Acessos do Administrador - todas as páginas
+        if (adminRole) {
+          const adminPermissions = pages.map(page => ({
+            role_id: adminRole.id,
+            page_id: page.id
+          }));
+          
+          await db.insert(rolePagePermissions).values(adminPermissions);
+        }
+        
+        // Acessos do Investidor - dashboard e startups
+        if (investorRole && dashboardPage && startupsPage) {
+          await db.insert(rolePagePermissions).values([
+            { role_id: investorRole.id, page_id: dashboardPage.id },
+            { role_id: investorRole.id, page_id: startupsPage.id }
+          ]);
+        }
+        
+        // Acessos do Associado - somente dashboard e startups (leitura)
+        if (associateRole && dashboardPage && startupsPage) {
+          await db.insert(rolePagePermissions).values([
+            { role_id: associateRole.id, page_id: dashboardPage.id },
+            { role_id: associateRole.id, page_id: startupsPage.id }
+          ]);
+        }
+        
+        console.log("Permissões de acesso configuradas com sucesso.");
+      }
     }
     
     // Check if we already have startup data
