@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { StartupCard } from "./StartupCard";
 import { type Startup, type Status } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -74,21 +74,43 @@ export function DragDropKanban({ startups, onCardClick }: KanbanBoardProps) {
     }
   }, [startups, columns]);
 
+  // Variável para rastrear se estamos arrastando
+  const [isDragging, setIsDragging] = useState(false);
+  // Tempo limite para o início do arrasto
+  const dragTimeout = useRef<number | null>(null);
+
   // Início da operação de drag
   const handleDragStart = (startup: Startup, e: React.DragEvent) => {
+    // Limpar qualquer timeout pendente
+    if (dragTimeout.current) {
+      window.clearTimeout(dragTimeout.current);
+      dragTimeout.current = null;
+    }
+    
     console.log('Iniciando drag para startup:', startup.name);
     setDraggingStartup(startup);
+    setIsDragging(true);
     
     // Definir os dados do drag
     e.dataTransfer.setData("text/plain", startup.id);
     
-    // Definir uma imagem para o drag (opcional)
+    // Definir uma imagem para o drag 
     const dragImg = new Image(100, 30);
     dragImg.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='30'><rect width='100%' height='100%' rx='5' fill='%23eef2ff' stroke='%232563eb' stroke-width='2'/></svg>";
     e.dataTransfer.setDragImage(dragImg, 50, 15);
     
     // Definir um efeito de drag
     e.dataTransfer.effectAllowed = "move";
+    
+    // Adicionar evento para detectar fim do arrasto mesmo fora do elemento
+    document.addEventListener('dragend', handleGlobalDragEnd, { once: true });
+  };
+  
+  // Detectar fim de arrasto em qualquer lugar
+  const handleGlobalDragEnd = () => {
+    console.log('Fim do arrasto global');
+    setIsDragging(false);
+    setDraggingStartup(null);
   };
 
   // Permitir drop
@@ -279,7 +301,7 @@ export function DragDropKanban({ startups, onCardClick }: KanbanBoardProps) {
                   {columnStartups.map((startup) => (
                     <div
                       key={startup.id}
-                      draggable
+                      draggable={!isDragging}
                       onDragStart={(e) => handleDragStart(startup, e)}
                       data-startup-id={startup.id}
                       className={`mb-2 transition-all duration-300 ease-in-out ${
@@ -292,7 +314,12 @@ export function DragDropKanban({ startups, onCardClick }: KanbanBoardProps) {
                     >
                       <StartupCard 
                         startup={startup} 
-                        onClick={() => onCardClick(startup)}
+                        onClick={() => {
+                          // Só permitir clique se não estivermos arrastando
+                          if (!isDragging) {
+                            onCardClick(startup);
+                          }
+                        }}
                         onDelete={() => setDeleteStartupId(startup.id)}
                       />
                     </div>

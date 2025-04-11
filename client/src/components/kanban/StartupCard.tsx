@@ -10,12 +10,12 @@ type StartupCardProps = {
 
 export function StartupCard({ startup, onClick, onDelete }: StartupCardProps) {
   const handleClick = (e: React.MouseEvent) => {
-    // Impedir que o evento de clique interfira no drag
-    if (e.currentTarget === e.target || 
-        e.target instanceof HTMLDivElement ||
-        e.target instanceof HTMLHeadingElement ||
-        e.target instanceof HTMLParagraphElement ||
-        e.target instanceof HTMLSpanElement) {
+    // Prevenir a propagação do evento para impedir que ele 
+    // seja interpretado como início de um drag durante o clique
+    e.stopPropagation();
+    
+    // Garantir que o clique não seja em elementos como botões
+    if (!(e.target instanceof HTMLButtonElement)) {
       onClick();
     }
   };
