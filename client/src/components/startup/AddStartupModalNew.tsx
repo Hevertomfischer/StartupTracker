@@ -346,33 +346,40 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
 
   return (
     <Dialog 
-      open={open} 
+      open={open}
+      modal={true}
+      // Impedir fechamento automático quando é definido por código
       onOpenChange={(isOpen) => {
+        console.log("Dialog onOpenChange:", { isOpen, isSubmitting, isClosingByRef: isClosingRef.current });
+        
+        // Só permitir fechamento se não estiver em submissão e for fechado deliberadamente
         if (!isOpen && !isSubmitting && !isClosingRef.current) {
+          console.log("Fechando o modal via onOpenChange");
           isClosingRef.current = true;
           onClose();
         }
       }}
     >
       <DialogContent 
-        className="max-w-lg sm:max-w-2xl" 
+        className="max-w-lg sm:max-w-2xl"
+        onClick={(e) => {
+          // Prevenir propagação de cliques para evitar fechamento do diálogo pai
+          e.stopPropagation();
+        }}
+        // Sempre impedir fechamento via ESC
         onEscapeKeyDown={(e) => {
-          // Impede que o ESC feche o dialog principal durante submissão
-          if (isSubmitting) {
-            e.preventDefault();
-          }
+          console.log("ESC pressionado, prevenindo fechamento automático");
+          e.preventDefault();
         }}
+        // Sempre impedir fechamento ao clicar fora
         onPointerDownOutside={(e) => {
-          // Impede que cliques fora fechem o dialog principal durante submissão
-          if (isSubmitting) {
-            e.preventDefault();
-          }
+          console.log("Clique fora detectado, prevenindo fechamento automático");
+          e.preventDefault();
         }}
+        // Impedir qualquer interação externa
         onInteractOutside={(e) => {
-          // Impede interações externas durante submissão
-          if (isSubmitting) {
-            e.preventDefault();
-          }
+          console.log("Interação externa detectada, prevenindo");
+          e.preventDefault();
         }}
       >
         <div className="absolute top-0 right-0 pt-4 pr-4">

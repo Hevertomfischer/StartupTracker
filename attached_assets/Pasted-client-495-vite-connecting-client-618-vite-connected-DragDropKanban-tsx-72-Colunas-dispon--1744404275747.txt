@@ -1,0 +1,95 @@
+client:495 [vite] connecting...
+client:618 [vite] connected.
+DragDropKanban.tsx:72 Colunas disponíveis: (7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+DragDropKanban.tsx:73 Startups status_ids: (4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(2)}
+DragDropKanban.tsx:272 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
+DragDropKanban.tsx:72 Colunas disponíveis: (7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+DragDropKanban.tsx:73 Startups status_ids: (4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(1)}startups: [{…}][[Prototype]]: Object
+DragDropKanban.tsx:272 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(2)}
+DragDropKanban.tsx:272 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
+DragDropKanban.tsx:72 Colunas disponíveis: (7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+DragDropKanban.tsx:73 Startups status_ids: (4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(2)}
+DragDropKanban.tsx:272 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
+DragDropKanban.tsx:72 Colunas disponíveis: (7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+DragDropKanban.tsx:73 Startups status_ids: (4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(2)}
+DragDropKanban.tsx:272 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
+AddStartupModalNew.tsx:321 Submitting data: {name: 'TechNova', status_id: 'e74a05a6-6612-49af-95a1-f42b035d5c4d', description: 'AI-powered predictive analytics platform for business intelligence', website: '', sector: 'tech', …}
+queryClient.ts:16 API Request: PATCH /api/startups/caa9161d-d546-409d-9f4b-cb6ce61d908f {name: 'TechNova', status_id: 'e74a05a6-6612-49af-95a1-f42b035d5c4d', description: 'AI-powered predictive analytics platform for business intelligence', website: '', sector: 'tech', …}
+queryClient.ts:40 API Response: PATCH /api/startups/caa9161d-d546-409d-9f4b-cb6ce61d908f {id: 'caa9161d-d546-409d-9f4b-cb6ce61d908f', name: 'TechNova', created_at: '2025-04-08T20:51:15.104Z', updated_at: '2025-04-11T20:43:07.810Z', status_id: 'e74a05a6-6612-49af-95a1-f42b035d5c4d', …}
+DragDropKanban.tsx:72 Colunas disponíveis: (7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+DragDropKanban.tsx:73 Startups status_ids: (4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(2)}
+DragDropKanban.tsx:272 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
+DragDropKanban.tsx:72 Colunas disponíveis: (7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+DragDropKanban.tsx:73 Startups status_ids: (4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(2)}
+DragDropKanban.tsx:272 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
+DragDropKanban.tsx:72 Colunas disponíveis: (7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+DragDropKanban.tsx:73 Startups status_ids: (4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(2)}
+DragDropKanban.tsx:272 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
+DragDropKanban.tsx:72 Colunas disponíveis: (7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+DragDropKanban.tsx:73 Startups status_ids: (4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(2)}
+DragDropKanban.tsx:272 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
+DragDropKanban.tsx:72 Colunas disponíveis: (7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+DragDropKanban.tsx:73 Startups status_ids: (4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(2)}
+DragDropKanban.tsx:272 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
+DragDropKanban.tsx:72 Colunas disponíveis: (7) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e']
+DragDropKanban.tsx:73 Startups status_ids: (4) ['11af8601-5cbb-466c-9de7-265867be0967', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Initial Contact (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Meeting Scheduled (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(2)}
+DragDropKanban.tsx:272 Coluna Proposal Sent (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Negotiation (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Won (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Closed Lost (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
