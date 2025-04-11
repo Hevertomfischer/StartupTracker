@@ -10,9 +10,9 @@ import {
 
 export function Sidebar() {
   const links = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard, current: true },
+    { name: 'Dashboard', href: '/', icon: LayoutDashboard, current: window.location.pathname === '/' },
     { name: 'Startups', href: '#', icon: Rocket, current: false },
-    { name: 'Teams', href: '#', icon: Users, current: false },
+    { name: 'Times', href: '/teams', icon: Users, current: window.location.pathname === '/teams' },
     { name: 'Calendar', href: '#', icon: Calendar, current: false },
     { name: 'Analytics', href: '#', icon: BarChart, current: false },
     { name: 'Settings', href: '#', icon: Settings, current: false },
