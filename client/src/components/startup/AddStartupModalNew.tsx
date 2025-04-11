@@ -97,6 +97,8 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
+  const [isToastShowing, setIsToastShowing] = useState(false);
+  const [shouldPreventClosing, setShouldPreventClosing] = useState(false);
   
   // Usando uma ref para garantir que o modal não será fechado durante operações
   const isClosingRef = useRef(false);
