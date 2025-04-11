@@ -94,6 +94,7 @@ export const startupMembers = pgTable("startup_members", {
   email: text("email"),
   phone: text("phone"),
   linkedin: text("linkedin"),
+  observations: text("observations"),
 });
 
 // Startup history table to track changes

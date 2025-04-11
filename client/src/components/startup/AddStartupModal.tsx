@@ -40,11 +40,35 @@ import {
   type Status
 } from "@shared/schema";
 import { StartupHistoryPanel } from "@/components/startup/StartupHistoryPanel";
-import { X } from "lucide-react";
+import { X, Loader2, PlusCircle, Trash2 } from "lucide-react";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { 
+  Avatar, 
+  AvatarFallback, 
+  AvatarImage 
+} from "@/components/ui/avatar";
+import { StartupMember, InsertStartupMember } from "@shared/schema";
 
 type AddStartupModalProps = {
   open: boolean;
@@ -290,12 +314,13 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
             </DialogDescription>
             
             <Tabs defaultValue={isEditing ? "history" : "basic"} className="w-full">
-              <TabsList className="grid grid-cols-6 mb-4">
+              <TabsList className="grid grid-cols-7 mb-4">
                 <TabsTrigger value="basic">Basic Info</TabsTrigger>
                 <TabsTrigger value="ceo">CEO</TabsTrigger>
                 <TabsTrigger value="metrics">Metrics</TabsTrigger>
                 <TabsTrigger value="location">Location</TabsTrigger>
                 <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="team">Equipe</TabsTrigger>
                 {isEditing && <TabsTrigger value="history">History</TabsTrigger>}
               </TabsList>
               
