@@ -63,7 +63,7 @@ const getPriorityStyles = (priority: string | null) => {
 export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsModalProps) {
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
-  const isClosingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Garantir que os valores são strings vazias em vez de null
   const defaultValues = {
@@ -84,12 +84,14 @@ export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsMo
 
   const onSubmit = async (data: Startup) => {
     try {
+      setIsSubmitting(true);
       await apiRequest("PATCH", `/api/startups/${startup.id}`, data);
       await queryClient.invalidateQueries({ queryKey: ["/api/startups"] });
       setIsEditing(false);
-      onClose();
     } catch (error) {
       console.error("Failed to update startup:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
   const sectorStyle = getSectorStyles(startup.sector);
@@ -112,15 +114,19 @@ export function StartupDetailsModal({ open, startup, onClose }: StartupDetailsMo
     <Dialog 
       open={open} 
       onOpenChange={(isOpen) => {
-        if (!isOpen) {
+        if (!isOpen && !isSubmitting) {
           onClose();
         }
       }}
       onInteractOutside={(e) => {
-        e.preventDefault();
+        if (!isSubmitting) {
+          e.preventDefault();
+        }
       }}
       onEscapeKeyDown={(e) => {
-        e.preventDefault();
+        if (!isSubmitting) {
+          e.preventDefault();
+        }
       }}
     >
       <DialogContent className="max-w-lg">
