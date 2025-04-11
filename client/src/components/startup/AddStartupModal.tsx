@@ -274,21 +274,35 @@ export function AddStartupModal({ open, onClose, startup, isEditing = false }: A
     }
   };
 
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      // Quando o modal estiver sendo fechado
+      onClose();
+    }
+  };
+
   return (
     <Dialog 
       open={open} 
-      onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          onClose();
-        }
-      }}
+      onOpenChange={handleOpenChange}
+      modal={true}
     >
-      <DialogContent className="max-w-lg">
+      <DialogContent 
+        className="max-w-lg" 
+        onEscapeKeyDown={(e) => {
+          // Impede que o ESC feche o dialog principal
+          e.preventDefault();
+        }}
+        onPointerDownOutside={(e) => {
+          // Impede que cliques fora fechem o dialog principal
+          e.preventDefault();
+        }}
+      >
         <div className="absolute top-0 right-0 pt-4 pr-4">
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={onClose}
+            onClick={() => onClose()}
             className="h-6 w-6 rounded-full"
           >
             <X className="h-4 w-4" />

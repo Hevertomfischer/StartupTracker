@@ -142,7 +142,14 @@ export function TeamMembersTab({
       )}
 
       {/* Dialog para adicionar membro da equipe */}
-      <Dialog open={isAddMemberDialogOpen} onOpenChange={setIsAddMemberDialogOpen}>
+      <Dialog 
+        open={isAddMemberDialogOpen} 
+        onOpenChange={(isOpen) => {
+          if (isOpen !== isAddMemberDialogOpen) {
+            setIsAddMemberDialogOpen(isOpen);
+          }
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Adicionar Membro da Equipe</DialogTitle>
@@ -317,7 +324,14 @@ export function TeamMembersTab({
       </Dialog>
       
       {/* Dialog para confirmar exclusão de membro */}
-      <AlertDialog open={isDeleteMemberDialogOpen} onOpenChange={setIsDeleteMemberDialogOpen}>
+      <AlertDialog 
+        open={isDeleteMemberDialogOpen} 
+        onOpenChange={(isOpen) => {
+          if (isOpen !== isDeleteMemberDialogOpen) {
+            setIsDeleteMemberDialogOpen(isOpen);
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
