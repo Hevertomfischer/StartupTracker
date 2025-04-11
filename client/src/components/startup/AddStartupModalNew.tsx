@@ -231,13 +231,15 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
         description: "A startup foi adicionada com sucesso!",
       });
       
-      // Atrasa levemente o fechamento para garantir que as operações são concluídas
+      // Para criação de startup, sempre fechamos o modal pois é preciso salvar primeiro 
+      // antes de poder adicionar membros da equipe
+      console.log("Fechando modal após adição bem-sucedida de nova startup");
       setTimeout(() => {
         if (!isClosingRef.current) {
           isClosingRef.current = true;
           onClose();
         }
-      }, 500);
+      }, 1000);
     },
     onError: (error) => {
       setIsSubmitting(false);
