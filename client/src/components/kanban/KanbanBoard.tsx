@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { StartupCard } from "./StartupCard";
 import { type Startup, type Status } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -25,7 +25,10 @@ import {
   DragOverlay,
   DragStartEvent,
   UniqueIdentifier,
-  useDroppable
+  useDroppable,
+  pointerWithin,
+  closestCorners,
+  getFirstCollision
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -123,12 +126,17 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
     
-    console.log('Drag end:', { active, over });
+    console.log('Drag end:', event);
+    console.log('Active data:', active.data?.current);
+    console.log('Over data:', over?.data?.current);
     
     setActiveId(null);
     
     // Se não tiver destino, não faz nada
-    if (!over) return;
+    if (!over) {
+      console.log('Sem destino detectado, abortando operação');
+      return;
+    }
     
     // Obtenha o ID do startup que está sendo arrastado
     const startupId = String(active.id);
@@ -136,28 +144,63 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
     // Verificando se estamos movendo para uma coluna ou outro elemento
     const overId = String(over.id);
     
-    // Primeiro, vamos checar se o over.id é uma coluna válida
-    let newStatusId = "";
-    const isColumn = columns.some(col => col.id === overId);
+    console.log('Detalhes do arrastar:', {
+      startupId,
+      overId,
+      overData: over.data?.current,
+      activeData: active.data?.current
+    });
     
-    if (isColumn) {
-      // Se for uma coluna válida, usamos o ID diretamente
+    // Primeiro, verificamos o tipo de destino através dos dados
+    let newStatusId = "";
+    
+    // Estratégia 1: Verificar se o over.id é diretamente um ID de coluna
+    const isDirectColumn = columns.some(col => col.id === overId);
+    if (isDirectColumn) {
+      console.log('Destino é uma coluna direta:', overId);
       newStatusId = overId;
-    } else {
-      // Se não for uma coluna, verificamos se o over.data possui informações da coluna
-      // Este é o caso quando arrastamos sobre outro card em vez da coluna diretamente
-      if (over.data?.current?.type === 'startup') {
-        const overStartup = over.data.current.startup;
-        if (overStartup && overStartup.status_id) {
-          newStatusId = overStartup.status_id;
-        }
+    } 
+    // Estratégia 2: Verificar pelo tipo nos dados
+    else if (over.data?.current?.type === 'column') {
+      console.log('Destino identificado pelos dados como coluna');
+      newStatusId = over.data.current.columnId || "";
+    } 
+    // Estratégia 3: Verificar se caiu em um card e pegar sua coluna pai
+    else if (over.data?.current?.type === 'startup') {
+      console.log('Destino é um startup:', over.data.current.startup?.name);
+      if (over.data.current.startup && over.data.current.startup.status_id) {
+        newStatusId = over.data.current.startup.status_id;
+        console.log('Usando status_id do startup alvo:', newStatusId);
+      } else if (over.data.current.status_id) {
+        newStatusId = over.data.current.status_id;
+        console.log('Usando status_id dos dados:', newStatusId);
+      } else if (over.data.current.parentColumn) {
+        newStatusId = over.data.current.parentColumn;
+        console.log('Usando parentColumn dos dados:', newStatusId);
       }
     }
+    // Estratégia 4: Última tentativa - verificar pelo atributo no DOM
+    else {
+      console.log('Tentando encontrar coluna por attributos de dados no DOM');
+      // Tentativa de buscar pelo DOM
+      const overElement = document.querySelector(`[data-droppable-id="${overId}"]`);
+      if (overElement && overElement.getAttribute('data-column-id')) {
+        newStatusId = overElement.getAttribute('data-column-id') || "";
+        console.log('Coluna encontrada por atributo data-column-id:', newStatusId);
+      }
+    }
+    
+    // Log detalhado para depuração
+    console.log('Status de destino identificado:', {
+      newStatusId, 
+      isValid: columns.some(col => col.id === newStatusId)
+    });
     
     // Verifica se o ID do status existe nas colunas
     const isValidStatus = columns.some(col => col.id === newStatusId);
     if (!isValidStatus || !newStatusId) {
-      console.error('Invalid status ID:', newStatusId);
+      console.error('ID de status inválido:', newStatusId);
+      console.error('IDs de coluna válidos:', columns.map(c => c.id));
       toast({
         title: "Erro",
         description: "Coluna de destino inválida",
@@ -315,12 +358,18 @@ export function KanbanBoard({ startups, onCardClick }: KanbanBoardProps) {
           sensors={sensors}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          collisionDetection={closestCorners}
           modifiers={[restrictToWindowEdges]}
         >
           <div className="kanban-board flex space-x-4 overflow-x-auto pb-4">
             {columns.map(column => {
               // Obter startups para esta coluna
               const columnStartups = getStartupsForColumn(column.id);
+              
+              // Log de diagnóstico para cada coluna
+              console.log(`Coluna ${column.name} (${column.id}):`, {
+                startups: columnStartups.map(s => ({ id: s.id, nome: s.name }))
+              });
               
               return (
                 <DroppableColumn
@@ -400,18 +449,32 @@ function DroppableColumn({
   onDeleteCard,
   lastMovedStartupId 
 }: DroppableColumnProps) {
-  const { setNodeRef } = useDroppable({ id });
+  const { setNodeRef, isOver } = useDroppable({ 
+    id,
+    data: {
+      type: 'column',
+      columnId: id,
+      accepts: ['startup']
+    }
+  });
   
   // IDs dos startups desta coluna
   const startupIds = useMemo(() => startups.map(s => s.id), [startups]);
+  
+  // Log para debugging dessa coluna
+  useEffect(() => {
+    console.log(`Coluna ${name} está pronta com ID: ${id}`);
+  }, [id, name]);
   
   return (
     <div 
       ref={setNodeRef}
       className={`kanban-column flex-shrink-0 w-80 bg-white rounded-lg shadow transition-all duration-300 ease-in-out ${
         isHighlighted ? 'ring-4 ring-blue-400 shadow-lg scale-102' : ''
-      }`}
+      } ${isOver ? 'ring-2 ring-blue-500 bg-blue-50' : ''}`}
       data-column-id={id}
+      data-droppable-id={id}
+      data-type="column"
     >
       <div className="p-3 border-b border-gray-200 bg-gray-100 rounded-t-lg">
         <h3 className="text-md font-medium text-gray-700 flex items-center">
@@ -451,6 +514,33 @@ type DraggableCardProps = {
 };
 
 function DraggableCard({ startup, onClick, onDelete, isHighlighted }: DraggableCardProps) {
+  // Recupera o ID da coluna pai para referência e logging
+  const columnElement = useRef<HTMLElement | null>(null);
+  const [parentColumnId, setParentColumnId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Encontra o elemento de coluna pai
+    const findParentColumn = (element: HTMLElement | null): HTMLElement | null => {
+      if (!element) return null;
+      if (element.dataset.type === 'column') return element;
+      if (element.parentElement) return findParentColumn(element.parentElement);
+      return null;
+    };
+    
+    // Timeout para garantir que o DOM esteja pronto
+    const timeoutId = setTimeout(() => {
+      const cardElement = document.querySelector(`[data-startup-id="${startup.id}"]`);
+      if (cardElement) {
+        columnElement.current = findParentColumn(cardElement as HTMLElement);
+        const colId = columnElement.current ? columnElement.current.dataset.columnId : null;
+        setParentColumnId(colId);
+        console.log(`Card ${startup.name} conectado à coluna:`, colId);
+      }
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [startup.id, startup.name]);
+  
   const {
     attributes,
     listeners,
@@ -462,7 +552,9 @@ function DraggableCard({ startup, onClick, onDelete, isHighlighted }: DraggableC
     id: startup.id,
     data: {
       type: 'startup',
-      startup
+      startup,
+      status_id: startup.status_id,
+      parentColumn: parentColumnId
     }
   });
   
