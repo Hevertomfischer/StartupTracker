@@ -9,7 +9,7 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { setupAuth, isAuthenticated, isAdmin, isInvestor } from "./auth";
+import { setupAuth, isAuthenticated, isAdmin, isInvestor, hashPassword } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -22,6 +22,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
   } catch (error) {
     console.error("Error initializing database:", error);
   }
+
+  // Endpoints para gerenciamento de usuários
+  
+  // Listar todos os usuários (apenas administradores)
+  app.get("/api/users", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const users = await storage.getUsers();
+      
+      // Para cada usuário, buscar seus perfis
+      const usersWithRoles = await Promise.all(
+        users.map(async (user) => {
+          const userRoleAssignments = await storage.getUserRoleAssignments(user.id);
+          const userRoleIds = userRoleAssignments.map(assignment => assignment.role_id);
+          const userRoles = await Promise.all(
+            userRoleIds.map(roleId => storage.getUserRole(roleId))
+          );
+          
+          // Filtrar roles undefined e obter apenas nomes
+          const roleNames = userRoles
+            .filter(role => role !== undefined)
+            .map(role => role!.name);
+            
+          return {
+            ...user,
+            roles: roleNames
+          };
+        })
+      );
+      
+      return res.status(200).json(usersWithRoles);
+    } catch (error) {
+      console.error("Erro ao listar usuários:", error);
+      return res.status(500).json({ message: "Erro ao listar usuários" });
+    }
+  });
+  
+  // Obter um usuário específico
+  app.get("/api/users/:id", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Buscar perfis do usuário
+      const userRoleAssignments = await storage.getUserRoleAssignments(user.id);
+      const userRoleIds = userRoleAssignments.map(assignment => assignment.role_id);
+      const userRoles = await Promise.all(
+        userRoleIds.map(roleId => storage.getUserRole(roleId))
+      );
+      
+      // Filtrar roles undefined e obter apenas nomes
+      const roleNames = userRoles
+        .filter(role => role !== undefined)
+        .map(role => role!.name);
+        
+      return res.status(200).json({
+        ...user,
+        roles: roleNames
+      });
+    } catch (error) {
+      console.error("Erro ao obter usuário:", error);
+      return res.status(500).json({ message: "Erro ao obter usuário" });
+    }
+  });
+  
+  // Criar novo usuário (apenas administradores)
+  app.post("/api/users", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { name, email, password, roleId } = req.body;
+      
+      // Verifica se o e-mail já está em uso
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Este e-mail já está sendo utilizado" });
+      }
+      
+      // Criptografa a senha
+      const hashedPassword = await hashPassword(password);
+      
+      // Cria o usuário
+      const newUser = await storage.createUser({
+        name,
+        email,
+        password: hashedPassword
+      });
+      
+      // Se um perfil foi especificado, atribui ao usuário
+      if (roleId) {
+        await storage.assignRoleToUser({
+          user_id: newUser.id,
+          role_id: roleId
+        });
+      }
+      
+      return res.status(201).json(newUser);
+    } catch (error) {
+      console.error("Erro ao criar usuário:", error);
+      return res.status(500).json({ message: "Erro ao criar usuário" });
+    }
+  });
+  
+  // Atualizar dados de um usuário (apenas administradores)
+  app.patch("/api/users/:id", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { name, email } = req.body;
+      
+      // Verifica se o usuário existe
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Se estiver atualizando o email, verificar se já está em uso
+      if (email && email !== user.email) {
+        const existingUser = await storage.getUserByEmail(email);
+        if (existingUser) {
+          return res.status(400).json({ message: "Este e-mail já está sendo utilizado" });
+        }
+      }
+      
+      // Atualiza o usuário
+      const updatedUser = await storage.updateUser(req.params.id, { name, email });
+      
+      return res.status(200).json(updatedUser);
+    } catch (error) {
+      console.error("Erro ao atualizar usuário:", error);
+      return res.status(500).json({ message: "Erro ao atualizar usuário" });
+    }
+  });
+  
+  // Ativar/Desativar usuário (apenas administradores)
+  app.patch("/api/users/:id/status", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { active } = req.body;
+      
+      // Verificar se o usuário existe
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+      
+      // Não permitir desativar o próprio usuário
+      if (req.user && req.user.id === req.params.id && active === false) {
+        return res.status(400).json({ message: "Não é possível desativar seu próprio usuário" });
+      }
+      
+      // Atualizar status do usuário
+      const updatedUser = await storage.updateUser(req.params.id, { active });
+      
+      return res.status(200).json(updatedUser);
+    } catch (error) {
+      console.error("Erro ao atualizar status do usuário:", error);
+      return res.status(500).json({ message: "Erro ao atualizar status do usuário" });
+    }
+  });
+  
+  // Listar todos os perfis disponíveis
+  app.get("/api/roles", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const roles = await storage.getUserRoles();
+      return res.status(200).json(roles);
+    } catch (error) {
+      console.error("Erro ao listar perfis:", error);
+      return res.status(500).json({ message: "Erro ao listar perfis" });
+    }
+  });
 
   // Status routes
   app.get("/api/statuses", isAuthenticated, async (req: Request, res: Response) => {
