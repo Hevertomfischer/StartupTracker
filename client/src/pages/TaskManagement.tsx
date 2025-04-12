@@ -147,13 +147,26 @@ export default function TaskManagement() {
     queryKey: ['/api/tasks'], 
     queryFn: () => apiRequest('GET', '/api/tasks').then(res => res.json()),
   });
+  
+  // Log whenever dialog is opened to check state
+  useEffect(() => {
+    if (dialogOpen) {
+      console.log('Dialog aberto, estado do formulário:', form.getValues());
+      console.log('Startups e usuários disponíveis:', { startups, users });
+    }
+  }, [dialogOpen, form, startups, users]);
 
   const { 
     data: startups, 
     isLoading: isLoadingStartups 
   } = useQuery({ 
     queryKey: ['/api/startups'], 
-    queryFn: () => apiRequest('GET', '/api/startups').then(res => res.json()),
+    queryFn: () => apiRequest('GET', '/api/startups')
+      .then(res => res.json())
+      .then(data => {
+        console.log('Startups carregadas:', data);
+        return data;
+      }),
   });
 
   const { 
@@ -161,7 +174,12 @@ export default function TaskManagement() {
     isLoading: isLoadingUsers 
   } = useQuery({ 
     queryKey: ['/api/users'], 
-    queryFn: () => apiRequest('GET', '/api/users').then(res => res.json()),
+    queryFn: () => apiRequest('GET', '/api/users')
+      .then(res => res.json())
+      .then(data => {
+        console.log('Usuários carregados:', data);
+        return data;
+      }),
   });
 
   // Mutations
@@ -490,11 +508,17 @@ export default function TaskManagement() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="none">Sem startup</SelectItem>
-                              {startups?.map((startup: any) => (
-                                <SelectItem key={startup.id} value={startup.id}>
-                                  {startup.name}
+                              {Array.isArray(startups) && startups.length > 0 ? (
+                                startups.map((startup: any) => (
+                                  <SelectItem key={startup.id} value={startup.id}>
+                                    {startup.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="loading" disabled>
+                                  Carregando startups...
                                 </SelectItem>
-                              ))}
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
