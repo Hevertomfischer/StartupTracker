@@ -7,6 +7,7 @@ import Dashboard from "@/pages/Dashboard";
 import AuthPage from "@/pages/auth-page";
 import TeamManagement from "@/pages/TeamManagement";
 import UserManagement from "@/pages/UserManagement";
+import TaskManagement from "@/pages/TaskManagement";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute, AdminRoute, InvestorRoute } from "@/lib/protected-route";
 import { UserRoleEnum } from "@shared/schema";
@@ -16,6 +17,7 @@ function Router() {
     <Switch>
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/teams" component={TeamManagement} />
+      <ProtectedRoute path="/tasks" component={TaskManagement} />
       <AdminRoute path="/users" component={UserManagement} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />

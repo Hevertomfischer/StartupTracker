@@ -81,7 +81,7 @@ const StatusBadge = ({ status }: { status: string }) => {
     case TaskStatusEnum.IN_PROGRESS:
       return <Badge variant="secondary" className="flex items-center gap-1"><Clock className="h-3 w-3" /> Em andamento</Badge>;
     case TaskStatusEnum.DONE:
-      return <Badge variant="success" className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Concluída</Badge>;
+      return <Badge variant="default" className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Concluída</Badge>;
     case TaskStatusEnum.CANCELLED:
       return <Badge variant="destructive" className="flex items-center gap-1"><XCircle className="h-3 w-3" /> Cancelada</Badge>;
     default:
@@ -325,14 +325,14 @@ export default function TaskManagement() {
   // Get startup name from ID
   const getStartupName = (id?: string | null) => {
     if (!id || !startups) return "-";
-    const startup = startups.find(s => s.id === id);
+    const startup = startups.find((s: any) => s.id === id);
     return startup ? startup.name : id;
   };
 
   // Get user name from ID
   const getUserName = (id?: string | null) => {
     if (!id || !users) return "-";
-    const user = users.find(u => u.id === id);
+    const user = users.find((u: any) => u.id === id);
     return user ? user.name : id;
   };
 
