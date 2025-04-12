@@ -147,14 +147,6 @@ export default function TaskManagement() {
     queryKey: ['/api/tasks'], 
     queryFn: () => apiRequest('GET', '/api/tasks').then(res => res.json()),
   });
-  
-  // Log whenever dialog is opened to check state
-  useEffect(() => {
-    if (dialogOpen) {
-      console.log('Dialog aberto, estado do formulário:', form.getValues());
-      console.log('Startups e usuários disponíveis:', { startups, users });
-    }
-  }, [dialogOpen, form, startups, users]);
 
   const { 
     data: startups, 
@@ -373,6 +365,14 @@ export default function TaskManagement() {
     const user = users.find((u: any) => u.id === id);
     return user ? user.name : id;
   };
+  
+  // Log whenever dialog is opened to check state
+  useEffect(() => {
+    if (dialogOpen) {
+      console.log('Dialog aberto, estado do formulário:', form.getValues());
+      console.log('Startups e usuários disponíveis:', { startups, users });
+    }
+  }, [dialogOpen, form, startups, users]);
 
   return (
     <Layout>
@@ -544,11 +544,17 @@ export default function TaskManagement() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="none">Sem responsável</SelectItem>
-                              {users?.map((user: any) => (
-                                <SelectItem key={user.id} value={user.id}>
-                                  {user.name}
+                              {Array.isArray(users) && users.length > 0 ? (
+                                users.map((user: any) => (
+                                  <SelectItem key={user.id} value={user.id}>
+                                    {user.name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="loading" disabled>
+                                  Carregando usuários...
                                 </SelectItem>
-                              ))}
+                              )}
                             </SelectContent>
                           </Select>
                           <FormMessage />
