@@ -132,7 +132,7 @@ type TaskFormValues = z.infer<typeof taskFormSchema>;
 export default function TaskManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -144,8 +144,9 @@ export default function TaskManagement() {
     data: tasks, 
     isLoading: isLoadingTasks 
   } = useQuery<Task[]>({ 
-    queryKey: ['/api/tasks'], 
-    queryFn: () => apiRequest('GET', '/api/tasks').then(res => res.json()),
+    queryKey: ['/api/tasks'],
+    enabled: !!user, // Só executa se o usuário estiver autenticado
+    retry: 3, // Tenta novamente até 3 vezes em caso de falha
   });
 
   const { 
@@ -154,15 +155,8 @@ export default function TaskManagement() {
     error: startupsError
   } = useQuery({ 
     queryKey: ['/api/startups'],
-    queryFn: getQueryFn({ on401: "throw" }), // Usar o queryFn padrão
-    onError: (error) => {
-      console.error('Erro ao carregar startups:', error);
-      toast({
-        title: "Erro de autenticação",
-        description: "Não foi possível carregar as startups. Verifique sua autenticação.",
-        variant: "destructive",
-      });
-    }
+    enabled: !!user, // Só executa se o usuário estiver autenticado
+    retry: 3, // Tenta novamente até 3 vezes em caso de falha
   });
 
   const { 
@@ -171,15 +165,8 @@ export default function TaskManagement() {
     error: usersError
   } = useQuery({ 
     queryKey: ['/api/users'],
-    queryFn: getQueryFn({ on401: "throw" }), // Usar o queryFn padrão
-    onError: (error) => {
-      console.error('Erro ao carregar usuários:', error);
-      toast({
-        title: "Erro de autenticação",
-        description: "Não foi possível carregar os usuários. Verifique sua autenticação.",
-        variant: "destructive",
-      });
-    }
+    enabled: !!user, // Só executa se o usuário estiver autenticado
+    retry: 3, // Tenta novamente até 3 vezes em caso de falha
   });
 
   // Mutations
@@ -373,14 +360,14 @@ export default function TaskManagement() {
 
   // Get startup name from ID
   const getStartupName = (id?: string | null) => {
-    if (!id || !startups) return "-";
+    if (!id || !startups || !Array.isArray(startups)) return "-";
     const startup = startups.find((s: any) => s.id === id);
     return startup ? startup.name : id;
   };
 
   // Get user name from ID
   const getUserName = (id?: string | null) => {
-    if (!id || !users) return "-";
+    if (!id || !users || !Array.isArray(users)) return "-";
     const user = users.find((u: any) => u.id === id);
     return user ? user.name : id;
   };
@@ -393,15 +380,45 @@ export default function TaskManagement() {
     }
   }, [dialogOpen, form, startups, users]);
 
+  // Estado de autenticação
+  const isLoading = isLoadingTasks || isLoadingUsers || isLoadingStartups;
+  const showAuthWarning = !user && !isLoading;
+
   return (
     <Layout>
       <div className="container px-6 py-8 mx-auto">
+        {showAuthWarning && (
+          <div className="mb-6 p-4 border border-red-300 bg-red-50 rounded-md text-red-800">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 mr-2" />
+              <h3 className="font-medium">Não autenticado</h3>
+            </div>
+            <p className="mt-1">Você precisa estar autenticado para gerenciar tarefas.</p>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Gerenciamento de Tarefas</h1>
           
+          <div className="flex items-center gap-4">
+            {user ? (
+              <Button variant="outline" onClick={() => logoutMutation.mutate()}>
+                Sair ({user.name})
+              </Button>
+            ) : (
+              <Button onClick={() => window.location.href = "/auth"}>
+                Fazer Login
+              </Button>
+            )}
+          </div>
+          
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => setSelectedTask(null)}>
+              <Button 
+                onClick={() => setSelectedTask(null)}
+                disabled={!user}
+                title={!user ? "Faça login para adicionar tarefas" : ""}
+              >
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Nova Tarefa
               </Button>
@@ -704,7 +721,11 @@ export default function TaskManagement() {
                     ? "Tente ajustar seus filtros para encontrar o que procura."
                     : "Começe criando uma nova tarefa."}
                 </p>
-                <Button onClick={() => setDialogOpen(true)}>
+                <Button 
+                  onClick={() => setDialogOpen(true)}
+                  disabled={!user}
+                  title={!user ? "Faça login para adicionar tarefas" : ""}
+                >
                   <PlusCircle className="h-4 w-4 mr-2" />
                   Nova Tarefa
                 </Button>
