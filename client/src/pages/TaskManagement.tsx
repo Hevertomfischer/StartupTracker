@@ -120,8 +120,8 @@ const PriorityBadge = ({ priority }: { priority: string }) => {
 const taskFormSchema = z.object({
   title: z.string().min(3, { message: "O título deve ter pelo menos 3 caracteres" }),
   description: z.string().optional(),
-  startup_id: z.string().uuid().optional().nullable(),
-  assigned_to: z.string().uuid().optional().nullable(),
+  startup_id: z.string().optional().nullable(),
+  assigned_to: z.string().min(1, { message: "É necessário selecionar um responsável" }),
   priority: z.string().default(PriorityEnum.MEDIUM),
   status: z.string().default(TaskStatusEnum.TODO),
   due_date: z.date().optional().nullable(),
@@ -284,8 +284,8 @@ export default function TaskManagement() {
     defaultValues: {
       title: "",
       description: "",
-      startup_id: null,
-      assigned_to: null,
+      startup_id: "none",
+      assigned_to: "",
       priority: PriorityEnum.MEDIUM,
       status: TaskStatusEnum.TODO,
       due_date: null,
@@ -299,7 +299,8 @@ export default function TaskManagement() {
         title: selectedTask.title,
         description: selectedTask.description ?? "",
         startup_id: selectedTask.startup_id || "none",
-        assigned_to: selectedTask.assigned_to || "none",
+        // Responsável deve ter um valor válido
+        assigned_to: selectedTask.assigned_to || "",
         priority: selectedTask.priority,
         status: selectedTask.status,
         due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : null,
@@ -309,7 +310,7 @@ export default function TaskManagement() {
         title: "",
         description: "",
         startup_id: "none",
-        assigned_to: "none",
+        assigned_to: "",
         priority: PriorityEnum.MEDIUM,
         status: TaskStatusEnum.TODO,
         due_date: null,
@@ -339,8 +340,18 @@ export default function TaskManagement() {
     const processedValues = {
       ...values,
       startup_id: values.startup_id === "none" ? null : values.startup_id,
-      assigned_to: values.assigned_to === "none" ? null : values.assigned_to
+      // Não permitimos assigned_to como null para atender o schema
     };
+    
+    // Validação extra para garantir que assigned_to nunca seja "none"
+    if (values.assigned_to === "none" || !values.assigned_to) {
+      toast({
+        title: "Erro de validação",
+        description: "É necessário selecionar um responsável para a tarefa",
+        variant: "destructive",
+      });
+      return;
+    }
     
     if (selectedTask) {
       updateTaskMutation.mutate({
