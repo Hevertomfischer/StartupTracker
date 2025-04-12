@@ -55,7 +55,8 @@ import {
   Edit,
   Trash2,
   AlertCircle,
-  CalendarRange
+  CalendarRange,
+  Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -64,7 +65,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { cn } from "@/lib/utils";
-import { Layout } from "@/components/layout/Layout";
+import { Sidebar } from "@/components/layout/Sidebar";
+
+// Layout component temporário (para solucionar erro de importação)
+function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-screen bg-gray-50">
+      <Sidebar />
+      <div className="flex-1 overflow-y-auto">
+        {children}
+      </div>
+    </div>
+  )
+}
 
 // Formatar uma data para exibição amigável
 const formatDate = (dateStr?: string | null) => {
@@ -470,7 +483,7 @@ export default function TaskManagement() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="">Sem startup</SelectItem>
-                              {startups?.map(startup => (
+                              {startups?.map((startup: any) => (
                                 <SelectItem key={startup.id} value={startup.id}>
                                   {startup.name}
                                 </SelectItem>
@@ -500,7 +513,7 @@ export default function TaskManagement() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="">Sem responsável</SelectItem>
-                              {users?.map(user => (
+                              {users?.map((user: any) => (
                                 <SelectItem key={user.id} value={user.id}>
                                   {user.name}
                                 </SelectItem>
@@ -676,7 +689,7 @@ export default function TaskManagement() {
                           {task.due_date ? (
                             <div className="flex items-center gap-1 text-sm">
                               <CalendarRange className="h-3.5 w-3.5 text-muted-foreground" />
-                              {formatDate(task.due_date)}
+                              {formatDate(String(task.due_date))}
                             </div>
                           ) : (
                             "-"
