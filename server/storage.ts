@@ -29,7 +29,14 @@ import {
   type InsertSystemPage,
   rolePagePermissions,
   type RolePagePermission,
-  type InsertRolePagePermission
+  type InsertRolePagePermission,
+  // Importações para tarefas
+  tasks,
+  type Task,
+  type InsertTask,
+  taskComments,
+  type TaskComment,
+  type InsertTaskComment
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, sql } from "drizzle-orm";
@@ -100,6 +107,23 @@ export interface IStorage {
   getStartupStatusHistory(startupId: string): Promise<StartupStatusHistory[]>;
   createStartupStatusHistoryEntry(entry: InsertStartupStatusHistory): Promise<StartupStatusHistory>;
   updateStartupStatusHistoryEntry(id: string, endDate: Date): Promise<StartupStatusHistory | undefined>;
+  
+  // Task operations
+  getTasks(): Promise<Task[]>;
+  getTasksForStartup(startupId: string): Promise<Task[]>;
+  getTasksAssignedToUser(userId: string): Promise<Task[]>;
+  getTasksCreatedByUser(userId: string): Promise<Task[]>;
+  getTask(id: string): Promise<Task | undefined>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(id: string, task: Partial<InsertTask>): Promise<Task | undefined>;
+  completeTask(id: string): Promise<Task | undefined>;
+  deleteTask(id: string): Promise<boolean>;
+  getTaskCounts(): Promise<{startupId: string, count: number}[]>;
+  
+  // Task comment operations
+  getTaskComments(taskId: string): Promise<TaskComment[]>;
+  createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
+  deleteTaskComment(id: string): Promise<boolean>;
   
   // Seed data
   seedDatabase(): Promise<void>;

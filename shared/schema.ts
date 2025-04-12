@@ -420,3 +420,34 @@ export const rolePagePermissionsRelations = relations(rolePagePermissions, ({ on
     references: [systemPages.id],
   }),
 }));
+
+// Relações para tarefas
+export const tasksRelations = relations(tasks, ({ one, many }) => ({
+  startup: one(startups, {
+    fields: [tasks.startup_id],
+    references: [startups.id],
+  }),
+  assignedTo: one(users, {
+    fields: [tasks.assigned_to],
+    references: [users.id],
+    relationName: "assignedTasks",
+  }),
+  createdBy: one(users, {
+    fields: [tasks.created_by],
+    references: [users.id],
+    relationName: "createdTasks",
+  }),
+  comments: many(taskComments),
+}));
+
+// Relações para comentários de tarefas
+export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskComments.task_id],
+    references: [tasks.id],
+  }),
+  user: one(users, {
+    fields: [taskComments.user_id],
+    references: [users.id],
+  }),
+}));
