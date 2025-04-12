@@ -156,6 +156,31 @@ export const startupStatusHistory = pgTable("startup_status_history", {
   duration_minutes: integer("duration_minutes"),
 });
 
+// Tabela de tarefas
+export const tasks = pgTable("tasks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  description: text("description"),
+  startup_id: uuid("startup_id").references(() => startups.id, { onDelete: "set null" }),
+  assigned_to: uuid("assigned_to").references(() => users.id, { onDelete: "set null" }),
+  created_by: uuid("created_by").references(() => users.id),
+  priority: text("priority").notNull().default("medium"), 
+  status: text("status").notNull().default("todo"),
+  due_date: timestamp("due_date"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+  completed_at: timestamp("completed_at"),
+});
+
+// Tabela de comentários em tarefas
+export const taskComments = pgTable("task_comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  task_id: uuid("task_id").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  user_id: uuid("user_id").notNull().references(() => users.id),
+  comment: text("comment").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Zod Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -233,6 +258,18 @@ export const insertRolePagePermissionSchema = createInsertSchema(rolePagePermiss
   created_at: true,
 });
 
+export const insertTaskSchema = createInsertSchema(tasks).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+  completed_at: true,
+});
+
+export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({
+  id: true,
+  created_at: true,
+});
+
 // TypeScript Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect & {
@@ -266,6 +303,12 @@ export type SystemPage = typeof systemPages.$inferSelect;
 export type InsertRolePagePermission = z.infer<typeof insertRolePagePermissionSchema>;
 export type RolePagePermission = typeof rolePagePermissions.$inferSelect;
 
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type Task = typeof tasks.$inferSelect;
+
+export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
+export type TaskComment = typeof taskComments.$inferSelect;
+
 // Status Enum (for default statuses)
 export const StatusEnum = {
   NEW_LEAD: "new_lead",
@@ -282,6 +325,14 @@ export const PriorityEnum = {
   LOW: "low",
   MEDIUM: "medium",
   HIGH: "high",
+} as const;
+
+// Task Status Enum
+export const TaskStatusEnum = {
+  TODO: "todo",
+  IN_PROGRESS: "in_progress",
+  DONE: "done",
+  CANCELLED: "cancelled"
 } as const;
 
 // Sector/Industry Enum
@@ -310,6 +361,7 @@ export const startupsRelations = relations(startups, ({ many }) => ({
   history: many(startupHistory),
   statusHistory: many(startupStatusHistory),
   members: many(startupMembers),
+  tasks: many(tasks),
 }));
 
 export const startupHistoryRelations = relations(startupHistory, ({ one }) => ({
@@ -333,6 +385,9 @@ export const startupStatusHistoryRelations = relations(startupStatusHistory, ({ 
 // Relações para as novas tabelas de gerenciamento de usuários e permissões
 export const usersRelations = relations(users, ({ many }) => ({
   roleAssignments: many(userRoleAssignments),
+  assignedTasks: many(tasks, { relationName: "assignedTasks" }),
+  createdTasks: many(tasks, { relationName: "createdTasks" }),
+  taskComments: many(taskComments),
 }));
 
 export const userRolesRelations = relations(userRoles, ({ many }) => ({
