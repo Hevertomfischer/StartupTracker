@@ -5,7 +5,9 @@ import {
   insertStartupSchema, 
   insertStartupMemberSchema, 
   updateStartupStatusSchema,
-  insertStatusSchema
+  insertStatusSchema,
+  insertTaskSchema,
+  insertTaskCommentSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -507,6 +509,227 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching startup status history:", error);
       return res.status(500).json({ message: "Failed to fetch startup status history", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Task routes
+  // Get all tasks
+  app.get("/api/tasks", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const tasks = await storage.getTasks();
+      return res.status(200).json(tasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      return res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  // Get tasks for a specific startup
+  app.get("/api/startups/:id/tasks", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const startupId = req.params.id;
+      const tasks = await storage.getTasksForStartup(startupId);
+      return res.status(200).json(tasks);
+    } catch (error) {
+      console.error("Error fetching startup tasks:", error);
+      return res.status(500).json({ message: "Failed to fetch startup tasks" });
+    }
+  });
+
+  // Get tasks assigned to current user
+  app.get("/api/tasks/assigned", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Usuário não autenticado" });
+      }
+      const tasks = await storage.getTasksAssignedToUser(req.user.id);
+      return res.status(200).json(tasks);
+    } catch (error) {
+      console.error("Error fetching assigned tasks:", error);
+      return res.status(500).json({ message: "Failed to fetch assigned tasks" });
+    }
+  });
+
+  // Get tasks created by current user
+  app.get("/api/tasks/created", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Usuário não autenticado" });
+      }
+      const tasks = await storage.getTasksCreatedByUser(req.user.id);
+      return res.status(200).json(tasks);
+    } catch (error) {
+      console.error("Error fetching created tasks:", error);
+      return res.status(500).json({ message: "Failed to fetch created tasks" });
+    }
+  });
+
+  // Get a single task
+  app.get("/api/tasks/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const task = await storage.getTask(id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      return res.status(200).json(task);
+    } catch (error) {
+      console.error("Error fetching task:", error);
+      return res.status(500).json({ message: "Failed to fetch task" });
+    }
+  });
+
+  // Create a new task
+  app.post("/api/tasks", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Usuário não autenticado" });
+      }
+      
+      const data = insertTaskSchema.parse({
+        ...req.body,
+        created_by: req.user.id
+      });
+      
+      const task = await storage.createTask(data);
+      return res.status(201).json(task);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      console.error("Error creating task:", error);
+      return res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  // Update a task
+  app.patch("/api/tasks/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const task = await storage.getTask(id);
+      
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      const data = insertTaskSchema.partial().parse(req.body);
+      const updatedTask = await storage.updateTask(id, data);
+      return res.status(200).json(updatedTask);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      console.error("Error updating task:", error);
+      return res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  // Mark a task as complete
+  app.patch("/api/tasks/:id/complete", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const task = await storage.getTask(id);
+      
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      const completedTask = await storage.completeTask(id);
+      return res.status(200).json(completedTask);
+    } catch (error) {
+      console.error("Error completing task:", error);
+      return res.status(500).json({ message: "Failed to complete task" });
+    }
+  });
+
+  // Delete a task
+  app.delete("/api/tasks/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const success = await storage.deleteTask(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      return res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      return res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  // Get task comments
+  app.get("/api/tasks/:id/comments", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const taskId = req.params.id;
+      const comments = await storage.getTaskComments(taskId);
+      return res.status(200).json(comments);
+    } catch (error) {
+      console.error("Error fetching task comments:", error);
+      return res.status(500).json({ message: "Failed to fetch task comments" });
+    }
+  });
+
+  // Add a comment to a task
+  app.post("/api/tasks/:id/comments", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Usuário não autenticado" });
+      }
+      
+      const taskId = req.params.id;
+      const task = await storage.getTask(taskId);
+      
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      
+      const data = insertTaskCommentSchema.parse({
+        ...req.body,
+        task_id: taskId,
+        user_id: req.user.id
+      });
+      
+      const comment = await storage.createTaskComment(data);
+      return res.status(201).json(comment);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      console.error("Error creating task comment:", error);
+      return res.status(500).json({ message: "Failed to create task comment" });
+    }
+  });
+
+  // Delete a task comment
+  app.delete("/api/tasks/comments/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const success = await storage.deleteTaskComment(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      
+      return res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting task comment:", error);
+      return res.status(500).json({ message: "Failed to delete task comment" });
+    }
+  });
+
+  // Get task counts for startups (for showing badges on cards)
+  app.get("/api/tasks/counts", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const counts = await storage.getTaskCounts();
+      return res.status(200).json(counts);
+    } catch (error) {
+      console.error("Error fetching task counts:", error);
+      return res.status(500).json({ message: "Failed to fetch task counts" });
     }
   });
 
