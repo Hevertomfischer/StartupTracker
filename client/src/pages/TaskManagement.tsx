@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "../lib/queryClient";
+import { apiRequest, getQueryFn } from "../lib/queryClient";
 import { Task, InsertTask, TaskStatusEnum, PriorityEnum } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { formatDistanceToNow } from "date-fns";
@@ -150,28 +150,36 @@ export default function TaskManagement() {
 
   const { 
     data: startups, 
-    isLoading: isLoadingStartups 
+    isLoading: isLoadingStartups,
+    error: startupsError
   } = useQuery({ 
-    queryKey: ['/api/startups'], 
-    queryFn: () => apiRequest('GET', '/api/startups')
-      .then(res => res.json())
-      .then(data => {
-        console.log('Startups carregadas:', data);
-        return data;
-      }),
+    queryKey: ['/api/startups'],
+    queryFn: getQueryFn({ on401: "throw" }), // Usar o queryFn padrão
+    onError: (error) => {
+      console.error('Erro ao carregar startups:', error);
+      toast({
+        title: "Erro de autenticação",
+        description: "Não foi possível carregar as startups. Verifique sua autenticação.",
+        variant: "destructive",
+      });
+    }
   });
 
   const { 
     data: users, 
-    isLoading: isLoadingUsers 
+    isLoading: isLoadingUsers,
+    error: usersError
   } = useQuery({ 
-    queryKey: ['/api/users'], 
-    queryFn: () => apiRequest('GET', '/api/users')
-      .then(res => res.json())
-      .then(data => {
-        console.log('Usuários carregados:', data);
-        return data;
-      }),
+    queryKey: ['/api/users'],
+    queryFn: getQueryFn({ on401: "throw" }), // Usar o queryFn padrão
+    onError: (error) => {
+      console.error('Erro ao carregar usuários:', error);
+      toast({
+        title: "Erro de autenticação",
+        description: "Não foi possível carregar os usuários. Verifique sua autenticação.",
+        variant: "destructive",
+      });
+    }
   });
 
   // Mutations
