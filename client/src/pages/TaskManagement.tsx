@@ -288,8 +288,8 @@ export default function TaskManagement() {
       form.reset({
         title: selectedTask.title,
         description: selectedTask.description ?? "",
-        startup_id: selectedTask.startup_id,
-        assigned_to: selectedTask.assigned_to,
+        startup_id: selectedTask.startup_id || "none",
+        assigned_to: selectedTask.assigned_to || "none",
         priority: selectedTask.priority,
         status: selectedTask.status,
         due_date: selectedTask.due_date ? new Date(selectedTask.due_date) : null,
@@ -298,8 +298,8 @@ export default function TaskManagement() {
       form.reset({
         title: "",
         description: "",
-        startup_id: null,
-        assigned_to: null,
+        startup_id: "none",
+        assigned_to: "none",
         priority: PriorityEnum.MEDIUM,
         status: TaskStatusEnum.TODO,
         due_date: null,
@@ -325,13 +325,20 @@ export default function TaskManagement() {
 
   // Form submission handler
   const onSubmit = (values: TaskFormValues) => {
+    // Converte os valores "none" para null antes de enviar
+    const processedValues = {
+      ...values,
+      startup_id: values.startup_id === "none" ? null : values.startup_id,
+      assigned_to: values.assigned_to === "none" ? null : values.assigned_to
+    };
+    
     if (selectedTask) {
       updateTaskMutation.mutate({
         id: selectedTask.id,
-        task: values
+        task: processedValues
       });
     } else {
-      createTaskMutation.mutate(values);
+      createTaskMutation.mutate(processedValues);
     }
   };
 
@@ -473,8 +480,8 @@ export default function TaskManagement() {
                           <FormLabel>Startup relacionada</FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
-                            defaultValue={field.value || ""} 
-                            value={field.value || ""}
+                            defaultValue={field.value || "none"} 
+                            value={field.value || "none"}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -482,7 +489,7 @@ export default function TaskManagement() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Sem startup</SelectItem>
+                              <SelectItem value="none">Sem startup</SelectItem>
                               {startups?.map((startup: any) => (
                                 <SelectItem key={startup.id} value={startup.id}>
                                   {startup.name}
@@ -503,8 +510,8 @@ export default function TaskManagement() {
                           <FormLabel>Responsável</FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
-                            defaultValue={field.value || ""}
-                            value={field.value || ""}
+                            defaultValue={field.value || "none"}
+                            value={field.value || "none"}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -512,7 +519,7 @@ export default function TaskManagement() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Sem responsável</SelectItem>
+                              <SelectItem value="none">Sem responsável</SelectItem>
                               {users?.map((user: any) => (
                                 <SelectItem key={user.id} value={user.id}>
                                   {user.name}
