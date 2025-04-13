@@ -783,10 +783,10 @@ export class DatabaseStorage implements IStorage {
   
   async getTaskCounts(): Promise<{startupId: string, count: number}[]> {
     const result = await db.execute(sql`
-      SELECT startup_id as "startupId", COUNT(*) as "count"
-      FROM tasks
-      WHERE startup_id IS NOT NULL
-      GROUP BY startup_id
+      SELECT s.id as "startupId", COUNT(t.id) as "count"
+      FROM startups s
+      LEFT JOIN tasks t ON s.id = t.startup_id
+      GROUP BY s.id
     `);
     return result.rows as {startupId: string, count: number}[];
   }
