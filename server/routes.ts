@@ -192,6 +192,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Erro ao listar perfis" });
     }
   });
+  
+  // Obter um perfil específico
+  app.get("/api/roles/:id", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const role = await storage.getUserRole(id);
+      
+      if (!role) {
+        return res.status(404).json({ message: "Perfil não encontrado" });
+      }
+      
+      return res.status(200).json(role);
+    } catch (error) {
+      console.error("Erro ao buscar perfil:", error);
+      return res.status(500).json({ message: "Erro ao buscar perfil" });
+    }
+  });
+  
+  // Criar um novo perfil
+  app.post("/api/roles", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const newRole = await storage.createUserRole(req.body);
+      return res.status(201).json(newRole);
+    } catch (error) {
+      console.error("Erro ao criar perfil:", error);
+      return res.status(500).json({ message: "Erro ao criar perfil" });
+    }
+  });
+  
+  // Atualizar um perfil existente
+  app.patch("/api/roles/:id", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updatedRole = await storage.updateUserRole(id, req.body);
+      
+      if (!updatedRole) {
+        return res.status(404).json({ message: "Perfil não encontrado" });
+      }
+      
+      return res.status(200).json(updatedRole);
+    } catch (error) {
+      console.error("Erro ao atualizar perfil:", error);
+      return res.status(500).json({ message: "Erro ao atualizar perfil" });
+    }
+  });
+  
+  // Excluir um perfil
+  app.delete("/api/roles/:id", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteUserRole(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Perfil não encontrado" });
+      }
+      
+      return res.status(200).json({ message: "Perfil excluído com sucesso" });
+    } catch (error) {
+      console.error("Erro ao excluir perfil:", error);
+      return res.status(500).json({ message: "Erro ao excluir perfil" });
+    }
+  });
+  
+  // Obter páginas do sistema
+  app.get("/api/system-pages", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const pages = await storage.getSystemPages();
+      return res.status(200).json(pages);
+    } catch (error) {
+      console.error("Erro ao listar páginas:", error);
+      return res.status(500).json({ message: "Erro ao listar páginas do sistema" });
+    }
+  });
+  
+  // Criar uma nova página do sistema
+  app.post("/api/system-pages", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const newPage = await storage.createSystemPage(req.body);
+      return res.status(201).json(newPage);
+    } catch (error) {
+      console.error("Erro ao criar página:", error);
+      return res.status(500).json({ message: "Erro ao criar página do sistema" });
+    }
+  });
+  
+  // Atualizar uma página do sistema
+  app.patch("/api/system-pages/:id", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const updatedPage = await storage.updateSystemPage(id, req.body);
+      
+      if (!updatedPage) {
+        return res.status(404).json({ message: "Página não encontrada" });
+      }
+      
+      return res.status(200).json(updatedPage);
+    } catch (error) {
+      console.error("Erro ao atualizar página:", error);
+      return res.status(500).json({ message: "Erro ao atualizar página do sistema" });
+    }
+  });
+  
+  // Excluir uma página do sistema
+  app.delete("/api/system-pages/:id", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteSystemPage(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Página não encontrada" });
+      }
+      
+      return res.status(200).json({ message: "Página excluída com sucesso" });
+    } catch (error) {
+      console.error("Erro ao excluir página:", error);
+      return res.status(500).json({ message: "Erro ao excluir página do sistema" });
+    }
+  });
+  
+  // Obter permissões de página para um perfil
+  app.get("/api/roles/:id/pages", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const permissions = await storage.getRolePagePermissions(id);
+      return res.status(200).json(permissions);
+    } catch (error) {
+      console.error("Erro ao listar permissões:", error);
+      return res.status(500).json({ message: "Erro ao listar permissões de página" });
+    }
+  });
+  
+  // Atribuir uma página a um perfil
+  app.post("/api/roles/:roleId/pages/:pageId", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { roleId, pageId } = req.params;
+      const permission = await storage.assignPageToRole({
+        role_id: roleId,
+        page_id: pageId
+      });
+      
+      return res.status(201).json(permission);
+    } catch (error) {
+      console.error("Erro ao atribuir página ao perfil:", error);
+      return res.status(500).json({ message: "Erro ao atribuir página ao perfil" });
+    }
+  });
+  
+  // Remover uma página de um perfil
+  app.delete("/api/roles/:roleId/pages/:pageId", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { roleId, pageId } = req.params;
+      const removed = await storage.removePageFromRole(roleId, pageId);
+      
+      if (!removed) {
+        return res.status(404).json({ message: "Permissão não encontrada" });
+      }
+      
+      return res.status(200).json({ message: "Permissão removida com sucesso" });
+    } catch (error) {
+      console.error("Erro ao remover página do perfil:", error);
+      return res.status(500).json({ message: "Erro ao remover página do perfil" });
+    }
+  });
 
   // Status routes
   app.get("/api/statuses", isAuthenticated, async (req: Request, res: Response) => {
