@@ -230,6 +230,7 @@ export default function TaskManagement() {
         variant: "default",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/task-counts'] });
       setDialogOpen(false);
       setSelectedTask(null);
     },
@@ -258,6 +259,7 @@ export default function TaskManagement() {
         variant: "default",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/task-counts'] });
     },
     onError: (error: any) => {
       toast({
@@ -284,6 +286,7 @@ export default function TaskManagement() {
         variant: "default",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/task-counts'] });
     },
     onError: (error: any) => {
       toast({
