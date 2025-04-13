@@ -9,9 +9,9 @@ export interface TaskCount {
 // Hook para buscar e gerenciar contagens de tarefas
 export function useTaskCounts() {
   const { data: taskCounts, isLoading, error, refetch } = useQuery<TaskCount[]>({
-    queryKey: ['/api/tasks/counts'],
+    queryKey: ['/api/task-counts'],
     queryFn: async () => {
-      const response = await fetch('/api/tasks/counts');
+      const response = await fetch('/api/task-counts');
       if (!response.ok) {
         throw new Error('Falha ao buscar contagens de tarefas');
       }
