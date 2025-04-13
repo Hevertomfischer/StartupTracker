@@ -7,7 +7,8 @@ import {
   BarChart,
   Settings,
   UserCog,
-  CheckSquare
+  CheckSquare,
+  ShieldCheck
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -27,13 +28,20 @@ export function Sidebar() {
     { name: 'Settings', href: '#', icon: Settings, current: false },
   ];
   
-  // Adiciona o link de gestão de usuários para administradores
+  // Adiciona os links de gestão para administradores
   if (isAdmin) {
     links.push({ 
       name: 'Usuários', 
       href: '/users', 
       icon: UserCog, 
       current: window.location.pathname === '/users' 
+    });
+    
+    links.push({ 
+      name: 'Perfis', 
+      href: '/roles', 
+      icon: ShieldCheck, 
+      current: window.location.pathname === '/roles' 
     });
   }
 
