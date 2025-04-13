@@ -169,7 +169,7 @@ export default function TaskManagement() {
     data: startups, 
     isLoading: isLoadingStartups,
     error: startupsError
-  } = useQuery({ 
+  } = useQuery<any[]>({ 
     queryKey: ['/api/startups'],
     enabled: !!user, // Só executa se o usuário estiver autenticado
     retry: 3, // Tenta novamente até 3 vezes em caso de falha
@@ -179,7 +179,7 @@ export default function TaskManagement() {
     data: users, 
     isLoading: isLoadingUsers,
     error: usersError
-  } = useQuery({ 
+  } = useQuery<any[]>({ 
     queryKey: ['/api/users'],
     enabled: !!user, // Só executa se o usuário estiver autenticado
     retry: 3, // Tenta novamente até 3 vezes em caso de falha
@@ -425,7 +425,7 @@ export default function TaskManagement() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gerenciamento de Tarefas</h1>
-            {filterStartupId && startups && (
+            {filterStartupId && Array.isArray(startups) && (
               <div className="mt-2 flex items-center text-sm text-blue-600">
                 <div className="flex items-center">
                   Filtrando tarefas da startup: 
