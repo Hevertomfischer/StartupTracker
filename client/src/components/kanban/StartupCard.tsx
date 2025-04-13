@@ -1,6 +1,8 @@
 import { Startup } from "@shared/schema";
-import { CalendarIcon, Trash2, LinkIcon, Building2, CircleDollarSign } from "lucide-react";
+import { CalendarIcon, Trash2, LinkIcon, Building2, CircleDollarSign, CheckSquare, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTaskCounts } from "@/hooks/use-task-counts";
+import { useLocation } from 'wouter';
 
 type StartupCardProps = {
   startup: Startup;
@@ -9,6 +11,11 @@ type StartupCardProps = {
 };
 
 export function StartupCard({ startup, onClick, onDelete }: StartupCardProps) {
+  const { getCountForStartup } = useTaskCounts();
+  const [, setLocation] = useLocation();
+  
+  const taskCount = getCountForStartup(startup.id);
+  
   const handleClick = (e: React.MouseEvent) => {
     // Prevenir a propagação do evento para impedir que ele 
     // seja interpretado como início de um drag durante o clique
@@ -23,6 +30,11 @@ export function StartupCard({ startup, onClick, onDelete }: StartupCardProps) {
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onDelete();
+  };
+  
+  const handleTasksClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLocation(`/tasks?startup=${startup.id}`);
   };
 
   // Determinar a cor de fundo com base na prioridade
@@ -136,18 +148,32 @@ export function StartupCard({ startup, onClick, onDelete }: StartupCardProps) {
 
       {/* Footer com badges */}
       <div className="flex flex-wrap justify-between items-center mt-3">
-        {/* Setor */}
-        {startup.sector && (
-          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getSectorBadgeColor()}`}>
-            {startup.sector}
-          </span>
-        )}
-
-        {/* Modelo de negócio */}
-        {startup.business_model && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-            {startup.business_model}
-          </span>
+        <div className="flex space-x-1">
+          {/* Setor */}
+          {startup.sector && (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getSectorBadgeColor()}`}>
+              {startup.sector}
+            </span>
+          )}
+  
+          {/* Modelo de negócio */}
+          {startup.business_model && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+              {startup.business_model}
+            </span>
+          )}
+        </div>
+        
+        {/* Badge de tarefas */}
+        {taskCount > 0 && (
+          <button 
+            onClick={handleTasksClick}
+            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+            title="Ver tarefas desta startup"
+          >
+            <CheckSquare className="h-3 w-3 mr-1" />
+            {taskCount}
+          </button>
         )}
       </div>
     </div>
