@@ -171,12 +171,18 @@ export default function TaskManagement() {
 
   // Mutations
   const createTaskMutation = useMutation({
-    mutationFn: (taskData: TaskFormValues) => {
-      return apiRequest('POST', '/api/tasks', taskData)
-        .then(res => {
-          if (!res.ok) throw new Error('Erro ao criar tarefa');
-          return res.json();
-        });
+    mutationFn: async (taskData: TaskFormValues) => {
+      try {
+        const res = await apiRequest('POST', '/api/tasks', taskData);
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || 'Erro ao criar tarefa');
+        }
+        return data;
+      } catch (error: any) {
+        console.error("Erro ao criar tarefa:", error);
+        throw new Error(error.message || 'Erro ao criar tarefa');
+      }
     },
     onSuccess: () => {
       toast({
@@ -187,7 +193,7 @@ export default function TaskManagement() {
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
       setDialogOpen(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Erro ao criar tarefa",
         description: error.message,
@@ -197,12 +203,18 @@ export default function TaskManagement() {
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: ({ id, task }: { id: string, task: TaskFormValues }) => {
-      return apiRequest('PATCH', `/api/tasks/${id}`, task)
-        .then(res => {
-          if (!res.ok) throw new Error('Erro ao atualizar tarefa');
-          return res.json();
-        });
+    mutationFn: async ({ id, task }: { id: string, task: TaskFormValues }) => {
+      try {
+        const res = await apiRequest('PATCH', `/api/tasks/${id}`, task);
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || 'Erro ao atualizar tarefa');
+        }
+        return data;
+      } catch (error: any) {
+        console.error("Erro ao atualizar tarefa:", error);
+        throw new Error(error.message || 'Erro ao atualizar tarefa');
+      }
     },
     onSuccess: () => {
       toast({
@@ -214,7 +226,7 @@ export default function TaskManagement() {
       setDialogOpen(false);
       setSelectedTask(null);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Erro ao atualizar tarefa",
         description: error.message,
@@ -224,12 +236,18 @@ export default function TaskManagement() {
   });
 
   const completeTaskMutation = useMutation({
-    mutationFn: (id: string) => {
-      return apiRequest('PATCH', `/api/tasks/${id}/complete`)
-        .then(res => {
-          if (!res.ok) throw new Error('Erro ao concluir tarefa');
-          return res.json();
-        });
+    mutationFn: async (id: string) => {
+      try {
+        const res = await apiRequest('PATCH', `/api/tasks/${id}/complete`);
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || 'Erro ao concluir tarefa');
+        }
+        return data;
+      } catch (error: any) {
+        console.error("Erro ao concluir tarefa:", error);
+        throw new Error(error.message || 'Erro ao concluir tarefa');
+      }
     },
     onSuccess: () => {
       toast({
@@ -239,7 +257,7 @@ export default function TaskManagement() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Erro ao concluir tarefa",
         description: error.message,
@@ -249,12 +267,18 @@ export default function TaskManagement() {
   });
 
   const deleteTaskMutation = useMutation({
-    mutationFn: (id: string) => {
-      return apiRequest('DELETE', `/api/tasks/${id}`)
-        .then(res => {
-          if (!res.ok) throw new Error('Erro ao excluir tarefa');
-          return res;
-        });
+    mutationFn: async (id: string) => {
+      try {
+        const res = await apiRequest('DELETE', `/api/tasks/${id}`);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.message || 'Erro ao excluir tarefa');
+        }
+        return true;
+      } catch (error: any) {
+        console.error("Erro ao excluir tarefa:", error);
+        throw new Error(error.message || 'Erro ao excluir tarefa');
+      }
     },
     onSuccess: () => {
       toast({
@@ -264,7 +288,7 @@ export default function TaskManagement() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Erro ao excluir tarefa",
         description: error.message,
