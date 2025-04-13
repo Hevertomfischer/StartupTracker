@@ -335,6 +335,8 @@ export default function TaskManagement() {
     const processedValues = {
       ...values,
       startup_id: values.startup_id === "none" ? null : values.startup_id,
+      // Garantir que due_date seja um objeto Date para o backend
+      due_date: values.due_date ? new Date(values.due_date) : undefined
       // Não permitimos assigned_to como null para atender o schema
     };
     
