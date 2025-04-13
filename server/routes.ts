@@ -726,6 +726,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/task-counts", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const counts = await storage.getTaskCounts();
+      console.log("API /api/task-counts - Response:", counts);
+      
+      // Verificar se counts é um array válido
+      if (!Array.isArray(counts)) {
+        console.error("API /api/task-counts - Invalid counts format:", counts);
+        return res.status(200).json([]);
+      }
+      
       return res.status(200).json(counts);
     } catch (error) {
       console.error("Error fetching task counts:", error);

@@ -782,13 +782,36 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTaskCounts(): Promise<{startupId: string, count: number}[]> {
-    const result = await db.execute(sql`
-      SELECT s.id as "startupId", COUNT(t.id) as "count"
-      FROM startups s
-      LEFT JOIN tasks t ON s.id = t.startup_id
-      GROUP BY s.id
-    `);
-    return result.rows as {startupId: string, count: number}[];
+    try {
+      const result = await db.execute(sql`
+        SELECT s.id as "startupId", COALESCE(COUNT(t.id), 0) as "count"
+        FROM startups s
+        LEFT JOIN tasks t ON s.id = t.startup_id
+        GROUP BY s.id
+      `);
+      
+      console.log("Task Counts - Database Raw Result:", result);
+      
+      // Converte o resultado explicitamente
+      const counts: {startupId: string, count: number}[] = [];
+      
+      // @ts-ignore - Drizzle ORM tipagem
+      for (const row of result) {
+        if (row && typeof row.startupId === 'string') {
+          counts.push({
+            startupId: row.startupId,
+            count: parseInt(row.count.toString())
+          });
+        }
+      }
+      
+      console.log("Task Counts - Converted Result:", counts);
+      
+      return counts;
+    } catch (error) {
+      console.error("Error in getTaskCounts:", error);
+      return [];
+    }
   }
   
   // Task comment operations
