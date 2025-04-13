@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -133,11 +134,26 @@ export default function TaskManagement() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user, logoutMutation } = useAuth();
+  const [location] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
+  const [filterStartupId, setFilterStartupId] = useState<string | null>(null);
+  
+  // Extrair o ID da startup da URL, se presente
+  useEffect(() => {
+    // Obter parâmetros da URL
+    const params = new URLSearchParams(window.location.search);
+    const startupId = params.get('startup');
+    if (startupId) {
+      setFilterStartupId(startupId);
+      console.log(`Filtrando tarefas para a startup: ${startupId}`);
+    } else {
+      setFilterStartupId(null);
+    }
+  }, [location]);
 
   // Queries
   const { 
@@ -330,7 +346,10 @@ export default function TaskManagement() {
     // Filtro de prioridade
     const priorityMatch = filterPriority === "all" || task.priority === filterPriority;
     
-    return searchMatch && statusMatch && priorityMatch;
+    // Filtro de startup (se aplicável)
+    const startupMatch = !filterStartupId || task.startup_id === filterStartupId;
+    
+    return searchMatch && statusMatch && priorityMatch && startupMatch;
   }) || [];
 
   // Form submission handler
@@ -404,7 +423,30 @@ export default function TaskManagement() {
         )}
 
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Gerenciamento de Tarefas</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Gerenciamento de Tarefas</h1>
+            {filterStartupId && startups && (
+              <div className="mt-2 flex items-center text-sm text-blue-600">
+                <div className="flex items-center">
+                  Filtrando tarefas da startup: 
+                  <span className="font-medium ml-1">
+                    {getStartupName(filterStartupId)}
+                  </span>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="ml-2 h-6 px-2 text-xs"
+                    onClick={() => {
+                      setFilterStartupId(null);
+                      window.history.pushState({}, '', '/tasks');
+                    }}
+                  >
+                    Limpar filtro
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
           
           <div className="flex items-center gap-4">
             {user ? (
@@ -723,7 +765,7 @@ export default function TaskManagement() {
                 <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">Nenhuma tarefa encontrada</h3>
                 <p className="text-muted-foreground mb-6">
-                  {searchTerm || filterStatus !== "all" || filterPriority !== "all"
+                  {searchTerm || filterStatus !== "all" || filterPriority !== "all" || filterStartupId
                     ? "Tente ajustar seus filtros para encontrar o que procura."
                     : "Começe criando uma nova tarefa."}
                 </p>
