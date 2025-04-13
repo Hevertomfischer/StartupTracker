@@ -29,6 +29,16 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -141,6 +151,7 @@ export default function TaskManagement() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [filterStartupId, setFilterStartupId] = useState<string | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<string | null>(null);
   
   // Extrair o ID da startup da URL, se presente
   useEffect(() => {
@@ -851,11 +862,7 @@ export default function TaskManagement() {
                               variant="outline"
                               size="icon"
                               className="text-red-500 hover:text-red-700"
-                              onClick={() => {
-                                if (window.confirm("Tem certeza que deseja excluir esta tarefa?")) {
-                                  deleteTaskMutation.mutate(task.id);
-                                }
-                              }}
+                              onClick={() => setTaskToDelete(task.id)}
                               title="Excluir tarefa"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -870,6 +877,31 @@ export default function TaskManagement() {
             )}
           </>
         )}
+        
+        {/* AlertDialog para confirmação de exclusão de tarefa */}
+        <AlertDialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Tarefa</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir esta tarefa?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => {
+                  if (taskToDelete) {
+                    deleteTaskMutation.mutate(taskToDelete);
+                    setTaskToDelete(null);
+                  }
+                }}
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );
