@@ -202,6 +202,7 @@ export default function TaskManagement() {
         variant: "default",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/task-counts'] });
       setDialogOpen(false);
     },
     onError: (error: any) => {
