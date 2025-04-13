@@ -173,12 +173,7 @@ export default function TaskManagement() {
   const createTaskMutation = useMutation({
     mutationFn: async (taskData: TaskFormValues) => {
       try {
-        const res = await apiRequest('POST', '/api/tasks', taskData);
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || 'Erro ao criar tarefa');
-        }
-        return data;
+        return await apiRequest('POST', '/api/tasks', taskData);
       } catch (error: any) {
         console.error("Erro ao criar tarefa:", error);
         throw new Error(error.message || 'Erro ao criar tarefa');
@@ -205,12 +200,7 @@ export default function TaskManagement() {
   const updateTaskMutation = useMutation({
     mutationFn: async ({ id, task }: { id: string, task: TaskFormValues }) => {
       try {
-        const res = await apiRequest('PATCH', `/api/tasks/${id}`, task);
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || 'Erro ao atualizar tarefa');
-        }
-        return data;
+        return await apiRequest('PATCH', `/api/tasks/${id}`, task);
       } catch (error: any) {
         console.error("Erro ao atualizar tarefa:", error);
         throw new Error(error.message || 'Erro ao atualizar tarefa');
@@ -238,12 +228,7 @@ export default function TaskManagement() {
   const completeTaskMutation = useMutation({
     mutationFn: async (id: string) => {
       try {
-        const res = await apiRequest('PATCH', `/api/tasks/${id}/complete`);
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data.message || 'Erro ao concluir tarefa');
-        }
-        return data;
+        return await apiRequest('PATCH', `/api/tasks/${id}/complete`);
       } catch (error: any) {
         console.error("Erro ao concluir tarefa:", error);
         throw new Error(error.message || 'Erro ao concluir tarefa');
@@ -269,12 +254,7 @@ export default function TaskManagement() {
   const deleteTaskMutation = useMutation({
     mutationFn: async (id: string) => {
       try {
-        const res = await apiRequest('DELETE', `/api/tasks/${id}`);
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.message || 'Erro ao excluir tarefa');
-        }
-        return true;
+        return await apiRequest('DELETE', `/api/tasks/${id}`);
       } catch (error: any) {
         console.error("Erro ao excluir tarefa:", error);
         throw new Error(error.message || 'Erro ao excluir tarefa');

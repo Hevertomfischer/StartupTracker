@@ -35,10 +35,23 @@ export async function apiRequest(
       throw new Error(`Request failed with status ${res.status}: ${JSON.stringify(errorData)}`);
     }
     
-    // Parse e retornar resposta JSON
-    const responseData = await res.json();
-    console.log(`API Response: ${method} ${url}`, responseData);
-    return responseData;
+    // Verifica se a resposta está vazia (como em 204 No Content)
+    if (res.status === 204) {
+      console.log(`API Response: ${method} ${url} (No Content)`);
+      return null;
+    }
+    
+    try {
+      // Tenta analisar a resposta como JSON
+      const responseData = await res.json();
+      console.log(`API Response: ${method} ${url}`, responseData);
+      return responseData;
+    } catch (e) {
+      // Se não for JSON, retorna o texto ou null
+      const text = await res.text();
+      console.log(`API Response: ${method} ${url} (Text)`, text || "(empty)");
+      return text || null;
+    }
   } catch (error) {
     console.error(`API Request failed: ${method} ${url}`, error);
     throw error;
