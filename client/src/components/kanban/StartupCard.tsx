@@ -164,17 +164,19 @@ export function StartupCard({ startup, onClick, onDelete }: StartupCardProps) {
           )}
         </div>
         
-        {/* Badge de tarefas */}
-        {taskCount > 0 && (
-          <button 
-            onClick={handleTasksClick}
-            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
-            title="Ver tarefas desta startup"
-          >
-            <CheckSquare className="h-3 w-3 mr-1" />
-            {taskCount}
-          </button>
-        )}
+        {/* Badge de tarefas - sempre exibido mas com visual diferente se não houver tarefas */}
+        <button 
+          onClick={handleTasksClick}
+          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
+            ${taskCount > 0 
+              ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' 
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'} 
+            transition-colors`}
+          title={taskCount > 0 ? `Ver ${taskCount} tarefas desta startup` : "Adicionar tarefas para esta startup"}
+        >
+          <CheckSquare className="h-3 w-3 mr-1" />
+          {taskCount > 0 ? taskCount : "0"}
+        </button>
       </div>
     </div>
   );

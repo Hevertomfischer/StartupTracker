@@ -722,8 +722,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get task counts for startups (for showing badges on cards)
-  app.get("/api/tasks/counts", isAuthenticated, async (req: Request, res: Response) => {
+  // Get task counts for startups (for showing badges on cards) - Nova rota
+  app.get("/api/task-counts", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const counts = await storage.getTaskCounts();
       return res.status(200).json(counts);
