@@ -89,7 +89,14 @@ export class WorkflowService {
    * Adiciona uma ação a um workflow
    */
   async addWorkflowAction(data: InsertWorkflowAction): Promise<WorkflowAction> {
-    const [action] = await db.insert(workflowActions).values(data).returning();
+    const workflowActionData = {
+      workflow_id: data.workflow_id,
+      action_type: data.action_type,
+      action_details: data.action_details,
+      order: data.order || 0
+    };
+    
+    const [action] = await db.insert(workflowActions).values(workflowActionData).returning();
     return action;
   }
 
@@ -340,8 +347,11 @@ export class WorkflowService {
         entityData = startup;
         
         // Se o email deve ser enviado para um campo da entidade (ex: ceo_email)
-        if (details.to_field && startup[details.to_field]) {
-          toEmail = startup[details.to_field];
+        if (details.to_field && typeof details.to_field === 'string') {
+          const fieldName = details.to_field as keyof typeof startup;
+          if (fieldName in startup && typeof startup[fieldName] === 'string') {
+            toEmail = startup[fieldName] as string;
+          }
         }
       } else if (entityType === 'task') {
         const [task] = await db
