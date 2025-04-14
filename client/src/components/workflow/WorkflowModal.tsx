@@ -114,6 +114,13 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({
         triggerDetails = {
           status_id: data.trigger_details.status_id || null,
         };
+      } else if (data.trigger_type === 'attribute_change' && data.trigger_details) {
+        triggerDetails = {
+          entity_type: data.trigger_details.entity_type || 'startup',
+          field_name: data.trigger_details.field_name || '',
+          old_value: data.trigger_details.old_value || undefined,
+          new_value: data.trigger_details.new_value || undefined,
+        };
       }
 
       // Preparar dados do formulário para envio
@@ -237,6 +244,7 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="status_change">Mudança de Status</SelectItem>
+                  <SelectItem value="attribute_change">Mudança de Atributo</SelectItem>
                   <SelectItem value="task_creation">Criação de Tarefa</SelectItem>
                   <SelectItem value="manual">Manual</SelectItem>
                   <SelectItem value="scheduled">Agendado</SelectItem>
@@ -284,6 +292,106 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({
                 </FormItem>
               )}
             />
+          </div>
+        )}
+
+        {triggerType === 'attribute_change' && (
+          <div className="border rounded-md p-4">
+            <h4 className="font-medium mb-2">Configuração de Mudança de Atributo</h4>
+            
+            <FormField
+              control={form.control}
+              name="trigger_details.entity_type"
+              render={({ field }) => (
+                <FormItem className="mb-4">
+                  <FormLabel>Tipo de Entidade</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value || 'startup'}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo de entidade" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="startup">Startup</SelectItem>
+                      <SelectItem value="task">Tarefa</SelectItem>
+                      <SelectItem value="user">Usuário</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    O tipo de objeto cujas mudanças serão monitoradas.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="trigger_details.field_name"
+              render={({ field }) => (
+                <FormItem className="mb-4">
+                  <FormLabel>Nome do Campo</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Ex: priority, name, description" 
+                      {...field} 
+                      value={field.value || ''}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    O nome do campo a ser monitorado. Deixe em branco para monitorar qualquer campo.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="trigger_details.old_value"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor Anterior (opcional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Valor antes da mudança" 
+                        {...field} 
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Monitore apenas mudanças partindo deste valor.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="trigger_details.new_value"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Novo Valor (opcional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Valor após a mudança" 
+                        {...field} 
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Monitore apenas mudanças para este valor.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
         )}
 
