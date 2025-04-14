@@ -77,7 +77,8 @@ export const WorkflowExecuteModal: React.FC<WorkflowExecuteModalProps> = ({
     setIsSubmitting(true);
     try {
       // Enviar requisição para API para executar o workflow
-      const response = await apiRequest(
+      // apiRequest já lançará erro se a resposta não for ok
+      const result = await apiRequest(
         'POST',
         `/api/workflows/${workflow.id}/execute`,
         {
@@ -85,11 +86,9 @@ export const WorkflowExecuteModal: React.FC<WorkflowExecuteModalProps> = ({
           entity_id: data.entity_id,
         }
       );
-
-      if (!response.ok) {
-        throw new Error('Falha ao executar workflow');
-      }
-
+      
+      console.log('Workflow executado com sucesso:', result);
+      
       // Exibir notificação de sucesso
       toast({
         title: 'Workflow executado',

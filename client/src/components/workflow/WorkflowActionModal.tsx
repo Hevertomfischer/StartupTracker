@@ -168,15 +168,14 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
       };
 
       // Enviar requisição para API
-      const response = await apiRequest(
+      // apiRequest já lançará erro se a resposta não for ok
+      const savedAction = await apiRequest(
         isEditing ? 'PATCH' : 'POST',
         isEditing ? `/api/workflow-actions/${action?.id}` : `/api/workflows/${workflowId}/actions`,
         actionData
       );
-
-      if (!response.ok) {
-        throw new Error('Falha ao salvar ação de workflow');
-      }
+      
+      console.log('Ação salva com sucesso:', savedAction);
 
       // Invalidar cache de queries para recarregar dados
       queryClient.invalidateQueries({ queryKey: ['/api/workflows', workflowId, 'actions'] });

@@ -143,19 +143,14 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({
       };
 
       // Enviar requisição para API
-      try {
-        const response = await apiRequest(
-          isEditing ? 'PATCH' : 'POST',
-          isEditing ? `/api/workflows/${workflow?.id}` : '/api/workflows',
-          workflowData
-        );
-        
-        // apiRequest já lançará erro se a resposta não for ok
-        console.log('Workflow salvo com sucesso:', response);
-      } catch (error) {
-        console.error('Erro ao salvar workflow:', error);
-        throw new Error(`Falha ao salvar workflow: ${error instanceof Error ? error.message : String(error)}`);
-      }
+      // apiRequest já lançará erro se a resposta não for ok
+      const updatedWorkflow = await apiRequest(
+        isEditing ? 'PATCH' : 'POST',
+        isEditing ? `/api/workflows/${workflow?.id}` : '/api/workflows',
+        workflowData
+      );
+      
+      console.log('Workflow salvo com sucesso:', updatedWorkflow);
 
       // Invalidar cache de queries para recarregar dados
       queryClient.invalidateQueries({ queryKey: ['/api/workflows'] });

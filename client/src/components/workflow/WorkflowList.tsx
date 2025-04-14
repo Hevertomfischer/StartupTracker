@@ -57,21 +57,20 @@ export const WorkflowList: React.FC = () => {
 
   const handleStatusChange = async (workflow: Workflow, isActive: boolean) => {
     try {
-      const response = await apiRequest(
+      // apiRequest já lança erro se a resposta não for ok
+      // e retorna diretamente os dados JSON
+      const updatedWorkflow = await apiRequest(
         'PATCH',
         `/api/workflows/${workflow.id}`,
         { is_active: isActive }
       );
       
-      if (response.ok) {
-        queryClient.invalidateQueries({ queryKey: ['/api/workflows'] });
-        toast({
-          title: `Workflow ${isActive ? 'ativado' : 'desativado'}`,
-          description: `O workflow "${workflow.name}" foi ${isActive ? 'ativado' : 'desativado'} com sucesso.`,
-        });
-      } else {
-        throw new Error('Falha ao atualizar status do workflow');
-      }
+      // Se chegou aqui, a requisição foi bem-sucedida
+      queryClient.invalidateQueries({ queryKey: ['/api/workflows'] });
+      toast({
+        title: `Workflow ${isActive ? 'ativado' : 'desativado'}`,
+        description: `O workflow "${workflow.name}" foi ${isActive ? 'ativado' : 'desativado'} com sucesso.`,
+      });
     } catch (error) {
       toast({
         title: 'Erro',
