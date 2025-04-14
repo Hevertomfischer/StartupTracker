@@ -19,7 +19,7 @@ type WorkflowActionModalProps = {
   onSave: (action: any) => void;
 };
 
-export function WorkflowActionModal({ open, onClose, onSave }: WorkflowActionModalProps) {
+export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowActionModalProps) {
   const [actionType, setActionType] = useState<string>("");
   const [actionDetails, setActionDetails] = useState<any>({});
 
