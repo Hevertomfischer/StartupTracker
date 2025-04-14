@@ -1,7 +1,11 @@
 // Mapping between type properties
 declare module '@shared/schema' {
   interface WorkflowAction {
-    execution_order?: number;
-    config_json?: any;
+    order?: number;
+    action_details?: any;
+    action_name?: string;
+    description?: string;
+    action_type?: string;
+    id?: string;
   }
 }
