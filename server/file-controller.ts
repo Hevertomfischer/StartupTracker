@@ -201,12 +201,15 @@ export const getStartupAttachments = async (req: Request, res: Response) => {
   try {
     const { startupId } = req.params;
     
+    console.log(`Buscando anexos para startup ${startupId}`);
+    
     // Busca a startup para verificar se existe
     const [existingStartup] = await db.select()
       .from(startups)
       .where(eq(startups.id, startupId));
       
     if (!existingStartup) {
+      console.log(`Startup não encontrada: ${startupId}`);
       return res.status(404).json({ message: "Startup não encontrada" });
     }
     
@@ -219,6 +222,7 @@ export const getStartupAttachments = async (req: Request, res: Response) => {
         
       if (pitchDeckFile) {
         pitchDeck = pitchDeckFile;
+        console.log(`PitchDeck encontrado: ${pitchDeckFile.id}`);
       }
     }
     
@@ -240,13 +244,17 @@ export const getStartupAttachments = async (req: Request, res: Response) => {
       .innerJoin(files, eq(startupAttachments.file_id, files.id))
       .where(eq(startupAttachments.startup_id, startupId));
     
-    return res.status(200).json({
+    console.log(`Encontrados ${attachmentsResult.length} anexos para a startup ${startupId}`);
+    
+    const responseData = {
       pitchDeck,
       attachments: attachmentsResult
-    });
+    };
+    
+    res.status(200).json(responseData);
   } catch (error) {
     console.error("Erro ao obter anexos:", error);
-    return res.status(500).json({ 
+    res.status(500).json({ 
       message: "Erro ao obter anexos da startup",
       error: error instanceof Error ? error.message : "Erro desconhecido"
     });
