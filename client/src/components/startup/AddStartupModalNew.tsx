@@ -405,7 +405,7 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
     }
   }, [isSubmitting, isEditing, startup, updateStartupMutation, createStartupMutation, toast]);
   
-  const handleCloseModal = useCallback(() => {
+  const handleCloseModal = useCallback((forceClose: boolean = false) => {
     // Verificação específica para abas protegidas (incluindo a aba "files")
     const isProtectedTab = activeTab === "team" || activeTab === "history" || activeTab === "files";
     
@@ -414,11 +414,12 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
       isToastShowing,
       shouldPreventClosing,
       isProtectedTab,
-      activeTab
+      activeTab,
+      forceClose
     });
     
-    // NUNCA permitir fechamento quando está nas abas protegidas
-    if (isProtectedTab) {
+    // NUNCA permitir fechamento quando está nas abas protegidas, a menos que seja forçado
+    if (isProtectedTab && !forceClose) {
       console.log("Tentativa de fechamento manual em aba protegida impedida:", activeTab);
       return;
     }
@@ -1098,7 +1099,7 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={handleCloseModal}
+                onClick={() => handleCloseModal(true)} 
                 className="w-full sm:w-auto"
                 disabled={isSubmitting}
               >
