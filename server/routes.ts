@@ -12,6 +12,16 @@ import {
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { setupAuth, isAuthenticated, isAdmin, isInvestor, hashPassword } from "./auth";
+import { 
+  upload, 
+  uploadFile, 
+  uploadPitchDeck, 
+  uploadStartupAttachment, 
+  getStartupAttachments,
+  deleteAttachment,
+  deletePitchDeck
+} from "./file-controller";
+import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -903,6 +913,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to fetch task counts" });
     }
   });
+
+  // Configurar rota estática para servir os arquivos enviados
+  app.use('/uploads', (req, res, next) => {
+    const filePath = path.join(process.cwd(), 'uploads', req.path);
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        next();
+      }
+    });
+  });
+
+  // Rotas para gerenciamento de arquivos
+  
+  // Upload de arquivo genérico
+  app.post("/api/files/upload", isAuthenticated, upload.single("file"), uploadFile);
+  
+  // Upload de PitchDeck específico para uma startup
+  app.post("/api/startups/:startupId/pitch-deck", isInvestor, upload.single("file"), uploadPitchDeck);
+  
+  // Upload de anexo para uma startup
+  app.post("/api/startups/:startupId/attachments", isInvestor, upload.single("file"), uploadStartupAttachment);
+  
+  // Obter anexos de uma startup
+  app.get("/api/startups/:startupId/attachments", isAuthenticated, getStartupAttachments);
+  
+  // Excluir um anexo
+  app.delete("/api/startups/attachments/:attachmentId", isInvestor, deleteAttachment);
+  
+  // Excluir o PitchDeck de uma startup
+  app.delete("/api/startups/:startupId/pitch-deck", isInvestor, deletePitchDeck);
 
   const httpServer = createServer(app);
   return httpServer;
