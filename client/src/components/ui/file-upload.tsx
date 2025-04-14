@@ -25,7 +25,7 @@ export function FileUpload({
   onUploadComplete,
   onUploadError,
   accept = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.zip",
-  maxSize = 10 * 1024 * 1024, // 10MB padrão
+  maxSize = 0, // 0 significa sem limite
   buttonText = "Escolher arquivo",
   fieldName = "file",
   additionalData = {},
@@ -112,8 +112,8 @@ export function FileUpload({
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Validar tamanho do arquivo
-    if (file.size > maxSize) {
+    // Validar tamanho do arquivo apenas se houver um limite definido (maxSize > 0)
+    if (maxSize > 0 && file.size > maxSize) {
       toast({
         title: "Arquivo muito grande",
         description: `O tamanho máximo permitido é ${formatFileSize(maxSize)}`,
@@ -206,7 +206,9 @@ export function FileUpload({
             <Upload className="h-8 w-8 text-muted-foreground" />
             <div className="text-sm font-medium">{buttonText}</div>
             <div className="text-xs text-muted-foreground">
-              Tamanho máximo: {formatFileSize(maxSize)}
+              {maxSize > 0 
+                ? `Tamanho máximo: ${formatFileSize(maxSize)}` 
+                : "Sem limite de tamanho"}
             </div>
           </Label>
         </div>
