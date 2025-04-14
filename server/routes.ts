@@ -964,6 +964,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Excluir o PitchDeck de uma startup
   app.delete("/api/startups/:startupId/pitch-deck", isInvestor, deletePitchDeck);
 
+  // Configurar rotas do módulo de workflow
+  setupWorkflowRoutes(app);
+
   const httpServer = createServer(app);
   return httpServer;
 }
