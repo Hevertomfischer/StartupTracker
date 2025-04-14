@@ -1,28 +1,49 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import fs from 'fs';
+import path from 'path';
+
+// Garantir que a pasta de uploads existe
+const uploadsDir = path.join(process.cwd(), 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  console.log('Diretório de uploads criado:', uploadsDir);
+} else {
+  console.log('Diretório de uploads encontrado:', uploadsDir);
+}
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Serve os arquivos de upload estáticos
+app.use('/uploads', express.static(uploadsDir));
+
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
+  const reqPath = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
+  // Preservar o método original corretamente
+  const originalJson = res.json.bind(res);
+  
+  // Sobreescrever de forma segura
+  res.json = function(body: any) {
+    capturedJsonResponse = body;
+    return originalJson(body);
   };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+    if (reqPath.startsWith("/api")) {
+      let logLine = `${req.method} ${reqPath} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        try {
+          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        } catch (e) {
+          logLine += ` :: [Error stringifying response]`;
+        }
       }
 
       if (logLine.length > 80) {

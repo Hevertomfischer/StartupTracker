@@ -52,8 +52,13 @@ export function FileManager({ startupId }: FileManagerProps) {
   const { data, isLoading, isError, error } = useQuery<AttachmentsResponse, Error>({
     queryKey: [`/api/startups/${startupId}/attachments`],
     queryFn: async () => {
-      const res = await apiRequest("GET", `/api/startups/${startupId}/attachments`);
-      return await res.json();
+      try {
+        console.log(`Buscando anexos para startup: ${startupId}`);
+        return await apiRequest("GET", `/api/startups/${startupId}/attachments`);
+      } catch (err) {
+        console.error('Erro ao buscar anexos:', err);
+        throw err;
+      }
     }
   });
   
