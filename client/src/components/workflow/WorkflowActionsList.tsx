@@ -88,21 +88,21 @@ export const WorkflowActionsList: React.FC<WorkflowActionsListProps> = ({ workfl
     }
 
     try {
-      const newOrder = action.execution_order;
-      const targetOrder = actions[targetIndex].execution_order;
+      const newOrder = action.order;
+      const targetOrder = actions[targetIndex].order;
 
       // Atualizar a ordem da ação selecionada
       await apiRequest(
         'PATCH',
         `/api/workflow-actions/${action.id}`,
-        { execution_order: targetOrder }
+        { order: targetOrder }
       );
 
       // Atualizar a ordem da ação de destino
       await apiRequest(
         'PATCH',
         `/api/workflow-actions/${actions[targetIndex].id}`,
-        { execution_order: newOrder }
+        { order: newOrder }
       );
 
       queryClient.invalidateQueries({ queryKey: ['/api/workflows', workflow.id, 'actions'] });
@@ -171,7 +171,7 @@ export const WorkflowActionsList: React.FC<WorkflowActionsListProps> = ({ workfl
               <TableBody>
                 {actions.map((action) => (
                   <TableRow key={action.id}>
-                    <TableCell className="font-medium">{action.execution_order}</TableCell>
+                    <TableCell className="font-medium">{action.order}</TableCell>
                     <TableCell>{action.action_name}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">

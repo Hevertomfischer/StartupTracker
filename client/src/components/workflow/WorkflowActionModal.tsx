@@ -41,7 +41,7 @@ const workflowActionFormSchema = z.object({
   }),
   description: z.string().optional(),
   action_type: z.enum(['send_email', 'attribute_change', 'task_creation', 'status_query']),
-  execution_order: z.number().int().positive(),
+  order: z.number().int().positive(),
   config_json: z.any(),
 });
 
@@ -76,7 +76,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
       action_name: action?.action_name || '',
       description: action?.description || '',
       action_type: (action?.action_type as any) || 'send_email',
-      execution_order: action?.execution_order || (actions?.length ? actions.length + 1 : 1),
+      order: action?.order || (actions?.length ? actions.length + 1 : 1),
       config_json: action?.config_json || {},
     },
   });
@@ -87,7 +87,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
   // Atualizar ordem de execução quando as ações forem carregadas (apenas em modo de criação)
   useEffect(() => {
     if (!isEditing && actions && actions.length > 0) {
-      form.setValue('execution_order', actions.length + 1);
+      form.setValue('order', actions.length + 1);
     }
   }, [form, actions, isEditing]);
 

@@ -224,6 +224,8 @@ export const workflows = pgTable("workflows", {
 export const workflowActions = pgTable("workflow_actions", {
   id: uuid("id").primaryKey().defaultRandom(),
   workflow_id: uuid("workflow_id").notNull().references(() => workflows.id, { onDelete: "cascade" }),
+  action_name: text("action_name").notNull(),
+  description: text("description"),
   action_type: text("action_type").notNull(), // email, attribute_change, task_creation, status_query
   action_details: jsonb("action_details").notNull(), // Dados específicos da ação
   order: integer("order").notNull().default(0), // Ordem de execução
