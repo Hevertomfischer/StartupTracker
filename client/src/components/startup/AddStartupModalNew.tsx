@@ -406,8 +406,8 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
   }, [isSubmitting, isEditing, startup, updateStartupMutation, createStartupMutation, toast]);
   
   const handleCloseModal = useCallback(() => {
-    // Verificação específica para abas protegidas
-    const isProtectedTab = activeTab === "team" || activeTab === "history";
+    // Verificação específica para abas protegidas (incluindo a aba "files")
+    const isProtectedTab = activeTab === "team" || activeTab === "history" || activeTab === "files";
     
     console.log("handleCloseModal:", {
       isSubmitting,
@@ -446,8 +446,8 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
       modal={true}
       // Impedir fechamento automático quando é definido por código
       onOpenChange={(isOpen) => {
-        // Verificação específica para abas protegidas
-        const isProtectedTab = activeTab === "team" || activeTab === "history";
+        // Verificação específica para abas protegidas (incluindo a aba "files")
+        const isProtectedTab = activeTab === "team" || activeTab === "history" || activeTab === "files";
         
         console.log("Dialog onOpenChange:", { 
           isOpen, 

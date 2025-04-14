@@ -1,8 +1,9 @@
 import { Startup } from "@shared/schema";
-import { CalendarIcon, Trash2, LinkIcon, Building2, CircleDollarSign, CheckSquare, ExternalLink } from "lucide-react";
+import { CalendarIcon, Trash2, LinkIcon, Building2, CircleDollarSign, CheckSquare, FileText, FileDigit } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTaskCounts } from "@/hooks/use-task-counts";
 import { useLocation } from 'wouter';
+import { usePitchDeck } from "@/hooks/use-pitch-deck";
 
 type StartupCardProps = {
   startup: Startup;
@@ -13,6 +14,7 @@ type StartupCardProps = {
 export function StartupCard({ startup, onClick, onDelete }: StartupCardProps) {
   const { getCountForStartup } = useTaskCounts();
   const [, setLocation] = useLocation();
+  const { hasPitchDeck, openPitchDeck, isLoading: isPitchDeckLoading } = usePitchDeck(startup.id);
   
   const taskCount = getCountForStartup(startup.id);
   
