@@ -26,7 +26,7 @@ import path from "path";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
-  
+
   // Initialize database with seed data
   try {
     await storage.seedDatabase();
@@ -36,12 +36,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Endpoints para gerenciamento de usuários
-  
+
   // Listar todos os usuários (apenas administradores)
   app.get("/api/users", isAdmin, async (req: Request, res: Response) => {
     try {
       const users = await storage.getUsers();
-      
+
       // Para cada usuário, buscar seus perfis
       const usersWithRoles = await Promise.all(
         users.map(async (user) => {
@@ -50,47 +50,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const userRoles = await Promise.all(
             userRoleIds.map(roleId => storage.getUserRole(roleId))
           );
-          
+
           // Filtrar roles undefined e obter apenas nomes
           const roleNames = userRoles
             .filter(role => role !== undefined)
             .map(role => role!.name);
-            
+
           return {
             ...user,
             roles: roleNames
           };
         })
       );
-      
+
       return res.status(200).json(usersWithRoles);
     } catch (error) {
       console.error("Erro ao listar usuários:", error);
       return res.status(500).json({ message: "Erro ao listar usuários" });
     }
   });
-  
+
   // Obter um usuário específico
   app.get("/api/users/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const user = await storage.getUser(req.params.id);
-      
+
       if (!user) {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
-      
+
       // Buscar perfis do usuário
       const userRoleAssignments = await storage.getUserRoleAssignments(user.id);
       const userRoleIds = userRoleAssignments.map(assignment => assignment.role_id);
       const userRoles = await Promise.all(
         userRoleIds.map(roleId => storage.getUserRole(roleId))
       );
-      
+
       // Filtrar roles undefined e obter apenas nomes
       const roleNames = userRoles
         .filter(role => role !== undefined)
         .map(role => role!.name);
-        
+
       return res.status(200).json({
         ...user,
         roles: roleNames
@@ -100,28 +100,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Erro ao obter usuário" });
     }
   });
-  
+
   // Criar novo usuário (apenas administradores)
   app.post("/api/users", isAdmin, async (req: Request, res: Response) => {
     try {
       const { name, email, password, roleId } = req.body;
-      
+
       // Verifica se o e-mail já está em uso
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ message: "Este e-mail já está sendo utilizado" });
       }
-      
+
       // Criptografa a senha
       const hashedPassword = await hashPassword(password);
-      
+
       // Cria o usuário
       const newUser = await storage.createUser({
         name,
         email,
         password: hashedPassword
       });
-      
+
       // Se um perfil foi especificado, atribui ao usuário
       if (roleId) {
         await storage.assignRoleToUser({
@@ -129,25 +129,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           role_id: roleId
         });
       }
-      
+
       return res.status(201).json(newUser);
     } catch (error) {
       console.error("Erro ao criar usuário:", error);
       return res.status(500).json({ message: "Erro ao criar usuário" });
     }
   });
-  
+
   // Atualizar dados de um usuário (apenas administradores)
   app.patch("/api/users/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const { name, email } = req.body;
-      
+
       // Verifica se o usuário existe
       const user = await storage.getUser(req.params.id);
       if (!user) {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
-      
+
       // Se estiver atualizando o email, verificar se já está em uso
       if (email && email !== user.email) {
         const existingUser = await storage.getUserByEmail(email);
@@ -155,43 +155,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Este e-mail já está sendo utilizado" });
         }
       }
-      
+
       // Atualiza o usuário
       const updatedUser = await storage.updateUser(req.params.id, { name, email });
-      
+
       return res.status(200).json(updatedUser);
     } catch (error) {
       console.error("Erro ao atualizar usuário:", error);
       return res.status(500).json({ message: "Erro ao atualizar usuário" });
     }
   });
-  
+
   // Ativar/Desativar usuário (apenas administradores)
   app.patch("/api/users/:id/status", isAdmin, async (req: Request, res: Response) => {
     try {
       const { active } = req.body;
-      
+
       // Verificar se o usuário existe
       const user = await storage.getUser(req.params.id);
       if (!user) {
         return res.status(404).json({ message: "Usuário não encontrado" });
       }
-      
+
       // Não permitir desativar o próprio usuário
       if (req.user && req.user.id === req.params.id && active === false) {
         return res.status(400).json({ message: "Não é possível desativar seu próprio usuário" });
       }
-      
+
       // Atualizar status do usuário
       const updatedUser = await storage.updateUser(req.params.id, { active });
-      
+
       return res.status(200).json(updatedUser);
     } catch (error) {
       console.error("Erro ao atualizar status do usuário:", error);
       return res.status(500).json({ message: "Erro ao atualizar status do usuário" });
     }
   });
-  
+
   // Listar todos os perfis disponíveis
   app.get("/api/roles", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -202,24 +202,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Erro ao listar perfis" });
     }
   });
-  
+
   // Obter um perfil específico
   app.get("/api/roles/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const role = await storage.getUserRole(id);
-      
+
       if (!role) {
         return res.status(404).json({ message: "Perfil não encontrado" });
       }
-      
+
       return res.status(200).json(role);
     } catch (error) {
       console.error("Erro ao buscar perfil:", error);
       return res.status(500).json({ message: "Erro ao buscar perfil" });
     }
   });
-  
+
   // Criar um novo perfil
   app.post("/api/roles", isAdmin, async (req: Request, res: Response) => {
     try {
@@ -230,41 +230,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Erro ao criar perfil" });
     }
   });
-  
+
   // Atualizar um perfil existente
   app.patch("/api/roles/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const updatedRole = await storage.updateUserRole(id, req.body);
-      
+
       if (!updatedRole) {
         return res.status(404).json({ message: "Perfil não encontrado" });
       }
-      
+
       return res.status(200).json(updatedRole);
     } catch (error) {
       console.error("Erro ao atualizar perfil:", error);
       return res.status(500).json({ message: "Erro ao atualizar perfil" });
     }
   });
-  
+
   // Excluir um perfil
   app.delete("/api/roles/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteUserRole(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Perfil não encontrado" });
       }
-      
+
       return res.status(200).json({ message: "Perfil excluído com sucesso" });
     } catch (error) {
       console.error("Erro ao excluir perfil:", error);
       return res.status(500).json({ message: "Erro ao excluir perfil" });
     }
   });
-  
+
   // Obter páginas do sistema
   app.get("/api/system-pages", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -275,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Erro ao listar páginas do sistema" });
     }
   });
-  
+
   // Criar uma nova página do sistema
   app.post("/api/system-pages", isAdmin, async (req: Request, res: Response) => {
     try {
@@ -286,41 +286,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Erro ao criar página do sistema" });
     }
   });
-  
+
   // Atualizar uma página do sistema
   app.patch("/api/system-pages/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const updatedPage = await storage.updateSystemPage(id, req.body);
-      
+
       if (!updatedPage) {
         return res.status(404).json({ message: "Página não encontrada" });
       }
-      
+
       return res.status(200).json(updatedPage);
     } catch (error) {
       console.error("Erro ao atualizar página:", error);
       return res.status(500).json({ message: "Erro ao atualizar página do sistema" });
     }
   });
-  
+
   // Excluir uma página do sistema
   app.delete("/api/system-pages/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteSystemPage(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Página não encontrada" });
       }
-      
+
       return res.status(200).json({ message: "Página excluída com sucesso" });
     } catch (error) {
       console.error("Erro ao excluir página:", error);
       return res.status(500).json({ message: "Erro ao excluir página do sistema" });
     }
   });
-  
+
   // Obter permissões de página para um perfil
   app.get("/api/roles/:id/pages", isAdmin, async (req: Request, res: Response) => {
     try {
@@ -332,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Erro ao listar permissões de página" });
     }
   });
-  
+
   // Atribuir uma página a um perfil
   app.post("/api/roles/:roleId/pages/:pageId", isAdmin, async (req: Request, res: Response) => {
     try {
@@ -341,24 +341,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role_id: roleId,
         page_id: pageId
       });
-      
+
       return res.status(201).json(permission);
     } catch (error) {
       console.error("Erro ao atribuir página ao perfil:", error);
       return res.status(500).json({ message: "Erro ao atribuir página ao perfil" });
     }
   });
-  
+
   // Remover uma página de um perfil
   app.delete("/api/roles/:roleId/pages/:pageId", isAdmin, async (req: Request, res: Response) => {
     try {
       const { roleId, pageId } = req.params;
       const removed = await storage.removePageFromRole(roleId, pageId);
-      
+
       if (!removed) {
         return res.status(404).json({ message: "Permissão não encontrada" });
       }
-      
+
       return res.status(200).json({ message: "Permissão removida com sucesso" });
     } catch (error) {
       console.error("Erro ao remover página do perfil:", error);
@@ -454,7 +454,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/startups/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
-      
+
       const startup = await storage.getStartup(id);
       if (!startup) {
         return res.status(404).json({ message: "Startup not found" });
@@ -487,7 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/startups/:id", isInvestor, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
-      
+
       const startup = await storage.getStartup(id);
       if (!startup) {
         return res.status(404).json({ message: "Startup not found" });
@@ -511,16 +511,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = req.params.id;
       const { status_id } = req.body;
-      
+
       console.log(`Updating startup ${id} status to ${status_id}`);
       console.log('Request body:', req.body);
-      
+
       // Validar o formato dos IDs
       const data = updateStartupStatusSchema.parse({ 
         id, 
         status_id 
       });
-      
+
       // Verificar se o startup existe
       const startup = await storage.getStartup(id);
       if (!startup) {
@@ -534,7 +534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error(`Status with ID ${status_id} not found`);
         return res.status(404).json({ message: "Status not found" });
       }
-      
+
       // Atualizar o status
       const updatedStartup = await storage.updateStartupStatus(id, data.status_id);
       console.log('Successfully updated startup status:', updatedStartup);
@@ -571,7 +571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/startups/:id/members", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const startupId = req.params.id;
-      
+
       const members = await storage.getStartupMembers(startupId);
       return res.status(200).json(members);
     } catch (error) {
@@ -584,7 +584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/startups/:id/members", isInvestor, async (req: Request, res: Response) => {
     try {
       const startupId = req.params.id;
-      
+
       // Check if startup exists
       const startup = await storage.getStartup(startupId);
       if (!startup) {
@@ -607,20 +607,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to create startup member" });
     }
   });
-  
+
   // Startup history routes
   app.get("/api/startups/:id/history", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       console.log(`Buscando histórico para startup ID: ${id}`);
-      
+
       // Se não existir nenhum registro de histórico, vamos criar um para teste
       let history = await storage.getStartupHistory(id);
-      
+
       // Se não tiver histórico, cria um registro para teste
       if (history.length === 0) {
         console.log(`Nenhum histórico encontrado para a startup ${id}, criando dados de teste`);
-        
+
         // Buscar a startup
         const startup = await storage.getStartup(id);
         if (startup) {
@@ -631,12 +631,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             old_value: "Nome anterior",
             new_value: startup.name || "Nome atual"
           });
-          
+
           // Buscar novamente
           history = await storage.getStartupHistory(id);
         }
       }
-      
+
       console.log(`Histórico encontrado: ${history?.length || 0} registros`);
       return res.status(200).json(history || []);
     } catch (error) {
@@ -644,20 +644,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to fetch startup history", error: error instanceof Error ? error.message : String(error) });
     }
   });
-  
+
   // Startup status history routes
   app.get("/api/startups/:id/status-history", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       console.log(`Buscando histórico de status para startup ID: ${id}`);
-      
+
       // Se não existir nenhum registro de histórico de status, vamos criar um para teste
       let statusHistory = await storage.getStartupStatusHistory(id);
-      
+
       // Se não tiver histórico de status, cria um registro para teste
       if (statusHistory.length === 0) {
         console.log(`Nenhum histórico de status encontrado para a startup ${id}, criando dados de teste`);
-        
+
         // Buscar a startup
         const startup = await storage.getStartup(id);
         if (startup && startup.status_id) {
@@ -670,13 +670,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               status_id: startup.status_id,
               status_name: status.name
             });
-            
+
             // Buscar novamente
             statusHistory = await storage.getStartupStatusHistory(id);
           }
         }
       }
-      
+
       console.log(`Histórico de status encontrado: ${statusHistory?.length || 0} registros`);
       return res.status(200).json(statusHistory || []);
     } catch (error) {
@@ -758,12 +758,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.user) {
         return res.status(401).json({ message: "Usuário não autenticado" });
       }
-      
+
       const data = insertTaskSchema.parse({
         ...req.body,
         created_by: req.user.id
       });
-      
+
       const task = await storage.createTask(data);
       return res.status(201).json(task);
     } catch (error) {
@@ -781,11 +781,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = req.params.id;
       const task = await storage.getTask(id);
-      
+
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
-      
+
       const data = insertTaskSchema.partial().parse(req.body);
       const updatedTask = await storage.updateTask(id, data);
       return res.status(200).json(updatedTask);
@@ -804,11 +804,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = req.params.id;
       const task = await storage.getTask(id);
-      
+
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
-      
+
       const completedTask = await storage.completeTask(id);
       return res.status(200).json(completedTask);
     } catch (error) {
@@ -822,11 +822,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = req.params.id;
       const success = await storage.deleteTask(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Task not found" });
       }
-      
+
       return res.status(204).end();
     } catch (error) {
       console.error("Error deleting task:", error);
@@ -852,20 +852,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.user) {
         return res.status(401).json({ message: "Usuário não autenticado" });
       }
-      
+
       const taskId = req.params.id;
       const task = await storage.getTask(taskId);
-      
+
       if (!task) {
         return res.status(404).json({ message: "Task not found" });
       }
-      
+
       const data = insertTaskCommentSchema.parse({
         ...req.body,
         task_id: taskId,
         user_id: req.user.id
       });
-      
+
       const comment = await storage.createTaskComment(data);
       return res.status(201).json(comment);
     } catch (error) {
@@ -883,11 +883,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = req.params.id;
       const success = await storage.deleteTaskComment(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Comment not found" });
       }
-      
+
       return res.status(204).end();
     } catch (error) {
       console.error("Error deleting task comment:", error);
@@ -900,17 +900,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const counts = await storage.getTaskCounts();
       console.log("API /api/task-counts - Response:", counts);
-      
+
       // Verificar se counts é um array válido
       if (!Array.isArray(counts)) {
         console.error("API /api/task-counts - Invalid counts format:", counts);
         return res.status(200).json([]);
       }
-      
+
       return res.status(200).json(counts);
     } catch (error) {
       console.error("Error fetching task counts:", error);
       return res.status(500).json({ message: "Failed to fetch task counts" });
+    }
+  });
+
+  // Workflow routes
+  app.get("/api/workflows", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const workflows = await storage.getWorkflows();
+      return res.status(200).json(workflows);
+    } catch (error) {
+      console.error("Error fetching workflows:", error);
+      return res.status(500).json({ message: "Failed to fetch workflows" });
+    }
+  });
+
+  app.post("/api/workflows", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Usuário não autenticado" });
+      }
+
+      const data = insertWorkflowSchema.parse({
+        ...req.body,
+        created_by: req.user.id
+      });
+
+      const workflow = await storage.createWorkflow(data);
+      return res.status(201).json(workflow);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      console.error("Error creating workflow:", error);
+      return res.status(500).json({ message: "Failed to create workflow" });
+    }
+  });
+
+  app.patch("/api/workflows/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const data = insertWorkflowSchema.partial().parse(req.body);
+      const workflow = await storage.updateWorkflow(id, data);
+
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+
+      return res.status(200).json(workflow);
+    } catch (error) {
+      console.error("Error updating workflow:", error);
+      return res.status(500).json({ message: "Failed to update workflow" });
+    }
+  });
+
+  app.delete("/api/workflows/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const success = await storage.deleteWorkflow(id);
+
+      if (!success) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+
+      return res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting workflow:", error);
+      return res.status(500).json({ message: "Failed to delete workflow" });
     }
   });
 
@@ -925,22 +992,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rotas para gerenciamento de arquivos
-  
+
   // Upload de arquivo genérico
   app.post("/api/files/upload", isAuthenticated, upload.single("file"), uploadFile);
-  
+
   // Upload de PitchDeck específico para uma startup
   app.post("/api/startups/:startupId/pitch-deck", isInvestor, upload.single("file"), uploadPitchDeck);
-  
+
   // Upload de anexo para uma startup
   app.post("/api/startups/:startupId/attachments", isInvestor, upload.single("file"), uploadStartupAttachment);
-  
+
   // Obter anexos de uma startup
   app.get("/api/startups/:startupId/attachments", isAuthenticated, getStartupAttachments);
-  
+
   // Excluir um anexo
   app.delete("/api/startups/attachments/:attachmentId", isInvestor, deleteAttachment);
-  
+
   // Excluir o PitchDeck de uma startup
   app.delete("/api/startups/:startupId/pitch-deck", isInvestor, deletePitchDeck);
 

@@ -311,6 +311,54 @@ export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({
   created_at: true,
 });
 
+// Workflow tables
+export const workflows = pgTable("workflows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  is_active: boolean("is_active").notNull().default(true),
+  trigger_type: text("trigger_type").notNull(), // status_change, attribute_change, record_creation
+  trigger_details: jsonb("trigger_details").notNull().default({}),
+  created_by: uuid("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const workflowActions = pgTable("workflow_actions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workflow_id: uuid("workflow_id").notNull().references(() => workflows.id, { onDelete: "cascade" }),
+  action_type: text("action_type").notNull(), // send_email, update_attribute, create_task
+  action_details: jsonb("action_details").notNull(),
+  order: integer("order").notNull().default(0),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const workflowConditions = pgTable("workflow_conditions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workflow_id: uuid("workflow_id").notNull().references(() => workflows.id, { onDelete: "cascade" }),
+  field_name: text("field_name").notNull(),
+  operator: text("operator").notNull(), // equals, not_equals, contains, greater_than, less_than
+  value: text("value").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Workflow schemas
+export const insertWorkflowSchema = createInsertSchema(workflows).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export const insertWorkflowActionSchema = createInsertSchema(workflowActions).omit({
+  id: true,
+  created_at: true,
+});
+
+export const insertWorkflowConditionSchema = createInsertSchema(workflowConditions).omit({
+  id: true,
+  created_at: true,
+});
+
 // TypeScript Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect & {

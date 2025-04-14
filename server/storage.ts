@@ -36,7 +36,10 @@ import {
   type InsertTask,
   taskComments,
   type TaskComment,
-  type InsertTaskComment
+  type InsertTaskComment,
+  workflows,
+  type Workflow,
+  type InsertWorkflow
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, sql } from "drizzle-orm";
@@ -49,44 +52,44 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, user: Partial<InsertUser>): Promise<User | undefined>;
   deactivateUser(id: string): Promise<User | undefined>;
-  
+
   // User Role operations
   getUserRoles(): Promise<UserRole[]>;
   getUserRole(id: string): Promise<UserRole | undefined>;
   createUserRole(role: InsertUserRole): Promise<UserRole>;
   updateUserRole(id: string, role: Partial<InsertUserRole>): Promise<UserRole | undefined>;
   deleteUserRole(id: string): Promise<boolean>;
-  
+
   // User Role Assignment operations
   getUserRoleAssignments(userId: string): Promise<UserRoleAssignment[]>;
   getUsersByRole(roleId: string): Promise<User[]>;
   assignRoleToUser(assignment: InsertUserRoleAssignment): Promise<UserRoleAssignment>;
   removeRoleFromUser(userId: string, roleId: string): Promise<boolean>;
-  
+
   // System Page operations
   getSystemPages(): Promise<SystemPage[]>;
   getSystemPage(id: string): Promise<SystemPage | undefined>;
   createSystemPage(page: InsertSystemPage): Promise<SystemPage>;
   updateSystemPage(id: string, page: Partial<InsertSystemPage>): Promise<SystemPage | undefined>;
   deleteSystemPage(id: string): Promise<boolean>;
-  
+
   // Role Page Permission operations
   getRolePagePermissions(roleId: string): Promise<RolePagePermission[]>;
   getPagePermissions(pageId: string): Promise<RolePagePermission[]>;
   assignPageToRole(permission: InsertRolePagePermission): Promise<RolePagePermission>;
   removePageFromRole(roleId: string, pageId: string): Promise<boolean>;
-  
+
   // User Page Permission check
   getUserAccessiblePages(userId: string): Promise<SystemPage[]>;
   checkUserPageAccess(userId: string, pagePath: string): Promise<boolean>;
-  
+
   // Status operations
   getStatuses(): Promise<Status[]>;
   getStatus(id: string): Promise<Status | undefined>;
   createStatus(status: InsertStatus): Promise<Status>;
   updateStatus(id: string, status: Partial<InsertStatus>): Promise<Status | undefined>;
   deleteStatus(id: string): Promise<boolean>;
-  
+
   // Startup operations
   getStartups(): Promise<Startup[]>;
   getStartup(id: string): Promise<Startup | undefined>;
@@ -94,20 +97,20 @@ export interface IStorage {
   updateStartup(id: string, startup: Partial<InsertStartup>): Promise<Startup | undefined>;
   updateStartupStatus(id: string, status_id: string): Promise<Startup | undefined>;
   deleteStartup(id: string): Promise<boolean>;
-  
+
   // Startup member operations
   getStartupMembers(startupId: string): Promise<StartupMember[]>;
   createStartupMember(member: InsertStartupMember): Promise<StartupMember>;
-  
+
   // Startup history operations
   getStartupHistory(startupId: string): Promise<StartupHistory[]>;
   createStartupHistoryEntry(entry: InsertStartupHistory): Promise<StartupHistory>;
-  
+
   // Startup status history operations
   getStartupStatusHistory(startupId: string): Promise<StartupStatusHistory[]>;
   createStartupStatusHistoryEntry(entry: InsertStartupStatusHistory): Promise<StartupStatusHistory>;
   updateStartupStatusHistoryEntry(id: string, endDate: Date): Promise<StartupStatusHistory | undefined>;
-  
+
   // Task operations
   getTasks(): Promise<Task[]>;
   getTasksForStartup(startupId: string): Promise<Task[]>;
@@ -119,12 +122,19 @@ export interface IStorage {
   completeTask(id: string): Promise<Task | undefined>;
   deleteTask(id: string): Promise<boolean>;
   getTaskCounts(): Promise<{startupId: string, count: number}[]>;
-  
+
   // Task comment operations
   getTaskComments(taskId: string): Promise<TaskComment[]>;
   createTaskComment(comment: InsertTaskComment): Promise<TaskComment>;
   deleteTaskComment(id: string): Promise<boolean>;
-  
+
+  //Workflow operations
+  getWorkflows(): Promise<Workflow[]>;
+  getWorkflow(id: string): Promise<Workflow | undefined>;
+  createWorkflow(workflow: InsertWorkflow): Promise<Workflow>;
+  updateWorkflow(id: string, workflow: Partial<InsertWorkflow>): Promise<Workflow | undefined>;
+  deleteWorkflow(id: string): Promise<boolean>;
+
   // Seed data
   seedDatabase(): Promise<void>;
 }
@@ -149,7 +159,7 @@ export class DatabaseStorage implements IStorage {
     const [newUser] = await db.insert(users).values(user).returning();
     return newUser;
   }
-  
+
   async updateUser(id: string, userData: Partial<InsertUser>): Promise<User | undefined> {
     const [updatedUser] = await db
       .update(users)
@@ -161,7 +171,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedUser;
   }
-  
+
   async deactivateUser(id: string): Promise<User | undefined> {
     const [deactivatedUser] = await db
       .update(users)
@@ -173,22 +183,22 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return deactivatedUser;
   }
-  
+
   // User Role operations
   async getUserRoles(): Promise<UserRole[]> {
     return await db.select().from(userRoles).orderBy(asc(userRoles.name));
   }
-  
+
   async getUserRole(id: string): Promise<UserRole | undefined> {
     const [role] = await db.select().from(userRoles).where(eq(userRoles.id, id));
     return role || undefined;
   }
-  
+
   async createUserRole(role: InsertUserRole): Promise<UserRole> {
     const [newRole] = await db.insert(userRoles).values(role).returning();
     return newRole;
   }
-  
+
   async updateUserRole(id: string, roleData: Partial<InsertUserRole>): Promise<UserRole | undefined> {
     const [updatedRole] = await db
       .update(userRoles)
@@ -197,12 +207,12 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedRole;
   }
-  
+
   async deleteUserRole(id: string): Promise<boolean> {
     const result = await db.delete(userRoles).where(eq(userRoles.id, id));
     return result.count > 0;
   }
-  
+
   // User Role Assignment operations
   async getUserRoleAssignments(userId: string): Promise<UserRoleAssignment[]> {
     return await db
@@ -210,16 +220,16 @@ export class DatabaseStorage implements IStorage {
       .from(userRoleAssignments)
       .where(eq(userRoleAssignments.user_id, userId));
   }
-  
+
   async getUsersByRole(roleId: string): Promise<User[]> {
     // Usando uma subconsulta para obter IDs de usuários com o papel especificado
     const userIds = await db
       .select({ userId: userRoleAssignments.user_id })
       .from(userRoleAssignments)
       .where(eq(userRoleAssignments.role_id, roleId));
-    
+
     if (userIds.length === 0) return [];
-    
+
     // Obtendo os detalhes completos dos usuários
     return await db
       .select()
@@ -229,7 +239,7 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(asc(users.name));
   }
-  
+
   async assignRoleToUser(assignment: InsertUserRoleAssignment): Promise<UserRoleAssignment> {
     // Verificar se a associação já existe
     const existing = await db
@@ -239,20 +249,20 @@ export class DatabaseStorage implements IStorage {
         sql`${userRoleAssignments.user_id} = ${assignment.user_id} AND 
             ${userRoleAssignments.role_id} = ${assignment.role_id}`
       );
-    
+
     if (existing.length > 0) {
       return existing[0];
     }
-    
+
     // Criar nova associação
     const [newAssignment] = await db
       .insert(userRoleAssignments)
       .values(assignment)
       .returning();
-    
+
     return newAssignment;
   }
-  
+
   async removeRoleFromUser(userId: string, roleId: string): Promise<boolean> {
     const result = await db
       .delete(userRoleAssignments)
@@ -260,25 +270,25 @@ export class DatabaseStorage implements IStorage {
         sql`${userRoleAssignments.user_id} = ${userId} AND 
             ${userRoleAssignments.role_id} = ${roleId}`
       );
-    
+
     return result.count > 0;
   }
-  
+
   // System Page operations
   async getSystemPages(): Promise<SystemPage[]> {
     return await db.select().from(systemPages).orderBy(asc(systemPages.name));
   }
-  
+
   async getSystemPage(id: string): Promise<SystemPage | undefined> {
     const [page] = await db.select().from(systemPages).where(eq(systemPages.id, id));
     return page || undefined;
   }
-  
+
   async createSystemPage(page: InsertSystemPage): Promise<SystemPage> {
     const [newPage] = await db.insert(systemPages).values(page).returning();
     return newPage;
   }
-  
+
   async updateSystemPage(id: string, pageData: Partial<InsertSystemPage>): Promise<SystemPage | undefined> {
     const [updatedPage] = await db
       .update(systemPages)
@@ -287,12 +297,12 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedPage;
   }
-  
+
   async deleteSystemPage(id: string): Promise<boolean> {
     const result = await db.delete(systemPages).where(eq(systemPages.id, id));
     return result.count > 0;
   }
-  
+
   // Role Page Permission operations
   async getRolePagePermissions(roleId: string): Promise<RolePagePermission[]> {
     return await db
@@ -300,14 +310,14 @@ export class DatabaseStorage implements IStorage {
       .from(rolePagePermissions)
       .where(eq(rolePagePermissions.role_id, roleId));
   }
-  
+
   async getPagePermissions(pageId: string): Promise<RolePagePermission[]> {
     return await db
       .select()
       .from(rolePagePermissions)
       .where(eq(rolePagePermissions.page_id, pageId));
   }
-  
+
   async assignPageToRole(permission: InsertRolePagePermission): Promise<RolePagePermission> {
     // Verificar se a permissão já existe
     const existing = await db
@@ -317,20 +327,20 @@ export class DatabaseStorage implements IStorage {
         sql`${rolePagePermissions.role_id} = ${permission.role_id} AND 
             ${rolePagePermissions.page_id} = ${permission.page_id}`
       );
-    
+
     if (existing.length > 0) {
       return existing[0];
     }
-    
+
     // Criar nova permissão
     const [newPermission] = await db
       .insert(rolePagePermissions)
       .values(permission)
       .returning();
-    
+
     return newPermission;
   }
-  
+
   async removePageFromRole(roleId: string, pageId: string): Promise<boolean> {
     const result = await db
       .delete(rolePagePermissions)
@@ -338,22 +348,22 @@ export class DatabaseStorage implements IStorage {
         sql`${rolePagePermissions.role_id} = ${roleId} AND 
             ${rolePagePermissions.page_id} = ${pageId}`
       );
-    
+
     return result.count > 0;
   }
-  
+
   // User Page Permission check
   async getUserAccessiblePages(userId: string): Promise<SystemPage[]> {
     // Consulta para obter todos os papéis do usuário
     const userRoles = await this.getUserRoleAssignments(userId);
-    
+
     if (userRoles.length === 0) {
       return []; // Usuário sem papéis não tem acesso a nenhuma página
     }
-    
+
     // Array com os IDs dos papéis do usuário
     const roleIds = userRoles.map(assignment => assignment.role_id);
-    
+
     // Consulta para obter todos os IDs de páginas associadas a esses papéis
     const pagePermissions = await db
       .select()
@@ -361,14 +371,14 @@ export class DatabaseStorage implements IStorage {
       .where(
         sql`${rolePagePermissions.role_id} IN (${roleIds.join(',')})`
       );
-    
+
     if (pagePermissions.length === 0) {
       return []; // Nenhuma página associada aos papéis do usuário
     }
-    
+
     // Array com os IDs das páginas acessíveis
     const pageIds = pagePermissions.map(permission => permission.page_id);
-    
+
     // Consulta para obter os detalhes completos das páginas
     return await db
       .select()
@@ -378,28 +388,28 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(asc(systemPages.name));
   }
-  
+
   async checkUserPageAccess(userId: string, pagePath: string): Promise<boolean> {
     // Primeiro, busca a página pelo seu caminho
     const [page] = await db
       .select()
       .from(systemPages)
       .where(eq(systemPages.path, pagePath));
-    
+
     if (!page) {
       return false; // A página não existe
     }
-    
+
     // Consulta para obter todos os papéis do usuário
     const userRoles = await this.getUserRoleAssignments(userId);
-    
+
     if (userRoles.length === 0) {
       return false; // Usuário sem papéis não tem acesso
     }
-    
+
     // Array com os IDs dos papéis do usuário
     const roleIds = userRoles.map(assignment => assignment.role_id);
-    
+
     // Verificar se existe pelo menos uma permissão que associe um papel do usuário à página
     const [permission] = await db
       .select()
@@ -408,7 +418,7 @@ export class DatabaseStorage implements IStorage {
         sql`${rolePagePermissions.page_id} = ${page.id} AND
             ${rolePagePermissions.role_id} IN (${roleIds.join(',')})`
       );
-    
+
     return !!permission; // Retorna true se encontrou uma permissão, false caso contrário
   }
 
@@ -416,17 +426,17 @@ export class DatabaseStorage implements IStorage {
   async getStatuses(): Promise<Status[]> {
     return await db.select().from(statuses).orderBy(asc(statuses.order));
   }
-  
+
   async getStatus(id: string): Promise<Status | undefined> {
     const [status] = await db.select().from(statuses).where(eq(statuses.id, id));
     return status || undefined;
   }
-  
+
   async createStatus(status: InsertStatus): Promise<Status> {
     const [newStatus] = await db.insert(statuses).values(status).returning();
     return newStatus;
   }
-  
+
   async updateStatus(id: string, statusData: Partial<InsertStatus>): Promise<Status | undefined> {
     const [updatedStatus] = await db
       .update(statuses)
@@ -435,36 +445,36 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedStatus;
   }
-  
+
   async deleteStatus(id: string): Promise<boolean> {
     const result = await db.delete(statuses).where(eq(statuses.id, id));
     return result.count > 0;
   }
-  
+
   // Startup operations
   async getStartups(): Promise<Startup[]> {
     return await db.select().from(startups).orderBy(desc(startups.created_at));
   }
-  
+
   async getStartup(id: string): Promise<Startup | undefined> {
     const [startup] = await db.select().from(startups).where(eq(startups.id, id));
     return startup || undefined;
   }
-  
+
   async createStartup(insertStartup: InsertStartup): Promise<Startup> {
     // Set updated_at to now
     const startupWithTimestamp = {
       ...insertStartup,
       updated_at: new Date()
     };
-    
+
     const [startup] = await db
       .insert(startups)
       .values(startupWithTimestamp)
       .returning();
     return startup;
   }
-  
+
   async updateStartup(id: string, updateData: Partial<InsertStartup>): Promise<Startup | undefined> {
     try {
       // Busca a startup antes da atualização para comparar os campos
@@ -473,26 +483,26 @@ export class DatabaseStorage implements IStorage {
         console.log(`Startup não encontrada: ${id}`);
         return undefined;
       }
-      
+
       console.log(`Atualizando startup ${id} com dados:`, updateData);
-      
+
       // Always update the updated_at timestamp
       const dataWithTimestamp = {
         ...updateData,
         updated_at: new Date()
       };
-      
+
       // Registra o histórico para cada campo que está sendo alterado
       for (const [key, newValue] of Object.entries(updateData)) {
         // Ignoramos o status_id pois ele é tratado separadamente no updateStartupStatus
         if (key === 'status_id' || key === 'updated_at') continue;
-        
+
         const oldValue = (oldStartup as any)[key];
-        
+
         // Só registra se o valor realmente mudou
         if (newValue !== oldValue && (newValue || oldValue)) {
           console.log(`Registrando alteração no campo ${key}:`, { oldValue, newValue });
-          
+
           try {
             const now = new Date();
             await db.insert(startupHistory).values({
@@ -508,13 +518,13 @@ export class DatabaseStorage implements IStorage {
           }
         }
       }
-      
+
       const [updatedStartup] = await db
         .update(startups)
         .set(dataWithTimestamp)
         .where(eq(startups.id, id))
         .returning();
-      
+
       console.log(`Startup ${id} atualizada com sucesso`);
       return updatedStartup;
     } catch (error) {
@@ -522,35 +532,35 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-  
+
   async updateStartupStatus(id: string, status_id: string): Promise<Startup | undefined> {
     try {
       console.log(`Atualizando status da startup ${id} para ${status_id}`);
-      
+
       // Busca a startup antes da atualização para obter o status anterior
       const oldStartup = await this.getStartup(id);
       if (!oldStartup) {
         console.log(`Startup não encontrada: ${id}`);
         return undefined;
       }
-      
+
       // Busca os detalhes dos status (anterior e novo)
       const oldStatus = oldStartup.status_id ? await this.getStatus(oldStartup.status_id) : null;
       const newStatus = await this.getStatus(status_id);
-      
+
       if (!newStatus) {
         console.error(`Status não encontrado: ${status_id}`);
         return undefined;
       }
-      
+
       console.log(`Alterando status de ${oldStatus?.name || 'Nenhum'} para ${newStatus.name}`);
-      
+
       // Se havia status anterior, fecha o registro de tempo no histórico
       if (oldStatus) {
         // Busca o último registro de histórico de status aberto para esta startup
         const statusHistoryEntries = await this.getStartupStatusHistory(id);
         const openEntry = statusHistoryEntries.find(entry => !entry.end_date && entry.status_id === oldStatus.id);
-        
+
         if (openEntry) {
           // Fecha o registro com a data atual
           const now = new Date();
@@ -560,7 +570,7 @@ export class DatabaseStorage implements IStorage {
           console.log(`Nenhum registro aberto encontrado para o status anterior ${oldStatus.id}`);
         }
       }
-      
+
       // Cria um novo registro de histórico de status
       const now = new Date();
       try {
@@ -574,7 +584,7 @@ export class DatabaseStorage implements IStorage {
       } catch (error) {
         console.error(`Erro ao criar registro de histórico de status:`, error);
       }
-      
+
       // Registra a mudança no histórico geral
       try {
         console.log(`Registrando alteração de status no histórico geral`);
@@ -587,7 +597,7 @@ export class DatabaseStorage implements IStorage {
       } catch (error) {
         console.error(`Erro ao registrar alteração de status no histórico geral:`, error);
       }
-      
+
       // Atualiza o status da startup sem registrar no histórico novamente
       const [updatedStartup] = await db
         .update(startups)
@@ -597,7 +607,7 @@ export class DatabaseStorage implements IStorage {
         })
         .where(eq(startups.id, id))
         .returning();
-      
+
       console.log(`Status da startup ${id} atualizado com sucesso`);
       return updatedStartup;
     } catch (error) {
@@ -605,12 +615,12 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-  
+
   async deleteStartup(id: string): Promise<boolean> {
     const result = await db.delete(startups).where(eq(startups.id, id));
     return result.count > 0;
   }
-  
+
   // Startup member operations
   async getStartupMembers(startupId: string): Promise<StartupMember[]> {
     return await db
@@ -618,7 +628,7 @@ export class DatabaseStorage implements IStorage {
       .from(startupMembers)
       .where(eq(startupMembers.startup_id, startupId));
   }
-  
+
   async createStartupMember(insertMember: InsertStartupMember): Promise<StartupMember> {
     const [member] = await db
       .insert(startupMembers)
@@ -626,18 +636,18 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return member;
   }
-  
+
   // Startup history operations
   async getStartupHistory(startupId: string): Promise<StartupHistory[]> {
     try {
       console.log(`Buscando histórico da startup ${startupId} no banco de dados`);
-      
+
       const results = await db
         .select()
         .from(startupHistory)
         .where(eq(startupHistory.startup_id, startupId))
         .orderBy(desc(startupHistory.changed_at));
-      
+
       console.log(`Encontrados ${results.length} registros de histórico para a startup ${startupId}`);
       return results;
     } catch (error) {
@@ -645,14 +655,14 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
-  
+
   async createStartupHistoryEntry(entry: InsertStartupHistory): Promise<StartupHistory> {
     try {
       const [historyEntry] = await db
         .insert(startupHistory)
         .values(entry)
         .returning();
-      
+
       console.log(`Novo registro de histórico criado: ${JSON.stringify(historyEntry)}`);
       return historyEntry;
     } catch (error) {
@@ -660,18 +670,18 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
-  
+
   // Startup status history operations
   async getStartupStatusHistory(startupId: string): Promise<StartupStatusHistory[]> {
     try {
       console.log(`Buscando histórico de status da startup ${startupId} no banco de dados`);
-      
+
       const results = await db
         .select()
         .from(startupStatusHistory)
         .where(eq(startupStatusHistory.startup_id, startupId))
         .orderBy(desc(startupStatusHistory.start_date));
-      
+
       console.log(`Encontrados ${results.length} registros de histórico de status para a startup ${startupId}`);
       return results;
     } catch (error) {
@@ -679,7 +689,7 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
-  
+
   async createStartupStatusHistoryEntry(entry: InsertStartupStatusHistory): Promise<StartupStatusHistory> {
     const [historyEntry] = await db
       .insert(startupStatusHistory)
@@ -687,18 +697,18 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return historyEntry;
   }
-  
+
   async updateStartupStatusHistoryEntry(id: string, endDate: Date): Promise<StartupStatusHistory | undefined> {
     // Calcular a duração em minutos
     const [entry] = await db.select().from(startupStatusHistory).where(eq(startupStatusHistory.id, id));
-    
+
     if (!entry) {
       return undefined;
     }
-    
+
     const startDate = new Date(entry.start_date);
     const durationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
-    
+
     // Atualizar o registro com a data de fim e duração
     const [updatedEntry] = await db
       .update(startupStatusHistory)
@@ -708,14 +718,14 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(startupStatusHistory.id, id))
       .returning();
-      
+
     return updatedEntry;
   }
   // Task operations
   async getTasks(): Promise<Task[]> {
     return await db.select().from(tasks).orderBy(desc(tasks.created_at));
   }
-  
+
   async getTasksForStartup(startupId: string): Promise<Task[]> {
     return await db
       .select()
@@ -723,7 +733,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tasks.startup_id, startupId))
       .orderBy(desc(tasks.created_at));
   }
-  
+
   async getTasksAssignedToUser(userId: string): Promise<Task[]> {
     return await db
       .select()
@@ -731,7 +741,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tasks.assigned_to, userId))
       .orderBy(desc(tasks.created_at));
   }
-  
+
   async getTasksCreatedByUser(userId: string): Promise<Task[]> {
     return await db
       .select()
@@ -739,17 +749,17 @@ export class DatabaseStorage implements IStorage {
       .where(eq(tasks.created_by, userId))
       .orderBy(desc(tasks.created_at));
   }
-  
+
   async getTask(id: string): Promise<Task | undefined> {
     const [task] = await db.select().from(tasks).where(eq(tasks.id, id));
     return task || undefined;
   }
-  
+
   async createTask(task: InsertTask): Promise<Task> {
     const [newTask] = await db.insert(tasks).values(task).returning();
     return newTask;
   }
-  
+
   async updateTask(id: string, taskData: Partial<InsertTask>): Promise<Task | undefined> {
     const [updatedTask] = await db
       .update(tasks)
@@ -761,7 +771,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedTask;
   }
-  
+
   async completeTask(id: string): Promise<Task | undefined> {
     const now = new Date();
     const [completedTask] = await db
@@ -775,12 +785,12 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return completedTask;
   }
-  
+
   async deleteTask(id: string): Promise<boolean> {
     const result = await db.delete(tasks).where(eq(tasks.id, id));
     return result.count > 0;
   }
-  
+
   async getTaskCounts(): Promise<{startupId: string, count: number}[]> {
     try {
       const result = await db.execute(sql`
@@ -789,12 +799,12 @@ export class DatabaseStorage implements IStorage {
         LEFT JOIN tasks t ON s.id = t.startup_id
         GROUP BY s.id
       `);
-      
+
       console.log("Task Counts - Database Raw Result:", result);
-      
+
       // Converte o resultado explicitamente
       const counts: {startupId: string, count: number}[] = [];
-      
+
       // @ts-ignore - Drizzle ORM tipagem
       for (const row of result) {
         if (row && typeof row.startupId === 'string') {
@@ -804,16 +814,16 @@ export class DatabaseStorage implements IStorage {
           });
         }
       }
-      
+
       console.log("Task Counts - Converted Result:", counts);
-      
+
       return counts;
     } catch (error) {
       console.error("Error in getTaskCounts:", error);
       return [];
     }
   }
-  
+
   // Task comment operations
   async getTaskComments(taskId: string): Promise<TaskComment[]> {
     return await db
@@ -822,16 +832,54 @@ export class DatabaseStorage implements IStorage {
       .where(eq(taskComments.task_id, taskId))
       .orderBy(asc(taskComments.created_at));
   }
-  
+
   async createTaskComment(comment: InsertTaskComment): Promise<TaskComment> {
     const [newComment] = await db.insert(taskComments).values(comment).returning();
     return newComment;
   }
-  
+
   async deleteTaskComment(id: string): Promise<boolean> {
     const result = await db.delete(taskComments).where(eq(taskComments.id, id));
     return result.count > 0;
   }  
+
+  // Workflow functions
+  async getWorkflows(): Promise<Workflow[]> {
+    return await db.select().from(workflows);
+  }
+
+  async getWorkflow(id: string): Promise<Workflow | undefined> {
+    const results = await db
+      .select()
+      .from(workflows)
+      .where(eq(workflows.id, id));
+    return results[0];
+  }
+
+  async createWorkflow(workflow: InsertWorkflow): Promise<Workflow> {
+    const results = await db
+      .insert(workflows)
+      .values(workflow)
+      .returning();
+    return results[0];
+  }
+
+  async updateWorkflow(id: string, workflowData: Partial<InsertWorkflow>): Promise<Workflow | undefined> {
+    const results = await db
+      .update(workflows)
+      .set(workflowData)
+      .where(eq(workflows.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async deleteWorkflow(id: string): Promise<boolean> {
+    const result = await db
+      .delete(workflows)
+      .where(eq(workflows.id, id));
+    return result.rowCount > 0;
+  }
+
   // Seed data
   async seedDatabase(): Promise<void> {
     // Check if we already have status data
@@ -848,7 +896,7 @@ export class DatabaseStorage implements IStorage {
         { name: "Closed Lost", color: "#EF4444", order: 6 }
       ]);
     }
-    
+
     // Verificar se já temos perfis de usuário
     const existingRoles = await db.select().from(userRoles);
     if (existingRoles.length === 0) {
@@ -868,11 +916,11 @@ export class DatabaseStorage implements IStorage {
           description: "Acesso somente leitura às startups e seus dados" 
         }
       ];
-      
+
       await db.insert(userRoles).values(roleValues);
       console.log("Perfis padrão criados com sucesso.");
     }
-    
+
     // Verificar se já temos páginas do sistema
     const existingPages = await db.select().from(systemPages);
     if (existingPages.length === 0) {
@@ -904,36 +952,36 @@ export class DatabaseStorage implements IStorage {
           icon: "users"
         }
       ];
-      
+
       await db.insert(systemPages).values(pageValues);
       console.log("Páginas do sistema criadas com sucesso.");
-      
+
       // Obter IDs dos perfis e páginas para associação
       const roles = await db.select().from(userRoles);
       const pages = await db.select().from(systemPages);
-      
+
       if (roles.length > 0 && pages.length > 0) {
         console.log("Configurando permissões de acesso às páginas...");
-        
+
         const adminRole = roles.find(role => role.name === "Administrador");
         const investorRole = roles.find(role => role.name === "Investidor");
         const associateRole = roles.find(role => role.name === "Associado");
-        
+
         const dashboardPage = pages.find(page => page.path === "/");
         const startupsPage = pages.find(page => page.path === "/startups");
         const settingsPage = pages.find(page => page.path === "/settings");
         const usersPage = pages.find(page => page.path === "/users");
-        
+
         // Acessos do Administrador - todas as páginas
         if (adminRole) {
           const adminPermissions = pages.map(page => ({
             role_id: adminRole.id,
             page_id: page.id
           }));
-          
+
           await db.insert(rolePagePermissions).values(adminPermissions);
         }
-        
+
         // Acessos do Investidor - dashboard e startups
         if (investorRole && dashboardPage && startupsPage) {
           await db.insert(rolePagePermissions).values([
@@ -941,7 +989,7 @@ export class DatabaseStorage implements IStorage {
             { role_id: investorRole.id, page_id: startupsPage.id }
           ]);
         }
-        
+
         // Acessos do Associado - somente dashboard e startups (leitura)
         if (associateRole && dashboardPage && startupsPage) {
           await db.insert(rolePagePermissions).values([
@@ -949,24 +997,24 @@ export class DatabaseStorage implements IStorage {
             { role_id: associateRole.id, page_id: startupsPage.id }
           ]);
         }
-        
+
         console.log("Permissões de acesso configuradas com sucesso.");
       }
     }
-    
+
     // Check if we already have startup data
     const existingStartups = await db.select().from(startups);
     if (existingStartups.length === 0) {
       // Get status ids first
       const allStatuses = await db.select().from(statuses);
-      
+
       if (allStatuses.length > 0) {
         // Get status ids
         const newLeadStatusId = allStatuses[0].id;
         const initialContactStatusId = allStatuses[1].id;
         const meetingScheduledStatusId = allStatuses[2].id;
         const proposalSentStatusId = allStatuses[3].id;
-        
+
         // Create demo startups
         const demoStartups = [
           {
@@ -1010,11 +1058,11 @@ export class DatabaseStorage implements IStorage {
             state: "MG"
           }
         ];
-        
+
         for (const startup of demoStartups) {
           // Insere a startup
           const [newStartup] = await db.insert(startups).values(startup).returning();
-          
+
           // Cria um registro inicial no histórico de status
           if (newStartup && newStartup.status_id) {
             const status = await this.getStatus(newStartup.status_id);
