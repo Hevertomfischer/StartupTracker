@@ -134,6 +134,16 @@ export interface IStorage {
   createWorkflow(workflow: InsertWorkflow): Promise<Workflow>;
   updateWorkflow(id: string, workflow: Partial<InsertWorkflow>): Promise<Workflow | undefined>;
   deleteWorkflow(id: string): Promise<boolean>;
+  
+  // Workflow Actions
+  getWorkflowActions(workflowId: string): Promise<any[]>;
+  createWorkflowAction(action: any): Promise<any>;
+  deleteWorkflowAction(id: string): Promise<boolean>;
+  
+  // Workflow Conditions
+  getWorkflowConditions(workflowId: string): Promise<any[]>;
+  createWorkflowCondition(condition: any): Promise<any>;
+  deleteWorkflowCondition(id: string): Promise<boolean>;
 
   // Seed data
   seedDatabase(): Promise<void>;
@@ -877,7 +887,54 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(workflows)
       .where(eq(workflows.id, id));
-    return result.rowCount > 0;
+    return result.count > 0;
+  }
+  
+  // Workflow Actions
+  async getWorkflowActions(workflowId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(workflowActions)
+      .where(eq(workflowActions.workflow_id, workflowId))
+      .orderBy(asc(workflowActions.order));
+  }
+  
+  async createWorkflowAction(action: any): Promise<any> {
+    const [result] = await db
+      .insert(workflowActions)
+      .values(action)
+      .returning();
+    return result;
+  }
+  
+  async deleteWorkflowAction(id: string): Promise<boolean> {
+    const result = await db
+      .delete(workflowActions)
+      .where(eq(workflowActions.id, id));
+    return result.count > 0;
+  }
+  
+  // Workflow Conditions
+  async getWorkflowConditions(workflowId: string): Promise<any[]> {
+    return await db
+      .select()
+      .from(workflowConditions)
+      .where(eq(workflowConditions.workflow_id, workflowId));
+  }
+  
+  async createWorkflowCondition(condition: any): Promise<any> {
+    const [result] = await db
+      .insert(workflowConditions)
+      .values(condition)
+      .returning();
+    return result;
+  }
+  
+  async deleteWorkflowCondition(id: string): Promise<boolean> {
+    const result = await db
+      .delete(workflowConditions)
+      .where(eq(workflowConditions.id, id));
+    return result.count > 0;
   }
 
   // Seed data

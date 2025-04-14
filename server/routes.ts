@@ -971,7 +971,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/workflows/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
+      console.log(`Attempting to delete workflow with ID: ${id}`);
+      
       const success = await storage.deleteWorkflow(id);
+      console.log(`Delete workflow result: ${success}`);
 
       if (!success) {
         return res.status(404).json({ message: "Workflow not found" });
@@ -981,6 +984,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting workflow:", error);
       return res.status(500).json({ message: "Failed to delete workflow" });
+    }
+  });
+  
+  // Workflow actions routes
+  app.get("/api/workflows/:workflowId/actions", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const workflowId = req.params.workflowId;
+      const actions = await storage.getWorkflowActions(workflowId);
+      return res.status(200).json(actions);
+    } catch (error) {
+      console.error(`Error fetching workflow actions:`, error);
+      return res.status(500).json({ message: "Failed to fetch workflow actions" });
+    }
+  });
+  
+  app.post("/api/workflows/:workflowId/actions", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const workflowId = req.params.workflowId;
+      const data = insertWorkflowActionSchema.parse({
+        ...req.body,
+        workflow_id: workflowId
+      });
+      
+      const action = await storage.createWorkflowAction(data);
+      return res.status(201).json(action);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      console.error("Error creating workflow action:", error);
+      return res.status(500).json({ message: "Failed to create workflow action" });
+    }
+  });
+  
+  app.delete("/api/workflows/actions/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const success = await storage.deleteWorkflowAction(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Workflow action not found" });
+      }
+      
+      return res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting workflow action:", error);
+      return res.status(500).json({ message: "Failed to delete workflow action" });
+    }
+  });
+  
+  // Workflow conditions routes
+  app.get("/api/workflows/:workflowId/conditions", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const workflowId = req.params.workflowId;
+      const conditions = await storage.getWorkflowConditions(workflowId);
+      return res.status(200).json(conditions);
+    } catch (error) {
+      console.error(`Error fetching workflow conditions:`, error);
+      return res.status(500).json({ message: "Failed to fetch workflow conditions" });
+    }
+  });
+  
+  app.post("/api/workflows/:workflowId/conditions", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const workflowId = req.params.workflowId;
+      const data = insertWorkflowConditionSchema.parse({
+        ...req.body,
+        workflow_id: workflowId
+      });
+      
+      const condition = await storage.createWorkflowCondition(data);
+      return res.status(201).json(condition);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        return res.status(400).json({ message: validationError.message });
+      }
+      console.error("Error creating workflow condition:", error);
+      return res.status(500).json({ message: "Failed to create workflow condition" });
+    }
+  });
+  
+  app.delete("/api/workflows/conditions/:id", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = req.params.id;
+      const success = await storage.deleteWorkflowCondition(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Workflow condition not found" });
+      }
+      
+      return res.status(204).end();
+    } catch (error) {
+      console.error("Error deleting workflow condition:", error);
+      return res.status(500).json({ message: "Failed to delete workflow condition" });
     }
   });
 
