@@ -42,7 +42,8 @@ import {
 } from "@shared/schema";
 import { StartupHistoryPanel } from "@/components/startup/StartupHistoryPanel";
 import { TeamMembersTabNew } from "@/components/team/TeamMembersTabNew";
-import { Loader2, X } from "lucide-react";
+import { FileManager } from "@/components/startup/FileManager";
+import { Loader2, X, FileText } from "lucide-react";
 import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
