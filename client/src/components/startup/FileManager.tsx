@@ -7,7 +7,7 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { File, FilePdf, FileText, Trash2, FileX, Download, FileImage, FileArchive } from "lucide-react";
+import { File, FileType, FileText, Trash2, FileX, Download, Image, Archive } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -107,12 +107,12 @@ export function FileManager({ startupId }: FileManagerProps) {
   };
   
   const getFileIcon = (mimetype: string) => {
-    if (mimetype.includes('pdf')) return <FilePdf className="h-6 w-6 text-red-500" />;
+    if (mimetype.includes('pdf')) return <FileType className="h-6 w-6 text-red-500" />;
     if (mimetype.includes('word') || mimetype.includes('document')) return <FileText className="h-6 w-6 text-blue-500" />;
     if (mimetype.includes('excel') || mimetype.includes('sheet')) return <FileText className="h-6 w-6 text-green-500" />;
     if (mimetype.includes('powerpoint') || mimetype.includes('presentation')) return <FileText className="h-6 w-6 text-orange-500" />;
-    if (mimetype.includes('image')) return <FileImage className="h-6 w-6 text-purple-500" />;
-    if (mimetype.includes('zip') || mimetype.includes('compressed')) return <FileArchive className="h-6 w-6 text-gray-500" />;
+    if (mimetype.includes('image')) return <Image className="h-6 w-6 text-purple-500" />;
+    if (mimetype.includes('zip') || mimetype.includes('compressed')) return <Archive className="h-6 w-6 text-gray-500" />;
     return <File className="h-6 w-6 text-gray-400" />;
   };
   
