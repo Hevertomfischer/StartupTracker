@@ -11,6 +11,18 @@ export const statuses = pgTable("statuses", {
   order: integer("order").notNull().default(0),
 });
 
+// Arquivos table para armazenar informações de arquivos
+export const files = pgTable("files", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  filename: text("filename").notNull(),
+  original_name: text("original_name").notNull(),
+  mimetype: text("mimetype").notNull(),
+  size: integer("size").notNull(),
+  path: text("path").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Startups table with all the requested attributes
 export const startups = pgTable("startups", {
   // Atributos principais
@@ -65,6 +77,9 @@ export const startups = pgTable("startups", {
   scangels_value_add: text("scangels_value_add"),
   no_investment_reason: text("no_investment_reason"),
   
+  // Arquivos
+  pitch_deck_id: uuid("pitch_deck_id").references(() => files.id, { onDelete: "set null" }),
+  
   // Outros campos
   assigned_to: uuid("assigned_to"),
   google_drive_link: text("google_drive_link"),
@@ -73,6 +88,17 @@ export const startups = pgTable("startups", {
   priority: text("priority"),
   time_tracking: integer("time_tracking"),
   observations: text("observations"),
+});
+
+// Tabela de anexos de startups
+export const startupAttachments = pgTable("startup_attachments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  startup_id: uuid("startup_id").notNull().references(() => startups.id, { onDelete: "cascade" }),
+  file_id: uuid("file_id").notNull().references(() => files.id, { onDelete: "cascade" }),
+  description: text("description"),
+  document_type: text("document_type"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Users table
@@ -194,6 +220,18 @@ export const insertStatusSchema = createInsertSchema(statuses).omit({
   id: true,
 });
 
+export const insertFileSchema = createInsertSchema(files).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export const insertStartupAttachmentSchema = createInsertSchema(startupAttachments).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
 export const insertStartupSchema = createInsertSchema(startups).omit({
   id: true,
   created_at: true,
@@ -282,6 +320,12 @@ export type User = typeof users.$inferSelect & {
 export type InsertStatus = z.infer<typeof insertStatusSchema>;
 export type Status = typeof statuses.$inferSelect;
 
+export type InsertFile = z.infer<typeof insertFileSchema>;
+export type File = typeof files.$inferSelect;
+
+export type InsertStartupAttachment = z.infer<typeof insertStartupAttachmentSchema>;
+export type StartupAttachment = typeof startupAttachments.$inferSelect;
+
 export type InsertStartup = z.infer<typeof insertStartupSchema>;
 export type Startup = typeof startups.$inferSelect;
 
@@ -360,11 +404,32 @@ export const UserRoleEnum = {
 // Relations
 
 // Define relations
-export const startupsRelations = relations(startups, ({ many }) => ({
+
+export const filesRelations = relations(files, ({ many, one }) => ({
+  attachments: many(startupAttachments),
+}));
+
+export const startupAttachmentsRelations = relations(startupAttachments, ({ one }) => ({
+  startup: one(startups, {
+    fields: [startupAttachments.startup_id],
+    references: [startups.id],
+  }),
+  file: one(files, {
+    fields: [startupAttachments.file_id],
+    references: [files.id],
+  }),
+}));
+
+export const startupsRelations = relations(startups, ({ many, one }) => ({
   history: many(startupHistory),
   statusHistory: many(startupStatusHistory),
   members: many(startupMembers),
   tasks: many(tasks),
+  attachments: many(startupAttachments),
+  pitchDeck: one(files, {
+    fields: [startups.pitch_deck_id],
+    references: [files.id],
+  }),
 }));
 
 export const startupHistoryRelations = relations(startupHistory, ({ one }) => ({
