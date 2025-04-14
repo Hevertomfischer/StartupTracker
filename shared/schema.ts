@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, uuid, numeric, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, uuid, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -207,44 +207,6 @@ export const taskComments = pgTable("task_comments", {
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Tabela de workflows
-export const workflows = pgTable("workflows", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  description: text("description"),
-  is_active: boolean("is_active").notNull().default(true),
-  trigger_type: text("trigger_type").notNull(), // status_change, task_creation, manual, schedule
-  trigger_details: jsonb("trigger_details"), // Detalhes específicos do gatilho (ex: id do status para mudança de status)
-  created_by: uuid("created_by").references(() => users.id),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Tabela de ações do workflow
-export const workflowActions = pgTable("workflow_actions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  workflow_id: uuid("workflow_id").notNull().references(() => workflows.id, { onDelete: "cascade" }),
-  action_name: text("action_name").notNull(),
-  description: text("description"),
-  action_type: text("action_type").notNull(), // email, attribute_change, task_creation, status_query
-  action_details: jsonb("action_details").notNull(), // Dados específicos da ação
-  order: integer("order").notNull().default(0), // Ordem de execução
-  created_at: timestamp("created_at").defaultNow().notNull(),
-  updated_at: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Tabela para logs de execução do workflow
-export const workflowExecutionLogs = pgTable("workflow_execution_logs", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  workflow_id: uuid("workflow_id").notNull().references(() => workflows.id),
-  execution_time: timestamp("execution_time").defaultNow().notNull(),
-  status: text("status").notNull(), // success, error, partial_success
-  entity_type: text("entity_type"), // startup, task
-  entity_id: uuid("entity_id"), // ID da entidade relacionada
-  error_message: text("error_message"),
-  execution_details: jsonb("execution_details"), // Detalhes da execução
-});
-
 // Zod Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -349,30 +311,6 @@ export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({
   created_at: true,
 });
 
-// Schemas para workflows
-export const insertWorkflowSchema = createInsertSchema(workflows).omit({
-  id: true,
-  created_at: true,
-  updated_at: true,
-}).extend({
-  trigger_details: z.any().optional(),
-});
-
-export const insertWorkflowActionSchema = createInsertSchema(workflowActions).omit({
-  id: true,
-  created_at: true,
-  updated_at: true,
-}).extend({
-  action_details: z.any(),
-});
-
-export const insertWorkflowExecutionLogSchema = createInsertSchema(workflowExecutionLogs).omit({
-  id: true,
-  execution_time: true,
-}).extend({
-  execution_details: z.any().optional(),
-});
-
 // TypeScript Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect & {
@@ -418,15 +356,6 @@ export type Task = typeof tasks.$inferSelect;
 export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
 export type TaskComment = typeof taskComments.$inferSelect;
 
-export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
-export type Workflow = typeof workflows.$inferSelect;
-
-export type InsertWorkflowAction = z.infer<typeof insertWorkflowActionSchema>;
-export type WorkflowAction = typeof workflowActions.$inferSelect;
-
-export type InsertWorkflowExecutionLog = z.infer<typeof insertWorkflowExecutionLogSchema>;
-export type WorkflowExecutionLog = typeof workflowExecutionLogs.$inferSelect;
-
 // Status Enum (for default statuses)
 export const StatusEnum = {
   NEW_LEAD: "new_lead",
@@ -470,30 +399,6 @@ export const UserRoleEnum = {
   ADMIN: "admin",
   INVESTOR: "investor",
   ASSOCIATE: "associate",
-} as const;
-
-// Workflow Trigger Type Enum
-export const WorkflowTriggerTypeEnum = {
-  STATUS_CHANGE: "status_change",
-  ATTRIBUTE_CHANGE: "attribute_change", // Novo tipo para monitorar mudanças em qualquer atributo
-  TASK_CREATION: "task_creation",
-  MANUAL: "manual",
-  SCHEDULED: "scheduled"
-} as const;
-
-// Workflow Action Type Enum
-export const WorkflowActionTypeEnum = {
-  EMAIL: "email",
-  ATTRIBUTE_CHANGE: "attribute_change",
-  TASK_CREATION: "task_creation",
-  STATUS_QUERY: "status_query"
-} as const;
-
-// Workflow Execution Status Enum
-export const WorkflowExecutionStatusEnum = {
-  SUCCESS: "success",
-  ERROR: "error",
-  PARTIAL_SUCCESS: "partial_success"
 } as const;
 
 // Relations
@@ -613,30 +518,4 @@ export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
     fields: [taskComments.user_id],
     references: [users.id],
   }),
-}));
-
-// Relações para workflows
-export const workflowsRelations = relations(workflows, ({ many, one }) => ({
-  actions: many(workflowActions),
-  executionLogs: many(workflowExecutionLogs),
-  creator: one(users, {
-    fields: [workflows.created_by],
-    references: [users.id],
-  })
-}));
-
-// Relações para ações de workflow
-export const workflowActionsRelations = relations(workflowActions, ({ one }) => ({
-  workflow: one(workflows, {
-    fields: [workflowActions.workflow_id],
-    references: [workflows.id],
-  })
-}));
-
-// Relações para logs de execução de workflow
-export const workflowExecutionLogsRelations = relations(workflowExecutionLogs, ({ one }) => ({
-  workflow: one(workflows, {
-    fields: [workflowExecutionLogs.workflow_id],
-    references: [workflows.id],
-  })
 }));

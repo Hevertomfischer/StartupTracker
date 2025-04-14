@@ -9,7 +9,6 @@ import TeamManagement from "@/pages/TeamManagement";
 import UserManagement from "@/pages/UserManagement";
 import TaskManagement from "@/pages/TaskManagement";
 import SimpleRoleManagement from "@/pages/SimpleRoleManagement";
-import WorkflowsPage from "@/pages/workflows-page";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute, AdminRoute, InvestorRoute } from "@/lib/protected-route";
 import { UserRoleEnum } from "@shared/schema";
@@ -22,7 +21,6 @@ function Router() {
       <ProtectedRoute path="/tasks" component={TaskManagement} />
       <AdminRoute path="/users" component={UserManagement} />
       <AdminRoute path="/roles" component={SimpleRoleManagement} />
-      <AdminRoute path="/workflows" component={WorkflowsPage} />
       <Route path="/auth" component={AuthPage} />
       <Route component={NotFound} />
     </Switch>

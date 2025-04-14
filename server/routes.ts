@@ -22,8 +22,6 @@ import {
   deletePitchDeck
 } from "./file-controller";
 import path from "path";
-import { setupWorkflowRoutes } from "./workflow-routes";
-import { workflowService } from "./workflow-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -540,15 +538,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Atualizar o status
       const updatedStartup = await storage.updateStartupStatus(id, data.status_id);
       console.log('Successfully updated startup status:', updatedStartup);
-      
-      // Disparar workflows associados à mudança de status
-      try {
-        await workflowService.handleStatusChange(id, data.status_id, 'startup');
-      } catch (error) {
-        console.error("Error executing workflow for status change:", error);
-        // Não retornar erro para o cliente, pois a atualização de status foi bem-sucedida
-      }
-      
       return res.status(200).json(updatedStartup);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -776,15 +765,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const task = await storage.createTask(data);
-      
-      // Disparar workflows associados à criação de tarefas
-      try {
-        await workflowService.handleTaskCreation(task.id);
-      } catch (error) {
-        console.error("Error executing workflow for task creation:", error);
-        // Não retornar erro para o cliente, pois a criação da tarefa foi bem-sucedida
-      }
-      
       return res.status(201).json(task);
     } catch (error) {
       if (error instanceof ZodError) {
@@ -963,9 +943,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Excluir o PitchDeck de uma startup
   app.delete("/api/startups/:startupId/pitch-deck", isInvestor, deletePitchDeck);
-
-  // Configurar rotas do módulo de workflow
-  setupWorkflowRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
