@@ -91,6 +91,8 @@ export class WorkflowService {
   async addWorkflowAction(data: InsertWorkflowAction): Promise<WorkflowAction> {
     const workflowActionData = {
       workflow_id: data.workflow_id,
+      action_name: data.action_name, 
+      description: data.description,
       action_type: data.action_type,
       action_details: data.action_details,
       order: data.order || 0
