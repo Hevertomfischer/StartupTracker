@@ -37,9 +37,16 @@ import {
   taskComments,
   type TaskComment,
   type InsertTaskComment,
+  // Importações para workflows
   workflows,
   type Workflow,
-  type InsertWorkflow
+  type InsertWorkflow,
+  workflowActions,
+  type WorkflowAction,
+  type InsertWorkflowAction,
+  workflowConditions,
+  type WorkflowCondition,
+  type InsertWorkflowCondition
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, sql } from "drizzle-orm";
