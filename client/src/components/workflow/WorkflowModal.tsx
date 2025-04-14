@@ -40,6 +40,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { WorkflowActionsList } from './WorkflowActionsList';
 import { useQuery } from '@tanstack/react-query';
 import { Status } from '@shared/schema';
 
@@ -156,9 +157,164 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({
     }
   };
 
+  const renderWorkflowForm = () => (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nome do Workflow</FormLabel>
+              <FormControl>
+                <Input placeholder="Ex: Notificar mudança de status" {...field} />
+              </FormControl>
+              <FormDescription>
+                Um nome descritivo para identificar este workflow.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descrição</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Descreva o propósito deste workflow..."
+                  className="resize-none"
+                  {...field}
+                  value={field.value || ''}
+                />
+              </FormControl>
+              <FormDescription>
+                Uma descrição detalhada do que este workflow faz.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="is_active"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Ativo</FormLabel>
+                <FormDescription>
+                  Quando ativo, este workflow será executado automaticamente.
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="trigger_type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tipo de Gatilho</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                defaultValue={field.value}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de gatilho" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="status_change">Mudança de Status</SelectItem>
+                  <SelectItem value="task_creation">Criação de Tarefa</SelectItem>
+                  <SelectItem value="manual">Manual</SelectItem>
+                  <SelectItem value="scheduled">Agendado</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                O evento que irá disparar a execução deste workflow.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Campos específicos para cada tipo de gatilho */}
+        {triggerType === 'status_change' && (
+          <div className="border rounded-md p-4">
+            <h4 className="font-medium mb-2">Configuração de Mudança de Status</h4>
+            <FormField
+              control={form.control}
+              name="trigger_details.status_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {statuses?.map((status) => (
+                        <SelectItem key={status.id} value={status.id}>
+                          {status.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    O workflow será executado quando uma startup mudar para este status.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
+
+        {triggerType === 'scheduled' && (
+          <div className="border rounded-md p-4">
+            <h4 className="font-medium mb-2">Configuração de Agendamento</h4>
+            <p className="text-sm text-muted-foreground mb-4">
+              A funcionalidade de agendamento será implementada em uma versão futura.
+            </p>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit">
+            {isEditing ? 'Atualizar' : 'Criar'} Workflow
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className={isEditing ? "sm:max-w-[800px]" : "sm:max-w-[600px]"}>
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar Workflow' : 'Novo Workflow'}</DialogTitle>
           <DialogDescription>
@@ -168,158 +324,22 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Workflow</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Notificar mudança de status" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Um nome descritivo para identificar este workflow.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Descreva o propósito deste workflow..."
-                      className="resize-none"
-                      {...field}
-                      value={field.value || ''}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Uma descrição detalhada do que este workflow faz.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="is_active"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">Ativo</FormLabel>
-                    <FormDescription>
-                      Quando ativo, este workflow será executado automaticamente.
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="trigger_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipo de Gatilho</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o tipo de gatilho" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="status_change">Mudança de Status</SelectItem>
-                      <SelectItem value="task_creation">Criação de Tarefa</SelectItem>
-                      <SelectItem value="manual">Manual</SelectItem>
-                      <SelectItem value="scheduled">Agendado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    O evento que irá disparar a execução deste workflow.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Campos específicos para cada tipo de gatilho */}
-            {triggerType === 'status_change' && (
-              <div className="border rounded-md p-4">
-                <h4 className="font-medium mb-2">Configuração de Mudança de Status</h4>
-                <FormField
-                  control={form.control}
-                  name="trigger_details.status_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {statuses?.map((status) => (
-                            <SelectItem key={status.id} value={status.id}>
-                              {status.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        O workflow será executado quando uma startup mudar para este status.
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            {triggerType === 'scheduled' && (
-              <div className="border rounded-md p-4">
-                <h4 className="font-medium mb-2">Configuração de Agendamento</h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  A funcionalidade de agendamento será implementada em uma versão futura.
-                </p>
-              </div>
-            )}
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit">
-                {isEditing ? 'Atualizar' : 'Criar'} Workflow
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+        {isEditing ? (
+          <Tabs defaultValue="settings" className="mt-2">
+            <TabsList className="w-full mb-4">
+              <TabsTrigger value="settings" className="flex-1">Configurações Básicas</TabsTrigger>
+              <TabsTrigger value="actions" className="flex-1">Ações</TabsTrigger>
+            </TabsList>
+            <TabsContent value="settings">
+              {renderWorkflowForm()}
+            </TabsContent>
+            <TabsContent value="actions">
+              {workflow && <WorkflowActionsList workflow={workflow} />}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          renderWorkflowForm()
+        )}
       </DialogContent>
     </Dialog>
   );
