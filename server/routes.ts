@@ -22,6 +22,8 @@ import {
   deletePitchDeck
 } from "./file-controller";
 import path from "path";
+import { setupWorkflowRoutes } from "./workflow-routes";
+import { workflowService } from "./workflow-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication

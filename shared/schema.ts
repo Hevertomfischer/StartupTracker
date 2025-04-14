@@ -347,6 +347,30 @@ export const insertTaskCommentSchema = createInsertSchema(taskComments).omit({
   created_at: true,
 });
 
+// Schemas para workflows
+export const insertWorkflowSchema = createInsertSchema(workflows).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  trigger_details: z.any().optional(),
+});
+
+export const insertWorkflowActionSchema = createInsertSchema(workflowActions).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+}).extend({
+  action_details: z.any(),
+});
+
+export const insertWorkflowExecutionLogSchema = createInsertSchema(workflowExecutionLogs).omit({
+  id: true,
+  execution_time: true,
+}).extend({
+  execution_details: z.any().optional(),
+});
+
 // TypeScript Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect & {
@@ -391,6 +415,15 @@ export type Task = typeof tasks.$inferSelect;
 
 export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
 export type TaskComment = typeof taskComments.$inferSelect;
+
+export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
+export type Workflow = typeof workflows.$inferSelect;
+
+export type InsertWorkflowAction = z.infer<typeof insertWorkflowActionSchema>;
+export type WorkflowAction = typeof workflowActions.$inferSelect;
+
+export type InsertWorkflowExecutionLog = z.infer<typeof insertWorkflowExecutionLogSchema>;
+export type WorkflowExecutionLog = typeof workflowExecutionLogs.$inferSelect;
 
 // Status Enum (for default statuses)
 export const StatusEnum = {
@@ -577,4 +610,30 @@ export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
     fields: [taskComments.user_id],
     references: [users.id],
   }),
+}));
+
+// Relações para workflows
+export const workflowsRelations = relations(workflows, ({ many, one }) => ({
+  actions: many(workflowActions),
+  executionLogs: many(workflowExecutionLogs),
+  creator: one(users, {
+    fields: [workflows.created_by],
+    references: [users.id],
+  })
+}));
+
+// Relações para ações de workflow
+export const workflowActionsRelations = relations(workflowActions, ({ one }) => ({
+  workflow: one(workflows, {
+    fields: [workflowActions.workflow_id],
+    references: [workflows.id],
+  })
+}));
+
+// Relações para logs de execução de workflow
+export const workflowExecutionLogsRelations = relations(workflowExecutionLogs, ({ one }) => ({
+  workflow: one(workflows, {
+    fields: [workflowExecutionLogs.workflow_id],
+    references: [workflows.id],
+  })
 }));
