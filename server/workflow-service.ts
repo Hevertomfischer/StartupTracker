@@ -368,7 +368,7 @@ export class WorkflowService {
       const details = action.action_details as any;
       
       // Validar se os detalhes necessários estão presentes
-      if (!details.to && !details.to_field && !details.cc && !details.bcc) {
+      if (!details.to_email && !details.to_field && !details.cc && !details.bcc) {
         return { 
           success: false, 
           message: 'Destinatário não especificado na ação de email'
@@ -384,7 +384,7 @@ export class WorkflowService {
 
       // Obter dados da entidade para substituição de variáveis
       let entityData: any = {};
-      let toEmail: string = details.to || '';
+      let toEmail: string = details.to_email || '';
       
       if (entityType === 'startup') {
         const [startup] = await db

@@ -114,6 +114,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
       
       if (data.action_type === 'send_email') {
         actionDetails = {
+          to_field: form.getValues('action_details.to_field') || '',
           to_email: form.getValues('action_details.to_email') || '',
           subject: form.getValues('action_details.subject') || '',
           body: form.getValues('action_details.body') || '',
@@ -306,26 +307,84 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
               <div className="border rounded-md p-4 space-y-4">
                 <h4 className="font-medium mb-2">Configuração de E-mail</h4>
                 
+                <div className="bg-muted/50 p-3 rounded-md mb-2">
+                  <h5 className="text-sm font-medium mb-1">Variáveis disponíveis</h5>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Você pode usar as seguintes variáveis do banco de dados no seu e-mail:
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <h6 className="text-xs font-medium">Startup:</h6>
+                      <ul className="text-xs text-muted-foreground list-disc pl-4">
+                        <li>{'{{name}}'} - Nome da startup</li>
+                        <li>{'{{status_name}}'} - Nome do status atual</li>
+                        <li>{'{{ceo_name}}'} - Nome do CEO</li>
+                        <li>{'{{investment_size}}'} - Valor do investimento</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h6 className="text-xs font-medium">Tarefa:</h6>
+                      <ul className="text-xs text-muted-foreground list-disc pl-4">
+                        <li>{'{{title}}'} - Título da tarefa</li>
+                        <li>{'{{description}}'} - Descrição da tarefa</li>
+                        <li>{'{{due_date}}'} - Data de vencimento</li>
+                        <li>{'{{priority}}'} - Prioridade da tarefa</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+                
                 <FormField
                   control={form.control}
-                  name="action_details.to_email"
+                  name="action_details.to_field"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Para (E-mail)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Ex: destinatario@example.com" 
-                          {...field} 
-                          value={field.value || ''}
-                        />
-                      </FormControl>
+                      <FormLabel>Enviar para o campo</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o campo do e-mail" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Usar endereço fixo</SelectItem>
+                          <SelectItem value="ceo_email">E-mail do CEO da startup</SelectItem>
+                          <SelectItem value="assigned_to_email">E-mail do responsável pela tarefa</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormDescription>
-                        E-mail do destinatário.
+                        Selecione um campo da entidade que contém o e-mail do destinatário.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                
+                {!form.watch('action_details.to_field') && (
+                  <FormField
+                    control={form.control}
+                    name="action_details.to_email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Para (E-mail)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Ex: destinatario@example.com" 
+                            {...field} 
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          E-mail do destinatário.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
                 
                 <FormField
                   control={form.control}
@@ -335,11 +394,14 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                       <FormLabel>Assunto</FormLabel>
                       <FormControl>
                         <Input 
-                          placeholder="Ex: Mudança de status" 
+                          placeholder="Ex: Startup {{name}} mudou para {{status_name}}" 
                           {...field} 
                           value={field.value || ''}
                         />
                       </FormControl>
+                      <FormDescription>
+                        Use variáveis entre chaves duplas para inserir dados dinâmicos.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -352,15 +414,20 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                     <FormItem>
                       <FormLabel>Corpo do E-mail</FormLabel>
                       <FormControl>
-                        <Textarea
-                          placeholder="Conteúdo do e-mail..."
-                          className="min-h-[100px]"
-                          {...field}
+                        <Textarea 
+                          placeholder="Olá,
+
+A startup {{name}} mudou para o status {{status_name}}.
+
+Atenciosamente,
+Equipe de Investimentos" 
+                          className="min-h-[120px]"
+                          {...field} 
                           value={field.value || ''}
                         />
                       </FormControl>
                       <FormDescription>
-                        Você pode usar variáveis como {"{startup_name}"} e {"{status_name}"}.
+                        Use variáveis entre chaves duplas para inserir dados dinâmicos.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
