@@ -100,6 +100,12 @@ export default function RoleManagement() {
   
   const loadRolePages = async (roleId: string) => {
     try {
+      // Mostrar um toast de carregamento
+      toast({
+        title: "Carregando permissões",
+        description: "Buscando permissões de páginas para este perfil...",
+      });
+      
       // Carregar as permissões de páginas para o perfil
       const permissions = await apiRequest('GET', `/api/roles/${roleId}/pages`);
       
@@ -112,6 +118,12 @@ export default function RoleManagement() {
       });
       
       setRolePages(pagesWithPermissions);
+      
+      // Mostrar sucesso
+      toast({
+        title: "Permissões carregadas",
+        description: `${permissions.length} permissões encontradas para este perfil.`,
+      });
     } catch (error) {
       toast({
         title: "Erro ao carregar permissões",
@@ -231,7 +243,23 @@ export default function RoleManagement() {
   const togglePagePermission = async (pageId: string, hasPermission: boolean) => {
     if (!selectedRole) return;
     
+    // Encontrar a página que está sendo modificada
+    const pageToUpdate = rolePages.find(p => p.id === pageId);
+    if (!pageToUpdate) return;
+    
+    // Otimisticamente atualizar a UI para feedback imediato
+    const updatedPages = rolePages.map(page => 
+      page.id === pageId ? { ...page, hasPermission: !hasPermission } : page
+    );
+    setRolePages(updatedPages);
+    
     try {
+      // Mostrar um toast de carregamento
+      toast({
+        title: hasPermission ? "Removendo permissão..." : "Adicionando permissão...",
+        description: `${hasPermission ? "Removendo" : "Adicionando"} acesso à página ${pageToUpdate.name}`,
+      });
+      
       if (hasPermission) {
         // Remover permissão
         await apiRequest('DELETE', `/api/roles/${selectedRole.id}/pages/${pageId}`);
@@ -240,16 +268,19 @@ export default function RoleManagement() {
         await apiRequest('POST', `/api/roles/${selectedRole.id}/pages/${pageId}`);
       }
       
-      // Atualizar a lista de permissões
+      // Atualizar a lista de permissões (para confirmação do servidor)
       await loadRolePages(selectedRole.id);
       
       toast({
         title: hasPermission ? "Permissão removida" : "Permissão adicionada",
         description: hasPermission 
-          ? "A permissão foi removida com sucesso." 
-          : "A permissão foi adicionada com sucesso.",
+          ? `A página ${pageToUpdate.name} não está mais acessível para o perfil ${selectedRole.name}.` 
+          : `A página ${pageToUpdate.name} agora está acessível para o perfil ${selectedRole.name}.`,
       });
     } catch (error) {
+      // Reverter a mudança otimista em caso de erro
+      setRolePages(rolePages);
+      
       toast({
         title: "Erro ao alterar permissão",
         description: error instanceof Error 
@@ -582,12 +613,21 @@ export default function RoleManagement() {
               {selectedRole && (
                 <TabsContent value="permissions">
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold">
-                      Permissões do Perfil: {selectedRole.name}
-                    </h2>
+                    <div>
+                      <h2 className="text-xl font-semibold">
+                        Permissões do Perfil: {selectedRole.name}
+                      </h2>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {selectedRole.description || "Sem descrição"}
+                      </p>
+                    </div>
                     
                     <div className="flex space-x-2">
-                      <Button variant={editMode ? "default" : "outline"} onClick={() => setEditMode(!editMode)}>
+                      <Button 
+                        variant={editMode ? "default" : "outline"} 
+                        onClick={() => setEditMode(!editMode)}
+                        className={editMode ? "bg-primary hover:bg-primary/90" : ""}
+                      >
                         {editMode ? (
                           <>
                             <CheckIcon className="mr-2 h-4 w-4" />
@@ -604,39 +644,85 @@ export default function RoleManagement() {
                   </div>
                   
                   <Card>
-                    <CardHeader>
-                      <CardTitle>Páginas do Sistema</CardTitle>
+                    <CardHeader className={editMode ? "bg-muted/30" : ""}>
+                      <CardTitle className="flex items-center">
+                        <ShieldCheck className="mr-2 h-5 w-5" />
+                        Páginas do Sistema
+                        {editMode && (
+                          <Badge className="ml-2 bg-blue-100 text-blue-800 border-blue-200">
+                            Modo de Edição
+                          </Badge>
+                        )}
+                      </CardTitle>
                       <CardDescription>
-                        Selecione as páginas que os usuários com o perfil "{selectedRole.name}" podem acessar.
+                        {editMode 
+                          ? "Clique nas caixas de seleção para conceder ou revogar acesso às páginas." 
+                          : `Páginas que usuários com o perfil "${selectedRole.name}" podem acessar.`}
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
+                      <div className="bg-muted/10 p-2 mb-4 rounded-lg text-sm flex items-center">
+                        <div className="flex items-center mr-4">
+                          <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                          <span>Permitido</span>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                          <span>Bloqueado</span>
+                        </div>
+                      </div>
+                      
                       <Table>
                         <TableHeader>
                           <TableRow>
                             <TableHead>Nome</TableHead>
                             <TableHead>Caminho</TableHead>
                             <TableHead>Descrição</TableHead>
-                            <TableHead>Acesso</TableHead>
+                            <TableHead className="text-center">Acesso</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {rolePages.map((page) => (
-                            <TableRow key={page.id}>
-                              <TableCell className="font-medium">{page.name}</TableCell>
-                              <TableCell><code>{page.path}</code></TableCell>
+                            <TableRow 
+                              key={page.id} 
+                              className={page.hasPermission 
+                                ? "border-l-4 border-l-green-500 border-opacity-50" 
+                                : "border-l-4 border-l-red-500 border-opacity-50"}
+                            >
+                              <TableCell className="font-medium">
+                                <div className="flex items-center">
+                                  {page.icon && (
+                                    <span className="mr-2 text-gray-500">
+                                      {page.icon === "dashboard" && <LayoutDashboard className="h-4 w-4" />}
+                                      {page.icon === "users" && <Users className="h-4 w-4" />}
+                                      {page.icon === "settings" && <Settings className="h-4 w-4" />}
+                                      {page.icon === "building" && <Rocket className="h-4 w-4" />}
+                                    </span>
+                                  )}
+                                  {page.name}
+                                </div>
+                              </TableCell>
+                              <TableCell><code className="bg-muted px-1 py-0.5 rounded">{page.path}</code></TableCell>
                               <TableCell>{page.description}</TableCell>
                               <TableCell>
-                                {editMode ? (
-                                  <Checkbox 
-                                    checked={page.hasPermission}
-                                    onCheckedChange={() => togglePagePermission(page.id, page.hasPermission)}
-                                  />
-                                ) : (
-                                  <Badge className={page.hasPermission ? "bg-green-100 text-green-800 border-green-200" : "bg-red-100 text-red-800 border-red-200"}>
-                                    {page.hasPermission ? "Permitido" : "Bloqueado"}
-                                  </Badge>
-                                )}
+                                <div className="flex justify-center">
+                                  {editMode ? (
+                                    <Checkbox 
+                                      checked={page.hasPermission}
+                                      onCheckedChange={() => togglePagePermission(page.id, page.hasPermission)}
+                                      className="h-5 w-5"
+                                    />
+                                  ) : (
+                                    <Badge className={page.hasPermission 
+                                      ? "bg-green-100 text-green-800 border-green-200" 
+                                      : "bg-red-100 text-red-800 border-red-200"}
+                                    >
+                                      {page.hasPermission 
+                                        ? "Permitido" 
+                                        : "Bloqueado"}
+                                    </Badge>
+                                  )}
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -650,6 +736,18 @@ export default function RoleManagement() {
                           )}
                         </TableBody>
                       </Table>
+                      
+                      {editMode && (
+                        <div className="flex justify-end mt-4">
+                          <Button 
+                            onClick={() => setEditMode(false)}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            <CheckIcon className="mr-2 h-4 w-4" />
+                            Salvar Alterações
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
