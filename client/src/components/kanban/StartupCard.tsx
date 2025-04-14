@@ -38,6 +38,11 @@ export function StartupCard({ startup, onClick, onDelete }: StartupCardProps) {
     e.stopPropagation();
     setLocation(`/tasks?startup=${startup.id}`);
   };
+  
+  const handlePitchDeckClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    openPitchDeck();
+  };
 
   // Determinar a cor de fundo com base na prioridade
   const getPriorityColor = () => {
@@ -166,19 +171,38 @@ export function StartupCard({ startup, onClick, onDelete }: StartupCardProps) {
           )}
         </div>
         
-        {/* Badge de tarefas - sempre exibido mas com visual diferente se não houver tarefas */}
-        <button 
-          onClick={handleTasksClick}
-          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
-            ${taskCount > 0 
-              ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' 
-              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'} 
-            transition-colors`}
-          title={taskCount > 0 ? `Ver ${taskCount} tarefas desta startup` : "Adicionar tarefas para esta startup"}
-        >
-          <CheckSquare className="h-3 w-3 mr-1" />
-          {taskCount > 0 ? taskCount : "0"}
-        </button>
+        <div className="flex gap-1">
+          {/* Badge de PitchDeck */}
+          {!isPitchDeckLoading && (
+            <button 
+              onClick={handlePitchDeckClick}
+              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
+                ${hasPitchDeck 
+                  ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' 
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'} 
+                transition-colors`}
+              title={hasPitchDeck ? "Ver PitchDeck" : "Nenhum PitchDeck disponível"}
+              disabled={!hasPitchDeck}
+            >
+              <FileDigit className="h-3 w-3 mr-1" />
+              {hasPitchDeck ? "PitchDeck" : "Sem deck"}
+            </button>
+          )}
+          
+          {/* Badge de tarefas */}
+          <button 
+            onClick={handleTasksClick}
+            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
+              ${taskCount > 0 
+                ? 'bg-blue-100 text-blue-800 hover:bg-blue-200' 
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'} 
+              transition-colors`}
+            title={taskCount > 0 ? `Ver ${taskCount} tarefas desta startup` : "Adicionar tarefas para esta startup"}
+          >
+            <CheckSquare className="h-3 w-3 mr-1" />
+            {taskCount > 0 ? taskCount : "0"}
+          </button>
+        </div>
       </div>
     </div>
   );
