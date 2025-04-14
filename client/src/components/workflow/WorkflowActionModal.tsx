@@ -42,7 +42,7 @@ const workflowActionFormSchema = z.object({
   description: z.string().optional(),
   action_type: z.enum(['send_email', 'attribute_change', 'task_creation', 'status_query']),
   order: z.number().int().positive(),
-  config_json: z.any(),
+  action_details: z.record(z.any()).optional(),
 });
 
 type WorkflowActionFormValues = z.infer<typeof workflowActionFormSchema>;
@@ -77,7 +77,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
       description: action?.description || '',
       action_type: (action?.action_type as any) || 'send_email',
       order: action?.order || (actions?.length ? actions.length + 1 : 1),
-      config_json: action?.config_json || {},
+      action_details: action?.action_details || {},
     },
   });
 
@@ -94,14 +94,14 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
   // Resetar formulário quando a ação ou estado do modal mudar
   useEffect(() => {
     if (isOpen) {
-      const configJson = action?.config_json ? action.config_json : {};
+      const actionDetails = action?.action_details || {};
       
       form.reset({
         action_name: action?.action_name || '',
         description: action?.description || '',
         action_type: (action?.action_type as any) || 'send_email',
         order: action?.order || (actions?.length ? actions.length + 1 : 1),
-        config_json: configJson,
+        action_details: actionDetails,
       });
     }
   }, [form, action, actions, isOpen]);
@@ -110,31 +110,31 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
   const onSubmit = async (data: WorkflowActionFormValues) => {
     try {
       // Preparar dados específicos do tipo de ação
-      let configJson = {};
+      let actionDetails = {};
       
       if (data.action_type === 'send_email') {
-        configJson = {
-          to_email: form.getValues('config_json.to_email') || '',
-          subject: form.getValues('config_json.subject') || '',
-          body: form.getValues('config_json.body') || '',
+        actionDetails = {
+          to_email: form.getValues('action_details.to_email') || '',
+          subject: form.getValues('action_details.subject') || '',
+          body: form.getValues('action_details.body') || '',
         };
       } else if (data.action_type === 'attribute_change') {
-        configJson = {
-          entity_type: form.getValues('config_json.entity_type') || 'startup',
-          attribute_name: form.getValues('config_json.attribute_name') || '',
-          attribute_value: form.getValues('config_json.attribute_value') || '',
+        actionDetails = {
+          entity_type: form.getValues('action_details.entity_type') || 'startup',
+          attribute_name: form.getValues('action_details.attribute_name') || '',
+          attribute_value: form.getValues('action_details.attribute_value') || '',
         };
       } else if (data.action_type === 'task_creation') {
-        configJson = {
-          title: form.getValues('config_json.title') || '',
-          description: form.getValues('config_json.description') || '',
-          assigned_to: form.getValues('config_json.assigned_to') || null,
-          due_date: form.getValues('config_json.due_date') || null,
-          priority: form.getValues('config_json.priority') || 'medium',
+        actionDetails = {
+          title: form.getValues('action_details.title') || '',
+          description: form.getValues('action_details.description') || '',
+          assigned_to: form.getValues('action_details.assigned_to') || null,
+          due_date: form.getValues('action_details.due_date') || null,
+          priority: form.getValues('action_details.priority') || 'medium',
         };
       } else if (data.action_type === 'status_query') {
-        configJson = {
-          target_status_id: form.getValues('config_json.target_status_id') || null,
+        actionDetails = {
+          target_status_id: form.getValues('action_details.target_status_id') || null,
         };
       }
 
@@ -142,7 +142,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
       const actionData = {
         ...data,
         workflow_id: workflowId,
-        config_json: configJson,
+        action_details: actionDetails,
       };
 
       // Enviar requisição para API
@@ -308,7 +308,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.to_email"
+                  name="action_details.to_email"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Para (E-mail)</FormLabel>
@@ -329,7 +329,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.subject"
+                  name="action_details.subject"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Assunto</FormLabel>
@@ -347,7 +347,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.body"
+                  name="action_details.body"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Corpo do E-mail</FormLabel>
@@ -375,7 +375,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.entity_type"
+                  name="action_details.entity_type"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipo de Entidade</FormLabel>
@@ -403,7 +403,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.attribute_name"
+                  name="action_details.attribute_name"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Nome do Atributo</FormLabel>
@@ -424,7 +424,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.attribute_value"
+                  name="action_details.attribute_value"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Valor do Atributo</FormLabel>
@@ -451,7 +451,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.title"
+                  name="action_details.title"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Título</FormLabel>
@@ -472,7 +472,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.description"
+                  name="action_details.description"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Descrição</FormLabel>
@@ -490,7 +490,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.assigned_to"
+                  name="action_details.assigned_to"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Responsável</FormLabel>
@@ -519,7 +519,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.due_date"
+                  name="action_details.due_date"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Data de Vencimento</FormLabel>
@@ -540,7 +540,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.priority"
+                  name="action_details.priority"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Prioridade</FormLabel>
@@ -572,7 +572,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
                 
                 <FormField
                   control={form.control}
-                  name="config_json.target_status_id"
+                  name="action_details.target_status_id"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status Alvo</FormLabel>
