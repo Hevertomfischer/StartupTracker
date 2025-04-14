@@ -328,9 +328,11 @@ export const workflowActions = pgTable("workflow_actions", {
   id: uuid("id").primaryKey().defaultRandom(),
   workflow_id: uuid("workflow_id").notNull().references(() => workflows.id, { onDelete: "cascade" }),
   action_type: text("action_type").notNull(), // send_email, update_attribute, create_task
+  action_name: text("action_name").notNull(), // Nome descritivo da ação
   action_details: jsonb("action_details").notNull(),
   order: integer("order").notNull().default(0),
   created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const workflowConditions = pgTable("workflow_conditions", {

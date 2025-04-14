@@ -68,11 +68,14 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
   const [selectedTab, setSelectedTab] = useState("basicInfo");
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
 
+  const [actionName, setActionName] = useState<string>("");
+
   const handleSave = () => {
     // Inclui os atributos selecionados no corpo do email se for envio de email
     if (actionType === "send_email") {
       onSave({
         action_type: actionType,
+        action_name: actionName,
         action_details: {
           ...actionDetails,
           selectedAttributes: selectedAttributes
@@ -81,6 +84,7 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
     } else {
       onSave({
         action_type: actionType,
+        action_name: actionName,
         action_details: actionDetails
       });
     }
@@ -131,18 +135,29 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
         </DialogHeader>
 
         <div className="space-y-4">
-          <div>
-            <Label>Tipo de Ação</Label>
-            <Select value={actionType} onValueChange={setActionType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo de ação" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="send_email">Enviar E-mail</SelectItem>
-                <SelectItem value="update_attribute">Atualizar Atributo</SelectItem>
-                <SelectItem value="create_task">Criar Tarefa</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            <div>
+              <Label>Nome da Ação</Label>
+              <Input
+                value={actionName}
+                onChange={(e) => setActionName(e.target.value)}
+                placeholder="Nome descritivo para identificar esta ação"
+                required
+              />
+            </div>
+            <div>
+              <Label>Tipo de Ação</Label>
+              <Select value={actionType} onValueChange={setActionType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de ação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="send_email">Enviar E-mail</SelectItem>
+                  <SelectItem value="update_attribute">Atualizar Atributo</SelectItem>
+                  <SelectItem value="create_task">Criar Tarefa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {actionType === "send_email" && (
