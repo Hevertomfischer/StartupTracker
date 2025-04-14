@@ -103,6 +103,7 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
   
   // Estado para controlar se o fechamento foi solicitado pelo código e não pelo usuário
   const [isProgrammaticClose, setIsProgrammaticClose] = useState(false);
+  const [isForceClose, setIsForceClose] = useState(false);
   
   // Usando uma ref para garantir que o modal não será fechado durante operações
   const isClosingRef = useRef(false);
@@ -405,7 +406,15 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
     }
   }, [isSubmitting, isEditing, startup, updateStartupMutation, createStartupMutation, toast]);
   
-  const handleCloseModal = useCallback((forceClose: boolean = false) => {
+  // Função ajustada para lidar tanto com eventos quanto com chamadas diretas
+  const handleCloseModal = useCallback((eventOrForce?: React.MouseEvent | boolean) => {
+    // Determina se é uma chamada forçada (passando true diretamente)
+    const forceClose = typeof eventOrForce === 'boolean' ? eventOrForce : false;
+    
+    // Armazena o estado de fechamento forçado quando true
+    if (forceClose) {
+      setIsForceClose(true);
+    }
     // Verificação específica para abas protegidas (incluindo a aba "files")
     const isProtectedTab = activeTab === "team" || activeTab === "history" || activeTab === "files";
     
@@ -439,7 +448,7 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
         { isSubmitting, isToastShowing, shouldPreventClosing, isClosingRef: isClosingRef.current }
       );
     }
-  }, [isSubmitting, isToastShowing, shouldPreventClosing, activeTab, onClose]);
+  }, [isSubmitting, isToastShowing, shouldPreventClosing, activeTab, onClose, setIsForceClose]);
 
   return (
     <Dialog 
@@ -457,17 +466,25 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
           shouldPreventClosing,
           isProtectedTab,
           isProgrammaticClose,
+          isForceClose,
           isClosingByRef: isClosingRef.current 
         });
         
-        // Se estiver em uma aba protegida, nunca permitir fechamento pela UI
-        if (!isOpen && isProtectedTab && !isProgrammaticClose) {
+        // Se estiver em uma aba protegida, nunca permitir fechamento pela UI a menos que seja um fechamento forçado
+        if (!isOpen && isProtectedTab && !isProgrammaticClose && !isForceClose) {
           console.log("Tentativa de fechamento BLOQUEADA - usuário está em aba protegida:", activeTab);
           return; // Bloqueia o fechamento completamente
         }
         
         // Para os outros casos, verificamos várias condições
-        if (!isOpen && !isSubmitting && !isToastShowing && !shouldPreventClosing && !isClosingRef.current) {
+        // Se for um fechamento forçado, permitimos mesmo com outras condições
+        if (!isOpen && isForceClose) {
+          console.log("Fechando o modal via onOpenChange - FORÇADO");
+          isClosingRef.current = true;
+          onClose();
+        }
+        // Caso padrão: verificações normais
+        else if (!isOpen && !isSubmitting && !isToastShowing && !shouldPreventClosing && !isClosingRef.current) {
           console.log("Fechando o modal via onOpenChange - condições permitidas");
           isClosingRef.current = true;
           onClose();
@@ -503,7 +520,7 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={handleCloseModal}
+            onClick={() => handleCloseModal(true)}
             disabled={isSubmitting}
             className="h-6 w-6 rounded-full"
           >
