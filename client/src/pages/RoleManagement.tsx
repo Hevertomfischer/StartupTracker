@@ -28,7 +28,20 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Edit, Trash2, Search, SaveIcon, CheckIcon, XIcon } from "lucide-react";
+import { 
+  PlusCircle, 
+  Edit, 
+  Trash2, 
+  Search, 
+  SaveIcon, 
+  Check as CheckIcon, 
+  XIcon,
+  ShieldCheck,
+  Settings,
+  Users,
+  LayoutDashboard,
+  Rocket
+} from "lucide-react";
 import { Redirect } from "wouter";
 import { apiRequest, queryClient } from "../lib/queryClient";
 import { UserRole, SystemPage, RolePagePermission } from "@shared/schema";
@@ -302,12 +315,13 @@ export default function RoleManagement() {
     (page.description && page.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
   
+  // Carregar dados apenas uma vez ao montar o componente
   useEffect(() => {
     if (isAdmin) {
       loadRoles();
       loadPages();
     }
-  }, [isAdmin]);
+  }, []);
   
   // Se não estiver carregado e não for admin, redirecionar
   if (!isLoading && !isAdmin) {
