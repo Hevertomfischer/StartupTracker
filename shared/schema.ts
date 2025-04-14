@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, uuid, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, uuid, numeric, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -207,6 +207,42 @@ export const taskComments = pgTable("task_comments", {
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Tabela de workflows
+export const workflows = pgTable("workflows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  is_active: boolean("is_active").notNull().default(true),
+  trigger_type: text("trigger_type").notNull(), // status_change, task_creation, manual, schedule
+  trigger_details: jsonb("trigger_details"), // Detalhes específicos do gatilho (ex: id do status para mudança de status)
+  created_by: uuid("created_by").references(() => users.id),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Tabela de ações do workflow
+export const workflowActions = pgTable("workflow_actions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workflow_id: uuid("workflow_id").notNull().references(() => workflows.id, { onDelete: "cascade" }),
+  action_type: text("action_type").notNull(), // email, attribute_change, task_creation, status_query
+  action_details: jsonb("action_details").notNull(), // Dados específicos da ação
+  order: integer("order").notNull().default(0), // Ordem de execução
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Tabela para logs de execução do workflow
+export const workflowExecutionLogs = pgTable("workflow_execution_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workflow_id: uuid("workflow_id").notNull().references(() => workflows.id),
+  execution_time: timestamp("execution_time").defaultNow().notNull(),
+  status: text("status").notNull(), // success, error, partial_success
+  entity_type: text("entity_type"), // startup, task
+  entity_id: uuid("entity_id"), // ID da entidade relacionada
+  error_message: text("error_message"),
+  execution_details: jsonb("execution_details"), // Detalhes da execução
+});
+
 // Zod Schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -399,6 +435,29 @@ export const UserRoleEnum = {
   ADMIN: "admin",
   INVESTOR: "investor",
   ASSOCIATE: "associate",
+} as const;
+
+// Workflow Trigger Type Enum
+export const WorkflowTriggerTypeEnum = {
+  STATUS_CHANGE: "status_change",
+  TASK_CREATION: "task_creation",
+  MANUAL: "manual",
+  SCHEDULED: "scheduled"
+} as const;
+
+// Workflow Action Type Enum
+export const WorkflowActionTypeEnum = {
+  EMAIL: "email",
+  ATTRIBUTE_CHANGE: "attribute_change",
+  TASK_CREATION: "task_creation",
+  STATUS_QUERY: "status_query"
+} as const;
+
+// Workflow Execution Status Enum
+export const WorkflowExecutionStatusEnum = {
+  SUCCESS: "success",
+  ERROR: "error",
+  PARTIAL_SUCCESS: "partial_success"
 } as const;
 
 // Relations
