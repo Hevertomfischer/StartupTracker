@@ -7,7 +7,7 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { File, FileType, FileText, Trash2, FileX, Download, Image, Archive } from "lucide-react";
+import { File, FileText, Trash2, FileX, Download, Image, Archive } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -107,7 +107,7 @@ export function FileManager({ startupId }: FileManagerProps) {
   };
   
   const getFileIcon = (mimetype: string) => {
-    if (mimetype.includes('pdf')) return <FileType className="h-6 w-6 text-red-500" />;
+    if (mimetype.includes('pdf')) return <FileText className="h-6 w-6 text-red-500" />;
     if (mimetype.includes('word') || mimetype.includes('document')) return <FileText className="h-6 w-6 text-blue-500" />;
     if (mimetype.includes('excel') || mimetype.includes('sheet')) return <FileText className="h-6 w-6 text-green-500" />;
     if (mimetype.includes('powerpoint') || mimetype.includes('presentation')) return <FileText className="h-6 w-6 text-orange-500" />;
@@ -172,7 +172,7 @@ export function FileManager({ startupId }: FileManagerProps) {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => window.open(data.pitchDeck.path, '_blank')}
+                      onClick={() => data.pitchDeck && window.open(data.pitchDeck.path, '_blank')}
                     >
                       <Download className="h-4 w-4 mr-1" />
                       Baixar

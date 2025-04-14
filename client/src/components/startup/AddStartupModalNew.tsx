@@ -531,13 +531,14 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className="grid grid-cols-7 mb-4">
+              <TabsList className="grid grid-cols-8 mb-4">
                 <TabsTrigger value="basic">Básico</TabsTrigger>
                 <TabsTrigger value="ceo">CEO</TabsTrigger>
                 <TabsTrigger value="metrics">Métricas</TabsTrigger>
                 <TabsTrigger value="location">Localização</TabsTrigger>
                 <TabsTrigger value="details">Detalhes</TabsTrigger>
                 <TabsTrigger value="team">Equipe</TabsTrigger>
+                {isEditing && <TabsTrigger value="files"><FileText className="h-4 w-4 mr-1" />Arquivos</TabsTrigger>}
                 {isEditing && <TabsTrigger value="history">Histórico</TabsTrigger>}
               </TabsList>
               
@@ -1065,15 +1066,32 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
                 )}
               </TabsContent>
               
-              {/* History Tab - Only shown when editing */}
-              {isEditing && startup && (
-                <TabsContent value="history" className="space-y-4">
-                  <div className="mb-4">
-                    <p className="text-sm text-gray-500">ID da Startup: {startup.id}</p>
+              {/* Files Tab */}
+              <TabsContent value="files" className="space-y-4">
+                {isEditing && startup?.id ? (
+                  <FileManager startupId={startup.id} />
+                ) : (
+                  <div className="text-center p-6 text-gray-500 border border-dashed rounded-md">
+                    Para adicionar arquivos, salve a startup primeiro.
                   </div>
-                  <StartupHistoryPanel startup={startup} />
-                </TabsContent>
-              )}
+                )}
+              </TabsContent>
+              
+              {/* History Tab */}
+              <TabsContent value="history" className="space-y-4">
+                {isEditing && startup?.id ? (
+                  <>
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-500">ID da Startup: {startup.id}</p>
+                    </div>
+                    <StartupHistoryPanel startup={startup} />
+                  </>
+                ) : (
+                  <div className="text-center p-6 text-gray-500 border border-dashed rounded-md">
+                    Histórico não disponível para startups não salvas.
+                  </div>
+                )}
+              </TabsContent>
             </Tabs>
             
             <DialogFooter className="mt-5 gap-2">
