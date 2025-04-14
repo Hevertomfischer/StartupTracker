@@ -404,6 +404,15 @@ export type Task = typeof tasks.$inferSelect;
 export type InsertTaskComment = z.infer<typeof insertTaskCommentSchema>;
 export type TaskComment = typeof taskComments.$inferSelect;
 
+export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
+export type Workflow = typeof workflows.$inferSelect;
+
+export type InsertWorkflowAction = z.infer<typeof insertWorkflowActionSchema>;
+export type WorkflowAction = typeof workflowActions.$inferSelect;
+
+export type InsertWorkflowCondition = z.infer<typeof insertWorkflowConditionSchema>;
+export type WorkflowCondition = typeof workflowConditions.$inferSelect;
+
 // Status Enum (for default statuses)
 export const StatusEnum = {
   NEW_LEAD: "new_lead",
@@ -565,5 +574,29 @@ export const taskCommentsRelations = relations(taskComments, ({ one }) => ({
   user: one(users, {
     fields: [taskComments.user_id],
     references: [users.id],
+  }),
+}));
+
+// Relações para workflows
+export const workflowsRelations = relations(workflows, ({ many, one }) => ({
+  actions: many(workflowActions),
+  conditions: many(workflowConditions),
+  createdBy: one(users, {
+    fields: [workflows.created_by],
+    references: [users.id],
+  }),
+}));
+
+export const workflowActionsRelations = relations(workflowActions, ({ one }) => ({
+  workflow: one(workflows, {
+    fields: [workflowActions.workflow_id],
+    references: [workflows.id],
+  }),
+}));
+
+export const workflowConditionsRelations = relations(workflowConditions, ({ one }) => ({
+  workflow: one(workflows, {
+    fields: [workflowConditions.workflow_id],
+    references: [workflows.id],
   }),
 }));
