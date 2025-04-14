@@ -8,7 +8,8 @@ import {
   Settings,
   UserCog,
   CheckSquare,
-  ShieldCheck
+  ShieldCheck,
+  Workflow
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -42,6 +43,13 @@ export function Sidebar() {
       href: '/roles', 
       icon: ShieldCheck, 
       current: window.location.pathname === '/roles' 
+    });
+    
+    links.push({ 
+      name: 'Fluxos de Trabalho', 
+      href: '/workflows', 
+      icon: Workflow, 
+      current: window.location.pathname === '/workflows' 
     });
   }
 
