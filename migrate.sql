@@ -1,40 +1,14 @@
--- Alteração na tabela users
-ALTER TABLE users 
-DROP COLUMN role,
-ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE,
-ADD COLUMN created_at TIMESTAMP DEFAULT NOW(),
-ADD COLUMN updated_at TIMESTAMP DEFAULT NOW();
-
--- Criação da tabela userRoles
-CREATE TABLE IF NOT EXISTS user_roles (
+-- Criar a tabela workflow_conditions se ela não existir
+CREATE TABLE IF NOT EXISTS workflow_conditions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  description TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
+  workflow_id UUID NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
+  field_name TEXT NOT NULL,
+  operator TEXT NOT NULL,
+  value TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- Criação da tabela userRoleAssignments
-CREATE TABLE IF NOT EXISTS user_role_assignments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  role_id UUID NOT NULL REFERENCES user_roles(id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Criação da tabela systemPages
-CREATE TABLE IF NOT EXISTS system_pages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL UNIQUE,
-  path TEXT NOT NULL UNIQUE,
-  description TEXT,
-  icon TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Criação da tabela rolePagePermissions
-CREATE TABLE IF NOT EXISTS role_page_permissions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  role_id UUID NOT NULL REFERENCES user_roles(id) ON DELETE CASCADE,
-  page_id UUID NOT NULL REFERENCES system_pages(id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT NOW()
-);
+-- Adicionar campo action_name na tabela workflow_actions
+ALTER TABLE workflow_actions 
+ADD COLUMN IF NOT EXISTS action_name TEXT NOT NULL DEFAULT 'Ação sem nome',
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT now();
