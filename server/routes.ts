@@ -7,7 +7,10 @@ import {
   updateStartupStatusSchema,
   insertStatusSchema,
   insertTaskSchema,
-  insertTaskCommentSchema
+  insertTaskCommentSchema,
+  insertWorkflowSchema,
+  insertWorkflowActionSchema,
+  insertWorkflowConditionSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
