@@ -100,7 +100,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
         action_name: action?.action_name || '',
         description: action?.description || '',
         action_type: (action?.action_type as any) || 'send_email',
-        execution_order: action?.execution_order || (actions?.length ? actions.length + 1 : 1),
+        order: action?.order || (actions?.length ? actions.length + 1 : 1),
         config_json: configJson,
       });
     }
@@ -280,7 +280,7 @@ const WorkflowActionModal: React.FC<WorkflowActionModalProps> = ({
 
             <FormField
               control={form.control}
-              name="execution_order"
+              name="order"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Ordem de Execução</FormLabel>
