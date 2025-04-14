@@ -51,7 +51,7 @@ const workflowFormSchema = z.object({
   }),
   description: z.string().optional(),
   is_active: z.boolean().default(true),
-  trigger_type: z.enum(['status_change', 'task_creation', 'manual', 'scheduled']),
+  trigger_type: z.enum(['status_change', 'attribute_change', 'task_creation', 'manual', 'scheduled']),
   trigger_details: z.any().optional(),
 });
 

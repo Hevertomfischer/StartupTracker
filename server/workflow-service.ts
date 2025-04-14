@@ -241,6 +241,56 @@ export class WorkflowService {
   }
 
   /**
+   * Verifica gatilhos de alteração de atributos e executa workflows correspondentes
+   */
+  async handleAttributeChange(
+    entityId: string, 
+    entityType: string, 
+    fieldName: string, 
+    oldValue: any, 
+    newValue: any
+  ): Promise<void> {
+    // Buscar workflows com trigger_type 'attribute_change'
+    const triggeredWorkflows = await db
+      .select()
+      .from(workflows)
+      .where(and(
+        eq(workflows.trigger_type, WorkflowTriggerTypeEnum.ATTRIBUTE_CHANGE),
+        eq(workflows.is_active, true)
+      ));
+
+    // Filtrar workflows baseados nos detalhes do gatilho
+    for (const workflow of triggeredWorkflows) {
+      const triggerDetails = workflow.trigger_details as any;
+      
+      // Verificar se o workflow deve ser acionado para esta mudança de atributo
+      if (triggerDetails) {
+        // Verificar se o workflow monitora este tipo de entidade
+        const entityTypeMatch = !triggerDetails.entity_type || 
+                               triggerDetails.entity_type === entityType;
+        
+        // Verificar se o workflow monitora este campo específico
+        const fieldMatch = !triggerDetails.field_name || 
+                          triggerDetails.field_name === fieldName;
+        
+        // Verificar se o workflow monitora valores específicos (opcional)
+        let valueMatch = true;
+        if (triggerDetails.old_value !== undefined) {
+          valueMatch = valueMatch && String(oldValue) === String(triggerDetails.old_value);
+        }
+        if (triggerDetails.new_value !== undefined) {
+          valueMatch = valueMatch && String(newValue) === String(triggerDetails.new_value);
+        }
+        
+        // Se todas as condições forem atendidas, executar o workflow
+        if (entityTypeMatch && fieldMatch && valueMatch) {
+          await this.executeWorkflow(workflow.id, entityId, entityType);
+        }
+      }
+    }
+  }
+
+  /**
    * Verifica gatilhos de criação de tarefa e executa workflows correspondentes
    */
   async handleTaskCreation(taskId: string): Promise<void> {

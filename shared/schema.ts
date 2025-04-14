@@ -475,6 +475,7 @@ export const UserRoleEnum = {
 // Workflow Trigger Type Enum
 export const WorkflowTriggerTypeEnum = {
   STATUS_CHANGE: "status_change",
+  ATTRIBUTE_CHANGE: "attribute_change", // Novo tipo para monitorar mudanças em qualquer atributo
   TASK_CREATION: "task_creation",
   MANUAL: "manual",
   SCHEDULED: "scheduled"
