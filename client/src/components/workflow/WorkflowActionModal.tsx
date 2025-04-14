@@ -43,7 +43,28 @@ const workflowActionFormSchema = z.object({
   action_type: z.enum(['send_email', 'attribute_change', 'task_creation', 'status_query']),
   order: z.number().int().positive(),
   action_details: z.record(z.any()).optional(),
-});
+})
+.refine(
+  (data) => {
+    // Validação específica para ação de e-mail
+    if (data.action_type === 'send_email') {
+      const details = data.action_details || {};
+      // Se to_field estiver preenchido, não precisa do to_email
+      if (!details.to_field && !details.to_email) {
+        return false;
+      }
+      // Ambos subject e body são obrigatórios
+      if (!details.subject || !details.body) {
+        return false;
+      }
+    }
+    return true;
+  },
+  {
+    message: "Para ações de e-mail, você deve fornecer um destinatário (campo ou e-mail direto), assunto e corpo",
+    path: ["action_details"],
+  }
+);
 
 type WorkflowActionFormValues = z.infer<typeof workflowActionFormSchema>;
 

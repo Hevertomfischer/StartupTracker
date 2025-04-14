@@ -110,34 +110,51 @@ export const WorkflowModal: React.FC<WorkflowModalProps> = ({
       // Preparar dados específicos do tipo de gatilho
       let triggerDetails = {};
       
-      if (data.trigger_type === 'status_change' && data.trigger_details) {
+      if (data.trigger_type === 'status_change') {
         triggerDetails = {
-          status_id: data.trigger_details.status_id || null,
+          status_id: data.trigger_details?.status_id || null,
         };
-      } else if (data.trigger_type === 'attribute_change' && data.trigger_details) {
+      } else if (data.trigger_type === 'attribute_change') {
+        // Remover valores vazios ou undefined para evitar problemas de validação
+        const oldValue = data.trigger_details?.old_value ? data.trigger_details.old_value : undefined;
+        const newValue = data.trigger_details?.new_value ? data.trigger_details.new_value : undefined;
+        
         triggerDetails = {
-          entity_type: data.trigger_details.entity_type || 'startup',
-          field_name: data.trigger_details.field_name || '',
-          old_value: data.trigger_details.old_value || undefined,
-          new_value: data.trigger_details.new_value || undefined,
+          entity_type: data.trigger_details?.entity_type || 'startup',
+          field_name: data.trigger_details?.field_name || '',
         };
+        
+        if (oldValue !== undefined && oldValue !== '') {
+          triggerDetails = { ...triggerDetails, old_value: oldValue };
+        }
+        
+        if (newValue !== undefined && newValue !== '') {
+          triggerDetails = { ...triggerDetails, new_value: newValue };
+        }
       }
 
       // Preparar dados do formulário para envio
       const workflowData = {
-        ...data,
+        name: data.name,
+        description: data.description || '',
+        is_active: data.is_active,
+        trigger_type: data.trigger_type,
         trigger_details: triggerDetails,
       };
 
       // Enviar requisição para API
-      const response = await apiRequest(
-        isEditing ? 'PATCH' : 'POST',
-        isEditing ? `/api/workflows/${workflow?.id}` : '/api/workflows',
-        workflowData
-      );
-
-      if (!response.ok) {
-        throw new Error('Falha ao salvar workflow');
+      try {
+        const response = await apiRequest(
+          isEditing ? 'PATCH' : 'POST',
+          isEditing ? `/api/workflows/${workflow?.id}` : '/api/workflows',
+          workflowData
+        );
+        
+        // apiRequest já lançará erro se a resposta não for ok
+        console.log('Workflow salvo com sucesso:', response);
+      } catch (error) {
+        console.error('Erro ao salvar workflow:', error);
+        throw new Error(`Falha ao salvar workflow: ${error instanceof Error ? error.message : String(error)}`);
       }
 
       // Invalidar cache de queries para recarregar dados
