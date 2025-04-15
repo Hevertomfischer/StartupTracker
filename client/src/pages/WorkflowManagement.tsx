@@ -80,6 +80,7 @@ export default function WorkflowManagement() {
   const [isWorkflowModalOpen, setIsWorkflowModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [isConditionModalOpen, setIsConditionModalOpen] = useState(false);
   const [workflowForm, setWorkflowForm] = useState({
     name: "",
     description: "",
@@ -222,11 +223,36 @@ export default function WorkflowManagement() {
         description: "A ação foi adicionada ao workflow com sucesso.",
       });
       refetchWorkflowActions();
+      setIsActionModalOpen(false);
     },
     onError: (error: any) => {
       toast({
         title: "Erro ao adicionar ação",
         description: error.message || "Ocorreu um erro ao adicionar a ação.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Mutação para adicionar uma condição ao workflow
+  const addWorkflowConditionMutation = useMutation({
+    mutationFn: async (conditionData: any) => {
+      if (!selectedWorkflow) throw new Error("Nenhum workflow selecionado");
+      const res = await apiRequest("POST", `/api/workflows/${selectedWorkflow.id}/conditions`, conditionData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Condição adicionada",
+        description: "A condição foi adicionada ao workflow com sucesso.",
+      });
+      refetchWorkflowConditions();
+      setIsConditionModalOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao adicionar condição",
+        description: error.message || "Ocorreu um erro ao adicionar a condição.",
         variant: "destructive",
       });
     }
@@ -299,6 +325,11 @@ export default function WorkflowManagement() {
   // Adicionar uma ação ao workflow
   const handleAddAction = (actionData: any) => {
     addWorkflowActionMutation.mutate(actionData);
+  };
+  
+  // Adicionar uma condição ao workflow
+  const handleAddCondition = (conditionData: any) => {
+    addWorkflowConditionMutation.mutate(conditionData);
   };
   
   // Renderizar o tipo de trigger em texto legível
@@ -605,7 +636,7 @@ export default function WorkflowManagement() {
                       <div className="space-y-4">
                         <div className="flex justify-between items-center">
                           <h3 className="font-medium">Condições do Workflow</h3>
-                          <Button size="sm">
+                          <Button size="sm" onClick={() => setIsConditionModalOpen(true)}>
                             <PlusCircle className="h-4 w-4 mr-1" />
                             Adicionar Condição
                           </Button>
