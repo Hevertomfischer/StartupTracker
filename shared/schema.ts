@@ -354,6 +354,7 @@ export const insertWorkflowSchema = createInsertSchema(workflows).omit({
 export const insertWorkflowActionSchema = createInsertSchema(workflowActions).omit({
   id: true,
   created_at: true,
+  updated_at: true,
 });
 
 export const insertWorkflowConditionSchema = createInsertSchema(workflowConditions).omit({

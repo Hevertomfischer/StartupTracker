@@ -1002,16 +1002,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/workflows/:workflowId/actions", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const workflowId = req.params.workflowId;
+      
+      console.log('Recebendo dados de ação de workflow:', JSON.stringify(req.body, null, 2));
+      console.log('Schema esperado:', JSON.stringify(insertWorkflowActionSchema.shape, null, 2));
+      
       const data = insertWorkflowActionSchema.parse({
         ...req.body,
         workflow_id: workflowId
       });
+      
+      console.log('Dados após parse:', JSON.stringify(data, null, 2));
       
       const action = await storage.createWorkflowAction(data);
       return res.status(201).json(action);
     } catch (error) {
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
+        console.error("Erro de validação:", validationError.message);
+        console.error("Detalhes do erro:", error);
         return res.status(400).json({ message: validationError.message });
       }
       console.error("Error creating workflow action:", error);
