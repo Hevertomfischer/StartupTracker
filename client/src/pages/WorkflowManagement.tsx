@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import WorkflowActionModal from "@/components/workflow/WorkflowActionModal";
+import WorkflowConditionModal from "@/components/workflow/WorkflowConditionModal";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -863,6 +864,13 @@ export default function WorkflowManagement() {
             open={isActionModalOpen}
             onClose={() => setIsActionModalOpen(false)}
             onSave={handleAddAction}
+          />
+          
+          {/* Modal de Condição do Workflow */}
+          <WorkflowConditionModal
+            open={isConditionModalOpen}
+            onClose={() => setIsConditionModalOpen(false)}
+            onSave={handleAddCondition}
           />
         </main>
       </div>
