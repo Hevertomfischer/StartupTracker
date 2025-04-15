@@ -215,8 +215,7 @@ export default function WorkflowManagement() {
   const addWorkflowActionMutation = useMutation({
     mutationFn: async (actionData: any) => {
       if (!selectedWorkflow) throw new Error("Nenhum workflow selecionado");
-      const res = await apiRequest("POST", `/api/workflows/${selectedWorkflow.id}/actions`, actionData);
-      return await res.json();
+      return await apiRequest("POST", `/api/workflows/${selectedWorkflow.id}/actions`, actionData);
     },
     onSuccess: () => {
       toast({
@@ -239,8 +238,7 @@ export default function WorkflowManagement() {
   const addWorkflowConditionMutation = useMutation({
     mutationFn: async (conditionData: any) => {
       if (!selectedWorkflow) throw new Error("Nenhum workflow selecionado");
-      const res = await apiRequest("POST", `/api/workflows/${selectedWorkflow.id}/conditions`, conditionData);
-      return await res.json();
+      return await apiRequest("POST", `/api/workflows/${selectedWorkflow.id}/conditions`, conditionData);
     },
     onSuccess: () => {
       toast({
