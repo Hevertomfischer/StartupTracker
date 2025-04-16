@@ -336,6 +336,8 @@ export class WorkflowEngine {
         // Garantir que o valor de prioridade seja válido
         let finalValue = "medium"; // valor padrão
         
+        console.log(`[WorkflowEngine] Processando valor de prioridade original: "${value}" (${typeof value})`);
+        
         // Normalize strings em inglês
         if (value === "low" || value === "medium" || value === "high") {
           finalValue = value;
@@ -353,7 +355,7 @@ export class WorkflowEngine {
         }
         
         updateData[attribute] = finalValue;
-        console.log(`[WorkflowEngine] Convertendo valor de prioridade: ${value} para ${finalValue}`);
+        console.log(`[WorkflowEngine] Valor de prioridade normalizado: "${value}" -> "${finalValue}"`); 
       
       } else if (
         attribute === "mrr" || 

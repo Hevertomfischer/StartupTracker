@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Toggle } from "@/components/ui/toggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+// Importação do PriorityEnum do schema compartilhado
 import { PriorityEnum } from "@shared/schema";
 import { HelpCircle, Info } from "lucide-react";
 import {
