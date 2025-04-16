@@ -320,9 +320,44 @@ export class WorkflowEngine {
         changed_at: new Date()
       });
       
-      // Criar objeto de atualização
+      // Criar objeto de atualização com conversão de tipos adequada
       const updateData: Record<string, any> = {};
-      updateData[attribute] = value;
+      
+      // Converter valor para o tipo apropriado com base no atributo
+      if (attribute === "is_active") {
+        // Converter strings 'true'/'false' para booleanos verdadeiros
+        if (value === "true" || value === true) {
+          updateData[attribute] = true;
+        } else if (value === "false" || value === false) {
+          updateData[attribute] = false;
+        }
+        console.log(`[WorkflowEngine] Convertendo valor booleano para ${attribute}: ${updateData[attribute]}`);
+      } else if (
+        attribute === "mrr" || 
+        attribute === "accumulated_revenue_current_year" || 
+        attribute === "total_revenue_last_year" || 
+        attribute === "total_revenue_previous_year" ||
+        attribute === "tam" ||
+        attribute === "sam" ||
+        attribute === "som" ||
+        attribute === "client_count" ||
+        attribute === "partner_count" ||
+        attribute === "time_tracking"
+      ) {
+        // Converter para número se for um dos campos numéricos
+        const numValue = Number(value);
+        if (!isNaN(numValue)) {
+          updateData[attribute] = numValue;
+          console.log(`[WorkflowEngine] Convertendo valor numérico para ${attribute}: ${updateData[attribute]}`);
+        } else {
+          updateData[attribute] = value;
+        }
+      } else {
+        // Para outros campos, usar o valor como está
+        updateData[attribute] = value;
+      }
+      
+      console.log(`[WorkflowEngine] Objeto de atualização final:`, updateData);
       
       // Atualizar startup diretamente usando o db
       const [updatedStartup] = await db
