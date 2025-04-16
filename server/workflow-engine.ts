@@ -1,4 +1,4 @@
-import { Eq, and, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "./db";
 import { IStorage } from "./storage";
 import { Startup, Workflow, WorkflowAction, WorkflowCondition, workflows, workflowActions, workflowConditions } from "@shared/schema";
@@ -42,7 +42,8 @@ export class WorkflowEngine {
       // Verificar cada workflow
       for (const workflow of activeWorkflows) {
         // Verificar se o status corresponde ao trigger_details
-        if (workflow.trigger_details?.status_id === statusId) {
+        const details = workflow.trigger_details as Record<string, any>;
+        if (details?.status_id === statusId) {
           console.log(`[WorkflowEngine] Workflow elegível: ${workflow.name} (${workflow.id})`);
           
           // Verificar condições adicionais
@@ -91,7 +92,8 @@ export class WorkflowEngine {
       // Verificar cada workflow
       for (const workflow of activeWorkflows) {
         // Verificar se o atributo corresponde ao trigger_details
-        if (workflow.trigger_details?.attribute === attributeName) {
+        const details = workflow.trigger_details as Record<string, any>;
+        if (details?.attribute === attributeName) {
           console.log(`[WorkflowEngine] Workflow elegível: ${workflow.name} (${workflow.id})`);
           
           // Verificar condições adicionais
@@ -216,7 +218,8 @@ export class WorkflowEngine {
   // Executa ação de envio de email
   private async executeSendEmailAction(action: WorkflowAction, startup: Startup): Promise<void> {
     // Verificar e pegar detalhes da ação
-    const { to, subject, body } = action.action_details;
+    const details = action.action_details as Record<string, any>;
+    const { to, subject, body } = details;
     
     if (!to || !subject || !body) {
       console.error("[WorkflowEngine] Detalhes de email incompletos:", action.action_details);
@@ -265,7 +268,8 @@ export class WorkflowEngine {
   // Executa ação de atualização de atributo
   private async executeUpdateAttributeAction(action: WorkflowAction, startup: Startup): Promise<void> {
     // Verificar e pegar detalhes da ação
-    const { attribute, value } = action.action_details;
+    const details = action.action_details as Record<string, any>;
+    const { attribute, value } = details;
     
     if (!attribute) {
       console.error("[WorkflowEngine] Atributo não especificado:", action.action_details);
@@ -295,7 +299,8 @@ export class WorkflowEngine {
   // Executa ação de criação de tarefa
   private async executeCreateTaskAction(action: WorkflowAction, startup: Startup): Promise<void> {
     // Verificar e pegar detalhes da ação
-    const { title, description, due_date, assignee_id, priority } = action.action_details;
+    const details = action.action_details as Record<string, any>;
+    const { title, description, due_date, assignee_id, priority } = details;
     
     if (!title) {
       console.error("[WorkflowEngine] Título da tarefa não especificado:", action.action_details);
@@ -315,8 +320,6 @@ export class WorkflowEngine {
         description: processedDescription,
         due_date: due_date || null,
         created_by: 'system', // Ou algum usuário admin
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
         assigned_to: assignee_id || null,
         is_completed: false,
         startup_id: startup.id,
