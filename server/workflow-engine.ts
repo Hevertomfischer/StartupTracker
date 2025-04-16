@@ -417,6 +417,31 @@ export class WorkflowEngine {
     
     console.log(`[WorkflowEngine] Criando tarefa: ${title}`);
     
+    // Normalizar valor de prioridade
+    let normalizedPriority = "medium"; // valor padrão
+    
+    if (priority) {
+      console.log(`[WorkflowEngine] Processando valor de prioridade para tarefa: "${priority}" (${typeof priority})`);
+      
+      // Normalize strings em inglês
+      if (priority === "low" || priority === "medium" || priority === "high") {
+        normalizedPriority = priority;
+      } 
+      // Normalize strings em português (insensitive to case)
+      else if (typeof priority === 'string') {
+        const lowerValue = priority.toLowerCase();
+        if (lowerValue === "baixa" || lowerValue === "baixo") {
+          normalizedPriority = "low";
+        } else if (lowerValue === "média" || lowerValue === "medio" || lowerValue === "média") {
+          normalizedPriority = "medium";
+        } else if (lowerValue === "alta" || lowerValue === "alto") {
+          normalizedPriority = "high";
+        }
+      }
+      
+      console.log(`[WorkflowEngine] Prioridade normalizada para tarefa: "${priority}" -> "${normalizedPriority}"`);
+    }
+    
     try {
       // Processar título e descrição para substituir placeholders
       const processedTitle = this.replacePlaceholders(title, startup);
@@ -432,7 +457,7 @@ export class WorkflowEngine {
           due_date: due_date ? new Date(due_date) : null,
           created_by: details.created_by || null,
           assigned_to: assignee_id || null,
-          priority: priority || "medium",
+          priority: normalizedPriority,
           status: "todo",
         })
         .returning();
