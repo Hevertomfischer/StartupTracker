@@ -49,8 +49,7 @@ import {
   type InsertWorkflowCondition
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, asc, sql } from "drizzle-orm";
-import { WorkflowEngine } from "./workflow-engine";
+import { eq, desc, asc, sql, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -535,6 +534,19 @@ export class DatabaseStorage implements IStorage {
               changed_at: now
             });
             console.log(`Alteração registrada para o campo ${key}`);
+            
+            // Processar workflow para mudança de atributo
+            try {
+              console.log(`Iniciando processamento de workflows para mudança de atributo ${key}`);
+              
+              // Usar dynamic import para evitar dependência circular
+              const { WorkflowEngine } = await import('./workflow-engine');
+              const workflowEngine = new WorkflowEngine();
+              await workflowEngine.processAttributeChangeWorkflows(id, key, newValue);
+            } catch (workflowError) {
+              console.error(`Erro ao processar workflows para a mudança de atributo ${key}:`, workflowError);
+              // Não falha a operação principal se o processamento de workflow falhar
+            }
           } catch (error) {
             console.error(`Erro ao registrar histórico para o campo ${key}:`, error);
           }
