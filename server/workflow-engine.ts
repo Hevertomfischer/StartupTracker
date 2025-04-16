@@ -10,7 +10,8 @@ import {
   workflowActions, 
   workflowConditions,
   startups,
-  tasks
+  tasks,
+  startupHistory
 } from "@shared/schema";
 import { createTransport } from "nodemailer";
 
@@ -296,6 +297,29 @@ export class WorkflowEngine {
     console.log(`[WorkflowEngine] Atualizando atributo: ${attribute} para ${value}`);
     
     try {
+      // Primeiro, registrar a alteração no histórico para manter auditoria
+      const oldStartup = await db
+        .select()
+        .from(startups)
+        .where(eq(startups.id, startup.id))
+        .then(results => results[0]);
+        
+      if (!oldStartup) {
+        console.error(`[WorkflowEngine] Startup não encontrada: ${startup.id}`);
+        return;
+      }
+      
+      const oldValue = (oldStartup as any)[attribute];
+      
+      // Registrar no histórico antes de alterar
+      await db.insert(startupHistory).values({
+        startup_id: startup.id,
+        field_name: attribute,
+        old_value: oldValue !== null && oldValue !== undefined ? String(oldValue) : 'Não definido',
+        new_value: value !== null && value !== undefined ? String(value) : 'Não definido',
+        changed_at: new Date()
+      });
+      
       // Criar objeto de atualização
       const updateData: Record<string, any> = {};
       updateData[attribute] = value;

@@ -301,6 +301,19 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
                       <SelectItem value="status7">Fechamento (Perdido)</SelectItem>
                     </SelectContent>
                   </Select>
+                ) : actionDetails.attribute === "is_active" ? (
+                  <Select 
+                    value={actionDetails.value || ""} 
+                    onValueChange={(value) => setActionDetails({...actionDetails, value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um valor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">Ativo</SelectItem>
+                      <SelectItem value="false">Inativo</SelectItem>
+                    </SelectContent>
+                  </Select>
                 ) : (
                   <Input 
                     type={actionDetails.attribute && editableAttributes.find(a => a.id === actionDetails.attribute)?.type === "number" ? "number" : "text"}
