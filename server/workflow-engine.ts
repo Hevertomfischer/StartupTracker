@@ -1,14 +1,24 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "./db";
-import { Startup, Workflow, WorkflowAction, WorkflowCondition, workflows, workflowActions, workflowConditions } from "@shared/schema";
+import { 
+  Startup, 
+  Task,
+  Workflow, 
+  WorkflowAction, 
+  WorkflowCondition, 
+  workflows, 
+  workflowActions, 
+  workflowConditions,
+  startups,
+  tasks
+} from "@shared/schema";
 import { createTransport } from "nodemailer";
 
 // Classe que contém a lógica para executar workflows
 export class WorkflowEngine {
-  private storage: IStorage;
-
-  constructor(storage: IStorage) {
-    this.storage = storage;
+  // Não depende mais da interface IStorage
+  constructor() {
+    // Sem dependências externas
   }
 
   // Processa workflows acionados por mudança de status
@@ -32,7 +42,11 @@ export class WorkflowEngine {
       if (activeWorkflows.length === 0) return;
 
       // Startup que teve status alterado
-      const startup = await this.storage.getStartup(startupId);
+      const [startup] = await db
+        .select()
+        .from(startups)
+        .where(eq(startups.id, startupId));
+        
       if (!startup) {
         console.error(`[WorkflowEngine] Startup não encontrada: ${startupId}`);
         return;
@@ -82,7 +96,11 @@ export class WorkflowEngine {
       if (activeWorkflows.length === 0) return;
 
       // Startup que teve atributo alterado
-      const startup = await this.storage.getStartup(startupId);
+      const [startup] = await db
+        .select()
+        .from(startups)
+        .where(eq(startups.id, startupId));
+        
       if (!startup) {
         console.error(`[WorkflowEngine] Startup não encontrada: ${startupId}`);
         return;
@@ -279,11 +297,18 @@ export class WorkflowEngine {
     
     try {
       // Criar objeto de atualização
-      const updateData: Partial<Startup> = {};
-      updateData[attribute as keyof Startup] = value;
+      const updateData: Record<string, any> = {};
+      updateData[attribute] = value;
       
-      // Atualizar startup
-      const updatedStartup = await this.storage.updateStartup(startup.id, updateData);
+      // Atualizar startup diretamente usando o db
+      const [updatedStartup] = await db
+        .update(startups)
+        .set({
+          ...updateData,
+          updated_at: new Date()
+        })
+        .where(eq(startups.id, startup.id))
+        .returning();
       
       if (updatedStartup) {
         console.log(`[WorkflowEngine] Atributo ${attribute} atualizado com sucesso`);
@@ -313,17 +338,20 @@ export class WorkflowEngine {
       const processedTitle = this.replacePlaceholders(title, startup);
       const processedDescription = description ? this.replacePlaceholders(description, startup) : '';
       
-      // Criar tarefa
-      const task = await this.storage.createTask({
-        title: processedTitle,
-        description: processedDescription,
-        due_date: due_date || null,
-        created_by: 'system', // Ou algum usuário admin
-        assigned_to: assignee_id || null,
-        is_completed: false,
-        startup_id: startup.id,
-        priority: priority || 'medium',
-      });
+      // Criar tarefa diretamente usando o db
+      const [task] = await db
+        .insert(tasks)
+        .values({
+          title: processedTitle,
+          description: processedDescription,
+          due_date: due_date ? new Date(due_date) : null,
+          created_by: 'system', // Ou algum usuário admin
+          assigned_to: assignee_id || null,
+          is_completed: false,
+          startup_id: startup.id,
+          priority: priority || 'medium',
+        })
+        .returning();
       
       if (task) {
         console.log(`[WorkflowEngine] Tarefa criada com sucesso: ${task.id}`);

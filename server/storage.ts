@@ -631,6 +631,46 @@ export class DatabaseStorage implements IStorage {
         .returning();
 
       console.log(`Status da startup ${id} atualizado com sucesso`);
+      
+      // Processar workflows para mudança de status
+      try {
+        console.log(`Iniciando processamento de workflows para mudança de status...`);
+        
+        // Buscar workflows aplicáveis usando o banco de dados diretamente
+        const activeWorkflows = await db
+          .select()
+          .from(workflows)
+          .where(
+            and(
+              eq(workflows.is_active, true),
+              eq(workflows.trigger_type, "status_change")
+            )
+          );
+          
+        // Verificar se tem workflows para processar
+        if (activeWorkflows.length > 0) {
+          console.log(`Encontrados ${activeWorkflows.length} workflows para status_change`);
+          
+          // Verificar cada workflow
+          for (const workflow of activeWorkflows) {
+            // Verificar se o status corresponde ao trigger_details
+            const details = workflow.trigger_details as Record<string, any>;
+            if (details?.status_id === status_id) {
+              console.log(`Workflow elegível: ${workflow.name} (${workflow.id})`);
+              
+              // Usar dynamic import para resolver a dependência circular
+              const { WorkflowEngine } = await import('./workflow-engine');
+              const workflowEngine = new WorkflowEngine();
+              await workflowEngine.processStatusChangeWorkflows(id, status_id);
+              break; // Processamos apenas uma vez
+            }
+          }
+        }
+      } catch (workflowError) {
+        console.error(`Erro ao processar workflows para a mudança de status:`, workflowError);
+        // Não falha a operação principal se o processamento de workflow falhar
+      }
+      
       return updatedStartup;
     } catch (error) {
       console.error(`Erro ao atualizar status da startup ${id}:`, error);
@@ -954,8 +994,9 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Iniciando processamento de workflows para mudança de status: Startup ${startupId}, Status ${statusId}`);
       
-      // Usar o WorkflowEngine para processar os workflows
-      const workflowEngine = new WorkflowEngine(this);
+      // Usar dynamic import para evitar dependência circular
+      const { WorkflowEngine } = await import('./workflow-engine');
+      const workflowEngine = new WorkflowEngine();
       await workflowEngine.processStatusChangeWorkflows(startupId, statusId);
       
       console.log(`[Storage] Processamento de workflows para mudança de status concluído`);
@@ -968,8 +1009,9 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`[Storage] Iniciando processamento de workflows para mudança de atributo: Startup ${startupId}, Atributo ${attributeName}`);
       
-      // Usar o WorkflowEngine para processar os workflows
-      const workflowEngine = new WorkflowEngine(this);
+      // Usar dynamic import para evitar dependência circular
+      const { WorkflowEngine } = await import('./workflow-engine');
+      const workflowEngine = new WorkflowEngine();
       await workflowEngine.processAttributeChangeWorkflows(startupId, attributeName, newValue);
       
       console.log(`[Storage] Processamento de workflows para mudança de atributo concluído`);
