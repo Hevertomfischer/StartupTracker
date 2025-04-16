@@ -18,6 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Toggle } from "@/components/ui/toggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { PriorityEnum } from "@shared/schema";
 import { HelpCircle, Info } from "lucide-react";
 import {
   Tooltip,
@@ -310,9 +311,9 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
                       <SelectValue placeholder="Selecione uma prioridade" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="low">Baixa</SelectItem>
-                      <SelectItem value="medium">Média</SelectItem>
-                      <SelectItem value="high">Alta</SelectItem>
+                      <SelectItem value={PriorityEnum.LOW}>Baixa</SelectItem>
+                      <SelectItem value={PriorityEnum.MEDIUM}>Média</SelectItem>
+                      <SelectItem value={PriorityEnum.HIGH}>Alta</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : actionDetails.attribute === "is_active" ? (
@@ -368,9 +369,9 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
                     <SelectValue placeholder="Selecione a prioridade" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Baixa</SelectItem>
-                    <SelectItem value="medium">Média</SelectItem>
-                    <SelectItem value="high">Alta</SelectItem>
+                    <SelectItem value={PriorityEnum.LOW}>Baixa</SelectItem>
+                    <SelectItem value={PriorityEnum.MEDIUM}>Média</SelectItem>
+                    <SelectItem value={PriorityEnum.HIGH}>Alta</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
