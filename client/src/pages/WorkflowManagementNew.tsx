@@ -271,24 +271,30 @@ export default function WorkflowManagement() {
         workflow_id: selectedWorkflow.id
       };
       
-      const response = await fetch(`/api/workflows/${selectedWorkflow.id}/actions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(completeActionData),
-        credentials: "include"
-      });
-      
-      if (!response.ok) {
+      try {
+        const response = await fetch(`/api/workflows/${selectedWorkflow.id}/actions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(completeActionData),
+          credentials: "include"
+        });
+        
+        if (!response.ok) {
+          setActionCreationStatus("error");
+          const errorText = await response.text();
+          throw new Error(`Erro ao adicionar ação: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        setActionCreationStatus("success");
+        return result;
+      } catch (error) {
+        console.error("Erro na requisição de adicionar ação:", error);
         setActionCreationStatus("error");
-        const errorText = await response.text();
-        throw new Error(`Erro ao adicionar ação: ${errorText}`);
+        throw error;
       }
-      
-      const result = await response.json();
-      setActionCreationStatus("success");
-      return result;
     },
     onSuccess: () => {
       toast({
@@ -314,6 +320,43 @@ export default function WorkflowManagement() {
     }
   });
   
+  // Mutação para excluir uma ação do workflow
+  const deleteWorkflowActionMutation = useMutation({
+    mutationFn: async (actionId: string) => {
+      try {
+        const response = await fetch(`/api/workflows/actions/${actionId}`, {
+          method: "DELETE",
+          credentials: "include"
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro ao excluir ação: ${errorText}`);
+        }
+        
+        return actionId;
+      } catch (error) {
+        console.error("Erro na requisição de excluir ação:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Ação excluída",
+        description: "A ação foi excluída com sucesso.",
+      });
+      // Atualiza a lista de ações
+      refetchWorkflowActions();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir ação",
+        description: error.message || "Ocorreu um erro ao excluir a ação.",
+        variant: "destructive",
+      });
+    }
+  });
+  
   // Mutação para adicionar uma condição ao workflow
   const addWorkflowConditionMutation = useMutation({
     mutationFn: async (conditionData: any) => {
@@ -326,24 +369,30 @@ export default function WorkflowManagement() {
         workflow_id: selectedWorkflow.id
       };
       
-      const response = await fetch(`/api/workflows/${selectedWorkflow.id}/conditions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(completeConditionData),
-        credentials: "include"
-      });
-      
-      if (!response.ok) {
+      try {
+        const response = await fetch(`/api/workflows/${selectedWorkflow.id}/conditions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(completeConditionData),
+          credentials: "include"
+        });
+        
+        if (!response.ok) {
+          setConditionCreationStatus("error");
+          const errorText = await response.text();
+          throw new Error(`Erro ao adicionar condição: ${errorText}`);
+        }
+        
+        const result = await response.json();
+        setConditionCreationStatus("success");
+        return result;
+      } catch (error) {
+        console.error("Erro na requisição de adicionar condição:", error);
         setConditionCreationStatus("error");
-        const errorText = await response.text();
-        throw new Error(`Erro ao adicionar condição: ${errorText}`);
+        throw error;
       }
-      
-      const result = await response.json();
-      setConditionCreationStatus("success");
-      return result;
     },
     onSuccess: () => {
       toast({
@@ -366,6 +415,43 @@ export default function WorkflowManagement() {
       setTimeout(() => {
         setConditionCreationStatus("idle");
       }, 1000);
+    }
+  });
+  
+  // Mutação para excluir uma condição do workflow
+  const deleteWorkflowConditionMutation = useMutation({
+    mutationFn: async (conditionId: string) => {
+      try {
+        const response = await fetch(`/api/workflows/conditions/${conditionId}`, {
+          method: "DELETE",
+          credentials: "include"
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Erro ao excluir condição: ${errorText}`);
+        }
+        
+        return conditionId;
+      } catch (error) {
+        console.error("Erro na requisição de excluir condição:", error);
+        throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Condição excluída",
+        description: "A condição foi excluída com sucesso.",
+      });
+      // Atualiza a lista de condições
+      refetchWorkflowConditions();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao excluir condição",
+        description: error.message || "Ocorreu um erro ao excluir a condição.",
+        variant: "destructive",
+      });
     }
   });
   
@@ -451,6 +537,20 @@ export default function WorkflowManagement() {
   const handleAddCondition = (conditionData: any) => {
     console.log("Dados da condição a serem enviados:", conditionData);
     addWorkflowConditionMutation.mutate(conditionData);
+  };
+  
+  // Excluir uma ação do workflow
+  const handleDeleteAction = (actionId: string) => {
+    if (confirm("Tem certeza que deseja excluir esta ação?")) {
+      deleteWorkflowActionMutation.mutate(actionId);
+    }
+  };
+  
+  // Excluir uma condição do workflow
+  const handleDeleteCondition = (conditionId: string) => {
+    if (confirm("Tem certeza que deseja excluir esta condição?")) {
+      deleteWorkflowConditionMutation.mutate(conditionId);
+    }
   };
   
   // Renderizar o tipo de trigger em texto legível
