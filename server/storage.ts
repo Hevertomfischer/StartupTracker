@@ -151,6 +151,10 @@ export interface IStorage {
   getWorkflowConditions(workflowId: string): Promise<any[]>;
   createWorkflowCondition(condition: any): Promise<any>;
   deleteWorkflowCondition(id: string): Promise<boolean>;
+  
+  // Workflow Execution
+  processStatusChangeWorkflows(startupId: string, statusId: string): Promise<void>;
+  processAttributeChangeWorkflows(startupId: string, attributeName: string, newValue: any): Promise<void>;
 
   // Seed data
   seedDatabase(): Promise<void>;
