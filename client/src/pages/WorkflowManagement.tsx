@@ -140,8 +140,7 @@ export default function WorkflowManagement() {
   // Mutação para criar um novo workflow
   const createWorkflowMutation = useMutation({
     mutationFn: async (data: typeof workflowForm) => {
-      const res = await apiRequest("POST", "/api/workflows", data);
-      return await res.json();
+      return await apiRequest("POST", "/api/workflows", data);
     },
     onSuccess: (data) => {
       toast({
@@ -166,8 +165,7 @@ export default function WorkflowManagement() {
   const updateWorkflowMutation = useMutation({
     mutationFn: async (data: any) => {
       if (!selectedWorkflow) throw new Error("Nenhum workflow selecionado");
-      const res = await apiRequest("PATCH", `/api/workflows/${selectedWorkflow.id}`, data);
-      return await res.json();
+      return await apiRequest("PATCH", `/api/workflows/${selectedWorkflow.id}`, data);
     },
     onSuccess: (data) => {
       toast({
