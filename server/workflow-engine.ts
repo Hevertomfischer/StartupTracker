@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "./db";
-import { IStorage } from "./storage";
 import { Startup, Workflow, WorkflowAction, WorkflowCondition, workflows, workflowActions, workflowConditions } from "@shared/schema";
 import { createTransport } from "nodemailer";
 

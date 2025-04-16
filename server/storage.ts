@@ -50,6 +50,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, sql } from "drizzle-orm";
+import { WorkflowEngine } from "./workflow-engine";
 
 export interface IStorage {
   // User operations
@@ -946,6 +947,35 @@ export class DatabaseStorage implements IStorage {
       .delete(workflowConditions)
       .where(eq(workflowConditions.id, id));
     return result.count > 0;
+  }
+  
+  // Workflow Execution
+  async processStatusChangeWorkflows(startupId: string, statusId: string): Promise<void> {
+    try {
+      console.log(`[Storage] Iniciando processamento de workflows para mudança de status: Startup ${startupId}, Status ${statusId}`);
+      
+      // Usar o WorkflowEngine para processar os workflows
+      const workflowEngine = new WorkflowEngine(this);
+      await workflowEngine.processStatusChangeWorkflows(startupId, statusId);
+      
+      console.log(`[Storage] Processamento de workflows para mudança de status concluído`);
+    } catch (error) {
+      console.error(`[Storage] Erro ao processar workflows para mudança de status:`, error);
+    }
+  }
+
+  async processAttributeChangeWorkflows(startupId: string, attributeName: string, newValue: any): Promise<void> {
+    try {
+      console.log(`[Storage] Iniciando processamento de workflows para mudança de atributo: Startup ${startupId}, Atributo ${attributeName}`);
+      
+      // Usar o WorkflowEngine para processar os workflows
+      const workflowEngine = new WorkflowEngine(this);
+      await workflowEngine.processAttributeChangeWorkflows(startupId, attributeName, newValue);
+      
+      console.log(`[Storage] Processamento de workflows para mudança de atributo concluído`);
+    } catch (error) {
+      console.error(`[Storage] Erro ao processar workflows para mudança de atributo:`, error);
+    }
   }
 
   // Seed data
