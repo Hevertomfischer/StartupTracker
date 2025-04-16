@@ -332,6 +332,20 @@ export class WorkflowEngine {
           updateData[attribute] = false;
         }
         console.log(`[WorkflowEngine] Convertendo valor booleano para ${attribute}: ${updateData[attribute]}`);
+      } else if (attribute === "priority") {
+        // Garantir que o valor de prioridade seja válido
+        if (value === "low" || value === "medium" || value === "high") {
+          updateData[attribute] = value;
+          console.log(`[WorkflowEngine] Usando valor válido para prioridade: ${value}`);
+        } else {
+          // Se recebermos um valor traduzido, converter para o valor correto do banco
+          if (value === "Baixa") updateData[attribute] = "low";
+          else if (value === "Média") updateData[attribute] = "medium";
+          else if (value === "Alta") updateData[attribute] = "high";
+          else updateData[attribute] = "medium"; // valor padrão
+          
+          console.log(`[WorkflowEngine] Convertendo valor de prioridade: ${value} para ${updateData[attribute]}`);
+        }
       } else if (
         attribute === "mrr" || 
         attribute === "accumulated_revenue_current_year" || 

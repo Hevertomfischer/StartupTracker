@@ -301,6 +301,20 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
                       <SelectItem value="status7">Fechamento (Perdido)</SelectItem>
                     </SelectContent>
                   </Select>
+                ) : actionDetails.attribute === "priority" ? (
+                  <Select 
+                    value={actionDetails.value || ""} 
+                    onValueChange={(value) => setActionDetails({...actionDetails, value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma prioridade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Baixa</SelectItem>
+                      <SelectItem value="medium">Média</SelectItem>
+                      <SelectItem value="high">Alta</SelectItem>
+                    </SelectContent>
+                  </Select>
                 ) : actionDetails.attribute === "is_active" ? (
                   <Select 
                     value={actionDetails.value || ""} 
