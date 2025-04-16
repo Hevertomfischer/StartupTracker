@@ -327,7 +327,7 @@ export class WorkflowEngine {
     const { title, description, due_date, assignee_id, priority } = details;
     
     if (!title) {
-      console.error("[WorkflowEngine] Título da tarefa não especificado:", action.action_details);
+      console.error("[WorkflowEngine] Título da tarefa não especificado:", details);
       return;
     }
     
@@ -344,12 +344,12 @@ export class WorkflowEngine {
         .values({
           title: processedTitle,
           description: processedDescription,
-          due_date: due_date ? new Date(due_date) : null,
-          created_by: 'system', // Ou algum usuário admin
-          assigned_to: assignee_id || null,
-          is_completed: false,
           startup_id: startup.id,
-          priority: priority || 'medium',
+          due_date: due_date ? new Date(due_date) : null,
+          created_by: details.created_by || null,
+          assigned_to: assignee_id || null,
+          priority: priority || "medium",
+          status: "todo",
         })
         .returning();
       
