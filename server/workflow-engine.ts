@@ -521,22 +521,23 @@ export class WorkflowEngine {
           }
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       // Extrair mensagens específicas de erros comuns do Resend
       let errorDetail = "Erro desconhecido";
       let errorCode = "UNKNOWN_ERROR";
+      const errorObj = error as Error;
       
-      if (error.message) {
+      if (errorObj && errorObj.message) {
         // Registrar códigos de erro específicos do Resend
-        if (error.message.includes("rate limited")) {
+        if (errorObj.message.includes("rate limited")) {
           errorCode = "RATE_LIMITED";
-        } else if (error.message.includes("unauthorized") || error.message.includes("invalid api key")) {
+        } else if (errorObj.message.includes("unauthorized") || errorObj.message.includes("invalid api key")) {
           errorCode = "AUTH_ERROR";
-        } else if (error.message.includes("invalid email")) {
+        } else if (errorObj.message.includes("invalid email")) {
           errorCode = "INVALID_EMAIL";
         }
         
-        errorDetail = error.message;
+        errorDetail = errorObj.message;
       }
       
       const errorMsg = `Erro ao enviar email: ${errorDetail}`;
@@ -550,8 +551,8 @@ export class WorkflowEngine {
         status: "ERROR",
         message: errorMsg,
         details: { 
-          error: error.toString(), 
-          stack: error.stack,
+          error: errorObj ? errorObj.toString() : String(error), 
+          stack: errorObj?.stack || "Sem stack trace",
           error_code: errorCode,
           to: processedTo,
           subject: processedSubject,

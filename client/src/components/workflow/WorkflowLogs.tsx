@@ -124,6 +124,44 @@ export default function WorkflowLogs({ workflowId, startupId }: WorkflowLogsProp
     if (!details) return null;
     
     try {
+      // Verificar se é um email em modo de teste
+      if (details.testMode && details.testRecipient) {
+        return (
+          <div className="mt-2 p-2 text-xs bg-blue-50 rounded-md border border-blue-200 max-h-32 overflow-auto">
+            <div className="font-medium mb-1 text-blue-700">
+              Email em Modo de Teste
+            </div>
+            <div className="grid grid-cols-2 gap-x-2">
+              <div className="text-gray-600">Destinatário original:</div>
+              <div>{details.to}</div>
+              <div className="text-gray-600">Redirecionado para:</div>
+              <div className="font-medium text-blue-700">{details.testRecipient}</div>
+              <div className="text-gray-600">Assunto:</div>
+              <div>{details.subject}</div>
+              <div className="text-gray-600">Hora:</div>
+              <div>{new Date(details.time).toLocaleString()}</div>
+            </div>
+          </div>
+        );
+      }
+      
+      // Verificar se é um email normal (não em modo de teste)
+      if (details.to && details.subject) {
+        return (
+          <div className="mt-2 p-2 text-xs bg-gray-50 rounded-md border border-gray-200 max-h-32 overflow-auto">
+            <div className="grid grid-cols-2 gap-x-2">
+              <div className="text-gray-600">Destinatário:</div>
+              <div>{details.to}</div>
+              <div className="text-gray-600">Assunto:</div>
+              <div>{details.subject}</div>
+              <div className="text-gray-600">Hora:</div>
+              <div>{details.time ? new Date(details.time).toLocaleString() : 'N/A'}</div>
+            </div>
+          </div>
+        );
+      }
+      
+      // Para outros tipos de detalhes, mostrar como JSON
       return (
         <div className="mt-2 p-2 text-xs bg-gray-50 rounded-md border border-gray-200 max-h-32 overflow-auto">
           <pre className="whitespace-pre-wrap break-words">
