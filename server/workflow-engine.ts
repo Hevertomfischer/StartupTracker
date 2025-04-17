@@ -326,13 +326,37 @@ export class WorkflowEngine {
     // Importa o serviço de email somente quando necessário para evitar ciclos de dependência
     const { sendEmail } = await import('./email-service');
     
+    // Verificar se a API Key do Resend está configurada
+    if (!process.env.RESEND_API_KEY) {
+      const errorMsg = "RESEND_API_KEY não configurada no ambiente";
+      console.error(`[WorkflowEngine] ${errorMsg}`);
+      
+      await this.logWorkflowEvent({
+        workflow_id: action.workflow_id,
+        workflow_action_id: action.id,
+        startup_id: startup.id,
+        action_type: "send_email",
+        status: "ERROR",
+        message: `Erro na configuração: ${errorMsg}`,
+        details: { error: "RESEND_API_KEY não configurada. Contacte o administrador do sistema." }
+      });
+      
+      return;
+    }
+    
     // Verificar e pegar detalhes da ação
     const details = action.action_details as Record<string, any>;
     const { to, subject, body } = details;
     
     if (!to || !subject || !body) {
-      const errorMsg = "[WorkflowEngine] Detalhes de email incompletos";
-      console.error(errorMsg, action.action_details);
+      // Registrar quais campos específicos estão ausentes para diagnóstico
+      const missingFields = [];
+      if (!to) missingFields.push('destinatário (to)');
+      if (!subject) missingFields.push('assunto (subject)');
+      if (!body) missingFields.push('corpo (body)');
+      
+      const errorMsg = `Detalhes de email incompletos: campos ausentes [${missingFields.join(', ')}]`;
+      console.error(`[WorkflowEngine] ${errorMsg}`, action.action_details);
       
       await this.logWorkflowEvent({
         workflow_id: action.workflow_id,
@@ -341,7 +365,10 @@ export class WorkflowEngine {
         action_type: "send_email",
         status: "ERROR",
         message: errorMsg,
-        details: { action_details: action.action_details }
+        details: { 
+          action_details: action.action_details,
+          missing_fields: missingFields
+        }
       });
       
       return;
@@ -349,12 +376,38 @@ export class WorkflowEngine {
     
     console.log(`[WorkflowEngine] Preparando envio de email para: ${to}, Assunto: ${subject}`);
     
+    // Verificar se o destinatário é um email válido (formato básico)
+    const isValidEmailFormat = (email: string): boolean => {
+      return /\S+@\S+\.\S+/.test(email);
+    };
+    
     // Substituir placeholders no corpo do email e assunto
     const processedBody = this.replacePlaceholders(body, startup);
     const processedSubject = this.replacePlaceholders(subject, startup);
     
     // Substituir placeholder de email se for o caso
     const processedTo = to.includes('{{') ? this.replacePlaceholders(to, startup) : to;
+    
+    // Verificar se o email processado é válido
+    if (!isValidEmailFormat(processedTo)) {
+      const errorMsg = `Destinatário de email inválido após processamento: "${processedTo}"`;
+      console.error(`[WorkflowEngine] ${errorMsg}`);
+      
+      await this.logWorkflowEvent({
+        workflow_id: action.workflow_id,
+        workflow_action_id: action.id,
+        startup_id: startup.id,
+        action_type: "send_email",
+        status: "ERROR",
+        message: errorMsg,
+        details: { 
+          original_to: to,
+          processed_to: processedTo 
+        }
+      });
+      
+      return;
+    }
     
     await this.logWorkflowEvent({
       workflow_id: action.workflow_id,
@@ -398,7 +451,24 @@ export class WorkflowEngine {
         finalBody += tableHtml;
       }
       
+      // Log do corpo final do email para diagnóstico (truncado para evitar logs muito grandes)
+      const bodySummary = finalBody.length > 200 
+        ? `${finalBody.substring(0, 200)}... (${finalBody.length} caracteres)`
+        : finalBody;
+      
+      await this.logWorkflowEvent({
+        workflow_id: action.workflow_id,
+        workflow_action_id: action.id,
+        startup_id: startup.id,
+        action_type: "send_email",
+        status: "INFO",
+        message: `Corpo do email preparado com ${finalBody.length} caracteres`,
+        details: { body_summary: bodySummary }
+      });
+      
       // Envia o email usando o serviço
+      console.log(`[WorkflowEngine] Enviando email via Resend para: ${processedTo}`);
+      
       const result = await sendEmail({
         to: processedTo,
         subject: processedSubject,
@@ -415,7 +485,12 @@ export class WorkflowEngine {
           startup_id: startup.id,
           action_type: "send_email",
           status: "SUCCESS",
-          message: successMsg
+          message: successMsg,
+          details: {
+            to: processedTo,
+            subject: processedSubject,
+            time: new Date().toISOString()
+          }
         });
       } else {
         const errorMsg = `Falha ao enviar email para: ${processedTo}`;
@@ -427,11 +502,34 @@ export class WorkflowEngine {
           startup_id: startup.id,
           action_type: "send_email",
           status: "ERROR",
-          message: errorMsg
+          message: errorMsg,
+          details: {
+            to: processedTo,
+            subject: processedSubject,
+            api: "Resend",
+            time: new Date().toISOString()
+          }
         });
       }
     } catch (error: any) {
-      const errorMsg = `Erro ao enviar email: ${error.message || "Erro desconhecido"}`;
+      // Extrair mensagens específicas de erros comuns do Resend
+      let errorDetail = "Erro desconhecido";
+      let errorCode = "UNKNOWN_ERROR";
+      
+      if (error.message) {
+        // Registrar códigos de erro específicos do Resend
+        if (error.message.includes("rate limited")) {
+          errorCode = "RATE_LIMITED";
+        } else if (error.message.includes("unauthorized") || error.message.includes("invalid api key")) {
+          errorCode = "AUTH_ERROR";
+        } else if (error.message.includes("invalid email")) {
+          errorCode = "INVALID_EMAIL";
+        }
+        
+        errorDetail = error.message;
+      }
+      
+      const errorMsg = `Erro ao enviar email: ${errorDetail}`;
       console.error(`[WorkflowEngine] ${errorMsg}`, error);
       
       await this.logWorkflowEvent({
@@ -441,7 +539,15 @@ export class WorkflowEngine {
         action_type: "send_email",
         status: "ERROR",
         message: errorMsg,
-        details: { error: error.toString(), stack: error.stack }
+        details: { 
+          error: error.toString(), 
+          stack: error.stack,
+          error_code: errorCode,
+          to: processedTo,
+          subject: processedSubject,
+          api: "Resend",
+          time: new Date().toISOString()
+        }
       });
     }
   }
