@@ -2,12 +2,12 @@ import nodemailer from 'nodemailer';
 
 // Configuração do transporter do Nodemailer usando variáveis de ambiente
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT || '587'),
-  secure: process.env.EMAIL_PORT === '465', // true para porta 465, false para outras portas
+  host: process.env.EMAIL_HOST?.trim(),
+  port: parseInt(process.env.EMAIL_PORT?.trim() || '587'),
+  secure: process.env.EMAIL_PORT?.trim() === '465', // true para porta 465, false para outras portas
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
+    user: process.env.EMAIL_USER?.trim(),
+    pass: process.env.EMAIL_PASSWORD?.trim(),
   },
 });
 

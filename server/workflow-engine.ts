@@ -5,13 +5,16 @@ import {
   Task,
   Workflow, 
   WorkflowAction, 
-  WorkflowCondition, 
+  WorkflowCondition,
+  WorkflowLog,
   workflows, 
   workflowActions, 
   workflowConditions,
+  workflowLogs,
   startups,
   tasks,
-  startupHistory
+  startupHistory,
+  WorkflowLogStatusEnum
 } from "@shared/schema";
 import { createTransport } from "nodemailer";
 
@@ -20,6 +23,32 @@ export class WorkflowEngine {
   // Não depende mais da interface IStorage
   constructor() {
     // Sem dependências externas
+  }
+  
+  // Registra um log de execução do workflow
+  async logWorkflowEvent(params: {
+    workflow_id?: string;
+    workflow_action_id?: string;
+    startup_id?: string;
+    action_type?: string;
+    status: keyof typeof WorkflowLogStatusEnum;
+    message: string;
+    details?: Record<string, any>;
+  }): Promise<void> {
+    try {
+      await db.insert(workflowLogs).values({
+        workflow_id: params.workflow_id,
+        workflow_action_id: params.workflow_action_id,
+        startup_id: params.startup_id,
+        action_type: params.action_type,
+        status: params.status,
+        message: params.message,
+        details: params.details || {}
+      });
+      console.log(`[WorkflowEngine] Log registrado: ${params.status} - ${params.message}`);
+    } catch (error) {
+      console.error("[WorkflowEngine] Erro ao registrar log:", error);
+    }
   }
 
   // Processa workflows acionados por mudança de status
@@ -201,18 +230,49 @@ export class WorkflowEngine {
       
       console.log(`[WorkflowEngine] Executando ${actions.length} ações para o workflow ${workflowId}`);
       
+      await this.logWorkflowEvent({
+        workflow_id: workflowId,
+        startup_id: startup.id,
+        status: "INFO",
+        message: `Iniciando execução de ${actions.length} ações do workflow`
+      });
+      
       // Executar cada ação na ordem
       for (const action of actions) {
         await this.executeAction(action, startup);
       }
+      
+      await this.logWorkflowEvent({
+        workflow_id: workflowId,
+        startup_id: startup.id,
+        status: "SUCCESS",
+        message: `Concluída execução de ${actions.length} ações do workflow`
+      });
     } catch (error) {
       console.error("[WorkflowEngine] Erro ao executar ações do workflow:", error);
+      
+      await this.logWorkflowEvent({
+        workflow_id: workflowId,
+        startup_id: startup.id,
+        status: "ERROR",
+        message: `Erro ao executar ações do workflow: ${error.message || "Erro desconhecido"}`,
+        details: { error: error.toString(), stack: error.stack }
+      });
     }
   }
   
   // Executa uma ação específica
   private async executeAction(action: WorkflowAction, startup: Startup): Promise<void> {
     console.log(`[WorkflowEngine] Executando ação: ${action.action_name} (${action.action_type})`);
+    
+    await this.logWorkflowEvent({
+      workflow_id: action.workflow_id,
+      workflow_action_id: action.id,
+      startup_id: startup.id,
+      action_type: action.action_type,
+      status: "INFO",
+      message: `Iniciando execução da ação "${action.action_name}" do tipo "${action.action_type}"`
+    });
     
     try {
       switch (action.action_type) {
@@ -227,9 +287,37 @@ export class WorkflowEngine {
           break;
         default:
           console.error(`[WorkflowEngine] Tipo de ação desconhecido: ${action.action_type}`);
+          await this.logWorkflowEvent({
+            workflow_id: action.workflow_id,
+            workflow_action_id: action.id,
+            startup_id: startup.id,
+            action_type: action.action_type,
+            status: "ERROR",
+            message: `Tipo de ação desconhecido: ${action.action_type}`
+          });
+          return;
       }
-    } catch (error) {
+      
+      await this.logWorkflowEvent({
+        workflow_id: action.workflow_id,
+        workflow_action_id: action.id,
+        startup_id: startup.id,
+        action_type: action.action_type,
+        status: "SUCCESS",
+        message: `Ação "${action.action_name}" executada com sucesso`
+      });
+    } catch (error: any) { // Typed as any to access error.message
       console.error(`[WorkflowEngine] Erro ao executar ação ${action.id}:`, error);
+      
+      await this.logWorkflowEvent({
+        workflow_id: action.workflow_id,
+        workflow_action_id: action.id,
+        startup_id: startup.id,
+        action_type: action.action_type,
+        status: "ERROR",
+        message: `Erro ao executar ação "${action.action_name}": ${error.message || "Erro desconhecido"}`,
+        details: { error: error.toString(), stack: error.stack }
+      });
     }
   }
   
@@ -243,7 +331,19 @@ export class WorkflowEngine {
     const { to, subject, body } = details;
     
     if (!to || !subject || !body) {
-      console.error("[WorkflowEngine] Detalhes de email incompletos:", action.action_details);
+      const errorMsg = "[WorkflowEngine] Detalhes de email incompletos";
+      console.error(errorMsg, action.action_details);
+      
+      await this.logWorkflowEvent({
+        workflow_id: action.workflow_id,
+        workflow_action_id: action.id,
+        startup_id: startup.id,
+        action_type: "send_email",
+        status: "ERROR",
+        message: errorMsg,
+        details: { action_details: action.action_details }
+      });
+      
       return;
     }
     
@@ -255,6 +355,16 @@ export class WorkflowEngine {
     
     // Substituir placeholder de email se for o caso
     const processedTo = to.includes('{{') ? this.replacePlaceholders(to, startup) : to;
+    
+    await this.logWorkflowEvent({
+      workflow_id: action.workflow_id,
+      workflow_action_id: action.id,
+      startup_id: startup.id,
+      action_type: "send_email",
+      status: "INFO",
+      message: `Preparando envio de email para: ${processedTo}, Assunto: ${processedSubject}`,
+      details: { to: processedTo, subject: processedSubject }
+    });
     
     try {
       // Processar atributos selecionados para incluir no corpo (se houver)
@@ -296,12 +406,43 @@ export class WorkflowEngine {
       });
       
       if (result) {
-        console.log(`[WorkflowEngine] Email enviado com sucesso para: ${processedTo}`);
+        const successMsg = `Email enviado com sucesso para: ${processedTo}`;
+        console.log(`[WorkflowEngine] ${successMsg}`);
+        
+        await this.logWorkflowEvent({
+          workflow_id: action.workflow_id,
+          workflow_action_id: action.id,
+          startup_id: startup.id,
+          action_type: "send_email",
+          status: "SUCCESS",
+          message: successMsg
+        });
       } else {
-        console.error(`[WorkflowEngine] Falha ao enviar email para: ${processedTo}`);
+        const errorMsg = `Falha ao enviar email para: ${processedTo}`;
+        console.error(`[WorkflowEngine] ${errorMsg}`);
+        
+        await this.logWorkflowEvent({
+          workflow_id: action.workflow_id,
+          workflow_action_id: action.id,
+          startup_id: startup.id,
+          action_type: "send_email",
+          status: "ERROR",
+          message: errorMsg
+        });
       }
-    } catch (error) {
-      console.error("[WorkflowEngine] Erro ao enviar email:", error);
+    } catch (error: any) {
+      const errorMsg = `Erro ao enviar email: ${error.message || "Erro desconhecido"}`;
+      console.error(`[WorkflowEngine] ${errorMsg}`, error);
+      
+      await this.logWorkflowEvent({
+        workflow_id: action.workflow_id,
+        workflow_action_id: action.id,
+        startup_id: startup.id,
+        action_type: "send_email",
+        status: "ERROR",
+        message: errorMsg,
+        details: { error: error.toString(), stack: error.stack }
+      });
     }
   }
   
