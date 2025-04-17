@@ -28,6 +28,10 @@ import {
   type SystemPage,
   type InsertSystemPage,
   rolePagePermissions,
+  // Importações para logs de workflow
+  workflowLogs,
+  type WorkflowLog,
+  type InsertWorkflowLog,
   type RolePagePermission,
   type InsertRolePagePermission,
   // Importações para tarefas
@@ -151,6 +155,12 @@ export interface IStorage {
   getWorkflowConditions(workflowId: string): Promise<any[]>;
   createWorkflowCondition(condition: any): Promise<any>;
   deleteWorkflowCondition(id: string): Promise<boolean>;
+  
+  // Workflow Logs
+  getWorkflowLogs(
+    filters?: Record<string, any>,
+    options?: { pageSize: number; page: number }
+  ): Promise<WorkflowLog[]>;
   
   // Workflow Execution
   processStatusChangeWorkflows(startupId: string, statusId: string): Promise<void>;
@@ -1010,14 +1020,10 @@ export class DatabaseStorage implements IStorage {
       const { pageSize, page } = options;
       const offset = (page - 1) * pageSize;
       
-      let query = db
-        .select()
-        .from(workflowLogs)
-        .orderBy(desc(workflowLogs.created_at))
-        .limit(pageSize)
-        .offset(offset);
-        
-      // Aplicar filtros se houver
+      // Criar a consulta base
+      let query = db.select().from(workflowLogs);
+      
+      // Aplicar filtros de forma encadeada
       if (filters.workflow_id) {
         query = query.where(eq(workflowLogs.workflow_id, filters.workflow_id));
       }
@@ -1034,6 +1040,12 @@ export class DatabaseStorage implements IStorage {
         query = query.where(eq(workflowLogs.action_type, filters.action_type));
       }
       
+      // Adicionar ordenação, limite e offset
+      query = query.orderBy(desc(workflowLogs.created_at))
+                  .limit(pageSize)
+                  .offset(offset);
+      
+      // Executar a consulta
       const logs = await query;
       return logs;
     } catch (error) {
