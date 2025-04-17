@@ -475,8 +475,16 @@ export class WorkflowEngine {
         body: finalBody
       });
       
-      if (result) {
-        const successMsg = `Email enviado com sucesso para: ${processedTo}`;
+      if (result.success) {
+        let successMsg = '';
+        
+        // Verificar se o e-mail foi enviado em modo de teste
+        if (result.testMode && result.testRecipient) {
+          successMsg = `Email redirecionado para ${result.testRecipient} (modo de teste) ao invés de ${processedTo}`;
+        } else {
+          successMsg = `Email enviado com sucesso para: ${processedTo}`;
+        }
+        
         console.log(`[WorkflowEngine] ${successMsg}`);
         
         await this.logWorkflowEvent({
@@ -489,6 +497,8 @@ export class WorkflowEngine {
           details: {
             to: processedTo,
             subject: processedSubject,
+            testMode: result.testMode || false,
+            testRecipient: result.testRecipient,
             time: new Date().toISOString()
           }
         });

@@ -1,4 +1,4 @@
-import { Resend, ErrorResponse } from 'resend';
+import { Resend } from 'resend';
 
 // Verificar se a API key foi definida
 if (!process.env.RESEND_API_KEY) {
@@ -86,10 +86,10 @@ export async function sendEmail(emailData: EmailData): Promise<{success: boolean
     if (error) {
       console.error('Erro retornado pelo Resend:', JSON.stringify(error));
       
-      // Utilizar o tipo correto para ErrorResponse
-      const resendError = error as ErrorResponse;
-      console.error('Código:', resendError.statusCode || 'Não disponível');
-      console.error('Mensagem:', resendError.message || 'Erro desconhecido');
+      // Tratar o objeto de erro com segurança
+      const resendError = error as any;
+      console.error('Código:', resendError?.statusCode || 'Não disponível');
+      console.error('Mensagem:', resendError?.message || 'Erro desconhecido');
       
       // Para lidar com o erro de domínio não verificado, informar claramente no log
       if (resendError.message && resendError.message.includes('verify a domain')) {
@@ -97,11 +97,22 @@ export async function sendEmail(emailData: EmailData): Promise<{success: boolean
         console.error('Em modo de teste, apenas e-mails para "contato@scventures.capital" são permitidos.');
       }
       
-      return false;
+      return { success: false };
     }
 
     console.log('E-mail enviado com sucesso através do Resend:', data?.id);
-    return true;
+    
+    // Verificar se o e-mail foi enviado em modo de teste
+    if (isTestMode) {
+      console.log(`MODO DE TESTE: Email redirecionado para ${verifiedEmail} em vez de ${to}`);
+      return { 
+        success: true, 
+        testMode: true, 
+        testRecipient: verifiedEmail 
+      };
+    }
+    
+    return { success: true };
   } catch (error: any) {
     console.error('Exceção ao enviar e-mail com Resend:', error);
     if (error.message) {
@@ -110,7 +121,9 @@ export async function sendEmail(emailData: EmailData): Promise<{success: boolean
     if (error.response) {
       console.error('Detalhes da resposta:', error.response);
     }
-    return false;
+    return { 
+      success: false 
+    };
   } finally {
     console.log('==== FIM DO ENVIO DE E-MAIL ====');
   }
