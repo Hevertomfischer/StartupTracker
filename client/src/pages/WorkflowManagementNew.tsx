@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import WorkflowActionModal from "@/components/workflow/WorkflowActionModal";
 import WorkflowConditionModal from "@/components/workflow/WorkflowConditionModal";
+import WorkflowLogs from "@/components/workflow/WorkflowLogs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { queryClient } from "@/lib/queryClient";
@@ -28,6 +29,7 @@ import {
   X,
   ArrowDownUp,
   Activity,
+  ClipboardList,
   Sliders,
   Workflow,
   AlertTriangle,
@@ -734,6 +736,12 @@ export default function WorkflowManagement() {
                       <TabsTrigger value="details">Detalhes</TabsTrigger>
                       <TabsTrigger value="actions">Ações</TabsTrigger>
                       <TabsTrigger value="conditions">Condições</TabsTrigger>
+                      <TabsTrigger value="logs">
+                        <div className="flex items-center gap-1">
+                          <ClipboardList className="h-4 w-4" />
+                          <span>Logs</span>
+                        </div>
+                      </TabsTrigger>
                     </TabsList>
                     
                     {/* Aba de Detalhes */}
@@ -980,6 +988,17 @@ export default function WorkflowManagement() {
                             </div>
                           </div>
                         )}
+                      </div>
+                    </TabsContent>
+                    
+                    {/* Aba de Logs */}
+                    <TabsContent value="logs">
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h3 className="font-medium">Logs de Execução</h3>
+                        </div>
+                        
+                        <WorkflowLogs workflowId={selectedWorkflow.id} />
                       </div>
                     </TabsContent>
                   </Tabs>
