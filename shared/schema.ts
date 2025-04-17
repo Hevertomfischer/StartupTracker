@@ -344,6 +344,19 @@ export const workflowConditions = pgTable("workflow_conditions", {
   created_at: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Tabela para registrar logs de workflow
+export const workflowLogs = pgTable("workflow_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workflow_id: uuid("workflow_id").references(() => workflows.id, { onDelete: "set null" }),
+  workflow_action_id: uuid("workflow_action_id").references(() => workflowActions.id, { onDelete: "set null" }),
+  startup_id: uuid("startup_id").references(() => startups.id, { onDelete: "set null" }),
+  action_type: text("action_type"),
+  status: text("status").notNull(), // success, error, info, warning
+  message: text("message").notNull(),
+  details: jsonb("details"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Workflow schemas
 export const insertWorkflowSchema = createInsertSchema(workflows).omit({
   id: true,
@@ -358,6 +371,11 @@ export const insertWorkflowActionSchema = createInsertSchema(workflowActions).om
 });
 
 export const insertWorkflowConditionSchema = createInsertSchema(workflowConditions).omit({
+  id: true,
+  created_at: true,
+});
+
+export const insertWorkflowLogSchema = createInsertSchema(workflowLogs).omit({
   id: true,
   created_at: true,
 });
@@ -416,6 +434,9 @@ export type WorkflowAction = typeof workflowActions.$inferSelect;
 export type InsertWorkflowCondition = z.infer<typeof insertWorkflowConditionSchema>;
 export type WorkflowCondition = typeof workflowConditions.$inferSelect;
 
+export type InsertWorkflowLog = z.infer<typeof insertWorkflowLogSchema>;
+export type WorkflowLog = typeof workflowLogs.$inferSelect;
+
 // Status Enum (for default statuses)
 export const StatusEnum = {
   NEW_LEAD: "new_lead",
@@ -432,6 +453,14 @@ export const PriorityEnum = {
   LOW: "low",
   MEDIUM: "medium",
   HIGH: "high",
+} as const;
+
+// Status do Log de Workflow
+export const WorkflowLogStatusEnum = {
+  SUCCESS: "success",
+  ERROR: "error",
+  INFO: "info",
+  WARNING: "warning",
 } as const;
 
 // Task Status Enum
@@ -601,5 +630,20 @@ export const workflowConditionsRelations = relations(workflowConditions, ({ one 
   workflow: one(workflows, {
     fields: [workflowConditions.workflow_id],
     references: [workflows.id],
+  }),
+}));
+
+export const workflowLogsRelations = relations(workflowLogs, ({ one }) => ({
+  workflow: one(workflows, {
+    fields: [workflowLogs.workflow_id],
+    references: [workflows.id],
+  }),
+  workflowAction: one(workflowActions, {
+    fields: [workflowLogs.workflow_action_id],
+    references: [workflowActions.id],
+  }),
+  startup: one(startups, {
+    fields: [workflowLogs.startup_id],
+    references: [startups.id],
   }),
 }));
