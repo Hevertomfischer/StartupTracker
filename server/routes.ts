@@ -1090,6 +1090,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to delete workflow condition" });
     }
   });
+  
+  // Rota para obter logs de workflow
+  app.get("/api/workflow-logs", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { workflow_id, startup_id, status, limit = "100", page = "1" } = req.query;
+      
+      const filters: Record<string, any> = {};
+      
+      if (workflow_id) filters.workflow_id = workflow_id as string;
+      if (startup_id) filters.startup_id = startup_id as string;
+      if (status) filters.status = status as string;
+      
+      const pageSize = parseInt(limit as string);
+      const currentPage = parseInt(page as string);
+      
+      const logs = await storage.getWorkflowLogs(filters, {
+        pageSize,
+        page: currentPage,
+      });
+      
+      return res.status(200).json(logs);
+    } catch (error) {
+      console.error("Error fetching workflow logs:", error);
+      return res.status(500).json({ message: "Failed to fetch workflow logs" });
+    }
+  });
+  
+  // Rota para obter logs específicos de uma startup
+  app.get("/api/startups/:id/workflow-logs", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { limit = "50" } = req.query;
+      
+      const pageSize = parseInt(limit as string);
+      
+      const logs = await storage.getWorkflowLogs({ startup_id: id }, {
+        pageSize,
+        page: 1,
+      });
+      
+      return res.status(200).json(logs);
+    } catch (error) {
+      console.error("Error fetching startup workflow logs:", error);
+      return res.status(500).json({ message: "Failed to fetch startup workflow logs" });
+    }
+  });
+  
+  // Rota para obter logs específicos de um workflow
+  app.get("/api/workflows/:id/logs", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { limit = "50" } = req.query;
+      
+      const pageSize = parseInt(limit as string);
+      
+      const logs = await storage.getWorkflowLogs({ workflow_id: id }, {
+        pageSize,
+        page: 1,
+      });
+      
+      return res.status(200).json(logs);
+    } catch (error) {
+      console.error("Error fetching workflow logs:", error);
+      return res.status(500).json({ message: "Failed to fetch workflow logs" });
+    }
+  });
 
   // Configurar rota estática para servir os arquivos enviados
   app.use('/uploads', (req, res, next) => {

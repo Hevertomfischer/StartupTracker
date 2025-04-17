@@ -1001,6 +1001,47 @@ export class DatabaseStorage implements IStorage {
     return result.count > 0;
   }
   
+  // Query workflow logs
+  async getWorkflowLogs(
+    filters: Record<string, any> = {}, 
+    options: { pageSize: number; page: number } = { pageSize: 100, page: 1 }
+  ): Promise<WorkflowLog[]> {
+    try {
+      const { pageSize, page } = options;
+      const offset = (page - 1) * pageSize;
+      
+      let query = db
+        .select()
+        .from(workflowLogs)
+        .orderBy(desc(workflowLogs.created_at))
+        .limit(pageSize)
+        .offset(offset);
+        
+      // Aplicar filtros se houver
+      if (filters.workflow_id) {
+        query = query.where(eq(workflowLogs.workflow_id, filters.workflow_id));
+      }
+      
+      if (filters.startup_id) {
+        query = query.where(eq(workflowLogs.startup_id, filters.startup_id));
+      }
+      
+      if (filters.status) {
+        query = query.where(eq(workflowLogs.status, filters.status));
+      }
+      
+      if (filters.action_type) {
+        query = query.where(eq(workflowLogs.action_type, filters.action_type));
+      }
+      
+      const logs = await query;
+      return logs;
+    } catch (error) {
+      console.error("Error fetching workflow logs:", error);
+      return [];
+    }
+  }
+  
   // Workflow Execution
   async processStatusChangeWorkflows(startupId: string, statusId: string): Promise<void> {
     try {
