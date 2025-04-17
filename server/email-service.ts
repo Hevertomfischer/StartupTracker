@@ -61,6 +61,16 @@ export async function sendEmail(emailData: EmailData): Promise<{success: boolean
     const verifiedEmail = 'contato@scventures.capital'; // Email verificado na conta Resend
     
     // Criar payload de envio
+    // Verificar se há erros de sintaxe no corpo do email (útil para depuração)
+    let processedBody = body;
+    try {
+      if (body.includes('{{') && body.includes('}}')) {
+        console.log('E-mail contém placeholders que devem ter sido processados antes de chegar aqui');
+      }
+    } catch (error) {
+      console.error('Erro ao analisar corpo do email:', error);
+    }
+    
     const payload = {
       from: fromAddress,
       to: isTestMode ? [verifiedEmail] : [to], // Em modo de teste, sempre envia para o email verificado
@@ -70,8 +80,8 @@ export async function sendEmail(emailData: EmailData): Promise<{success: boolean
              <strong>MODO DE TESTE:</strong> Este email seria enviado para <strong>${to}</strong><br/>
              Para enviar para outros destinatários, verifique um domínio no Resend.
            </div>
-           ${body}`
-        : body,
+           ${processedBody}`
+        : processedBody,
     };
     
     console.log('Payload de envio:', JSON.stringify(payload, null, 2));

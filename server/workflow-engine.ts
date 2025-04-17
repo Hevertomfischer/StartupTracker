@@ -754,8 +754,35 @@ export class WorkflowEngine {
   
   // Substituir placeholders em strings
   private replacePlaceholders(text: string, startup: Startup): string {
+    // Adicionar mapeamento de nomes amigáveis para atributos reais da tabela
+    const attributeMap: Record<string, keyof Startup> = {
+      'nome': 'name',
+      'email': 'ceo_email',
+      'ceo_email': 'ceo_email',
+      'telefone': 'ceo_whatsapp',
+      'whatsapp': 'ceo_whatsapp',
+      'website': 'website',
+      'setor': 'sector',
+      'descricao': 'description',
+      'status': 'status_id',
+      'cidade': 'city',
+      'estado': 'state',
+      'modelo': 'business_model',
+      'mrr': 'mrr',
+      'prioridade': 'priority'
+    };
+    
     return text.replace(/\{\{(\w+)\}\}/g, (match, field) => {
-      const value = startup[field as keyof Startup];
+      // Verificar se é um nome amigável e mapeá-lo para o atributo correto
+      const attributeName = attributeMap[field] || field as keyof Startup;
+      
+      // Obter o valor do atributo
+      const value = startup[attributeName as keyof Startup];
+      
+      // Logging para diagnóstico
+      console.log(`[WorkflowEngine] Substituindo placeholder {{${field}}} => atributo: ${String(attributeName)}, valor: ${String(value || 'undefined')}`);
+      
+      // Retornar valor ou o placeholder original se o valor for undefined
       return value !== undefined ? String(value) : match;
     });
   }
