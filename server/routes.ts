@@ -1117,17 +1117,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Rota para obter todos os logs de workflow com filtragem e paginação
+  app.get("/api/workflow-logs", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { 
+        status, 
+        action_type, 
+        workflow_id, 
+        startup_id,
+        page = "1", 
+        limit = "10" 
+      } = req.query;
+      
+      // Construir filtros com base nos parâmetros da requisição
+      const filters: Record<string, any> = {};
+      if (status) filters.status = status;
+      if (action_type) filters.action_type = action_type;
+      if (workflow_id) filters.workflow_id = workflow_id;
+      if (startup_id) filters.startup_id = startup_id;
+      
+      // Configurar paginação
+      const pageNum = parseInt(page as string);
+      const pageSize = parseInt(limit as string);
+      
+      const logs = await storage.getWorkflowLogs(filters, {
+        page: pageNum,
+        pageSize
+      });
+      
+      return res.status(200).json(logs);
+    } catch (error) {
+      console.error("Error fetching workflow logs:", error);
+      return res.status(500).json({ message: "Failed to fetch workflow logs" });
+    }
+  });
+  
   // Rota para obter logs específicos de uma startup
   app.get("/api/startups/:id/workflow-logs", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { limit = "50" } = req.query;
+      const { 
+        status, 
+        action_type,
+        page = "1", 
+        limit = "10" 
+      } = req.query;
       
+      // Construir filtros com base nos parâmetros da requisição
+      const filters: Record<string, any> = { startup_id: id };
+      if (status) filters.status = status;
+      if (action_type) filters.action_type = action_type;
+      
+      // Configurar paginação
+      const pageNum = parseInt(page as string);
       const pageSize = parseInt(limit as string);
       
-      const logs = await storage.getWorkflowLogs({ startup_id: id }, {
-        pageSize,
-        page: 1,
+      const logs = await storage.getWorkflowLogs(filters, {
+        page: pageNum,
+        pageSize
       });
       
       return res.status(200).json(logs);
@@ -1141,13 +1188,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/workflows/:id/logs", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const { limit = "50" } = req.query;
+      const { 
+        status, 
+        action_type,
+        page = "1", 
+        limit = "10" 
+      } = req.query;
       
+      // Construir filtros com base nos parâmetros da requisição
+      const filters: Record<string, any> = { workflow_id: id };
+      if (status) filters.status = status;
+      if (action_type) filters.action_type = action_type;
+      
+      // Configurar paginação
+      const pageNum = parseInt(page as string);
       const pageSize = parseInt(limit as string);
       
-      const logs = await storage.getWorkflowLogs({ workflow_id: id }, {
-        pageSize,
-        page: 1,
+      const logs = await storage.getWorkflowLogs(filters, {
+        page: pageNum,
+        pageSize
       });
       
       return res.status(200).json(logs);

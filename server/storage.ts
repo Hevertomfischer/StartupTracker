@@ -1020,33 +1020,39 @@ export class DatabaseStorage implements IStorage {
       const { pageSize, page } = options;
       const offset = (page - 1) * pageSize;
       
-      // Criar a consulta base
-      let query = db.select().from(workflowLogs);
+      // Construir a consulta usando uma abordagem mais clara
+      let baseQuery = db.select().from(workflowLogs);
       
-      // Aplicar filtros de forma encadeada
+      // Função auxiliar para aplicar filtro e retornar nova query
+      const applyFilter = (query: any, field: any, value: any) => {
+        return query.where(eq(field, value));
+      };
+      
+      // Aplicar filtros sequencialmente
+      let finalQuery = baseQuery;
+      
       if (filters.workflow_id) {
-        query = query.where(eq(workflowLogs.workflow_id, filters.workflow_id));
+        finalQuery = applyFilter(finalQuery, workflowLogs.workflow_id, filters.workflow_id);
       }
       
       if (filters.startup_id) {
-        query = query.where(eq(workflowLogs.startup_id, filters.startup_id));
+        finalQuery = applyFilter(finalQuery, workflowLogs.startup_id, filters.startup_id);
       }
       
       if (filters.status) {
-        query = query.where(eq(workflowLogs.status, filters.status));
+        finalQuery = applyFilter(finalQuery, workflowLogs.status, filters.status);
       }
       
       if (filters.action_type) {
-        query = query.where(eq(workflowLogs.action_type, filters.action_type));
+        finalQuery = applyFilter(finalQuery, workflowLogs.action_type, filters.action_type);
       }
       
       // Adicionar ordenação, limite e offset
-      query = query.orderBy(desc(workflowLogs.created_at))
-                  .limit(pageSize)
-                  .offset(offset);
+      const logs = await finalQuery
+        .orderBy(desc(workflowLogs.created_at))
+        .limit(pageSize)
+        .offset(offset);
       
-      // Executar a consulta
-      const logs = await query;
       return logs;
     } catch (error) {
       console.error("Error fetching workflow logs:", error);
