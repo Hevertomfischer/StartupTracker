@@ -42,6 +42,12 @@ export interface EmailData {
 export async function sendEmail(emailData: EmailData): Promise<boolean> {
   const { to, subject, body, from } = emailData;
   
+  console.log('==== DETALHES DO ENVIO DE E-MAIL ====');
+  console.log(`API Key (primeiros 5 chars): ${process.env.RESEND_API_KEY?.substring(0, 5)}...`);
+  console.log(`Para: ${to}`);
+  console.log(`Assunto: ${subject}`);
+  console.log(`Tamanho do corpo: ${body.length} caracteres`);
+  
   try {
     // Determinar o remetente (usar um domínio verificado no Resend é importante)
     // O formato padrão do Resend é "Nome <onboarding@resend.dev>"
@@ -50,23 +56,42 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
 
     console.log(`Tentando enviar e-mail de ${fromAddress} para: ${to}`);
     
-    // Enviar o e-mail através do Resend
-    const { data, error } = await resend.emails.send({
+    // Criar payload de envio
+    const payload = {
       from: fromAddress,
       to: [to],
       subject: subject,
       html: body,
-    });
+    };
+    
+    console.log('Payload de envio:', JSON.stringify(payload, null, 2));
+    
+    // Enviar o e-mail através do Resend
+    console.log('Chamando API Resend...');
+    const result = await resend.emails.send(payload);
+    console.log('Resposta completa do Resend:', JSON.stringify(result, null, 2));
+    
+    const { data, error } = result;
 
     if (error) {
       console.error('Erro retornado pelo Resend:', error);
+      console.error('Código:', error.status_code);
+      console.error('Mensagem:', error.message);
       return false;
     }
 
     console.log('E-mail enviado com sucesso através do Resend:', data?.id);
     return true;
-  } catch (error) {
-    console.error('Erro ao enviar e-mail com Resend:', error);
+  } catch (error: any) {
+    console.error('Exceção ao enviar e-mail com Resend:', error);
+    if (error.message) {
+      console.error('Mensagem de erro:', error.message);
+    }
+    if (error.response) {
+      console.error('Detalhes da resposta:', error.response);
+    }
     return false;
+  } finally {
+    console.log('==== FIM DO ENVIO DE E-MAIL ====');
   }
 }
