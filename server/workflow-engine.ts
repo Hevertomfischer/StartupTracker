@@ -235,6 +235,9 @@ export class WorkflowEngine {
   
   // Executa ação de envio de email
   private async executeSendEmailAction(action: WorkflowAction, startup: Startup): Promise<void> {
+    // Importa o serviço de email somente quando necessário para evitar ciclos de dependência
+    const { sendEmail } = await import('./email-service');
+    
     // Verificar e pegar detalhes da ação
     const details = action.action_details as Record<string, any>;
     const { to, subject, body } = details;
@@ -244,40 +247,59 @@ export class WorkflowEngine {
       return;
     }
     
-    console.log(`[WorkflowEngine] Enviando email para: ${to}, Assunto: ${subject}`);
+    console.log(`[WorkflowEngine] Preparando envio de email para: ${to}, Assunto: ${subject}`);
     
-    // Substituir placeholders no corpo do email
+    // Substituir placeholders no corpo do email e assunto
     const processedBody = this.replacePlaceholders(body, startup);
     const processedSubject = this.replacePlaceholders(subject, startup);
     
-    // Configurar transporte de email (simulado para dev)
+    // Substituir placeholder de email se for o caso
+    const processedTo = to.includes('{{') ? this.replacePlaceholders(to, startup) : to;
+    
     try {
-      // Em um ambiente de produção, configure com credenciais reais
-      console.log(`[WorkflowEngine] Email seria enviado para ${to}`);
-      console.log(`[WorkflowEngine] Assunto: ${processedSubject}`);
-      console.log(`[WorkflowEngine] Corpo: ${processedBody}`);
+      // Processar atributos selecionados para incluir no corpo (se houver)
+      let finalBody = processedBody;
       
-      // Descomentar e configurar para envio real
-      /*
-      const transporter = createTransport({
-        host: "smtp.example.com",
-        port: 587,
-        secure: false,
-        auth: {
-          user: "seu-email@example.com",
-          pass: "sua-senha",
-        },
-      });
+      // Se tiver atributos selecionados para tabela, adicionar ao corpo
+      if (details.selectedAttributes && details.selectedAttributes.length > 0) {
+        const tableRows = details.selectedAttributes.map((attr: string) => {
+          const attrLabel = this.getAttributeLabel(attr);
+          const attrValue = startup[attr as keyof Startup] || 'N/A';
+          return `<tr><td style="padding: 8px; border: 1px solid #ddd;"><strong>${attrLabel}</strong></td><td style="padding: 8px; border: 1px solid #ddd;">${attrValue}</td></tr>`;
+        }).join('');
+        
+        const tableHtml = `
+          <div style="margin-top: 20px; margin-bottom: 20px;">
+            <table style="border-collapse: collapse; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="padding: 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #ddd;">Atributo</th>
+                  <th style="padding: 8px; text-align: left; background-color: #f2f2f2; border: 1px solid #ddd;">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tableRows}
+              </tbody>
+            </table>
+          </div>
+        `;
+        
+        // Adicionar tabela ao final do corpo
+        finalBody += tableHtml;
+      }
       
-      const info = await transporter.sendMail({
-        from: '"Sistema de Workflows" <sistema@example.com>',
-        to,
+      // Envia o email usando o serviço
+      const result = await sendEmail({
+        to: processedTo,
         subject: processedSubject,
-        html: processedBody,
+        body: finalBody
       });
       
-      console.log(`[WorkflowEngine] Email enviado: ${info.messageId}`);
-      */
+      if (result) {
+        console.log(`[WorkflowEngine] Email enviado com sucesso para: ${processedTo}`);
+      } else {
+        console.error(`[WorkflowEngine] Falha ao enviar email para: ${processedTo}`);
+      }
     } catch (error) {
       console.error("[WorkflowEngine] Erro ao enviar email:", error);
     }
@@ -474,9 +496,33 @@ export class WorkflowEngine {
   
   // Substituir placeholders em strings
   private replacePlaceholders(text: string, startup: Startup): string {
-    return text.replace(/\{(\w+)\}/g, (match, field) => {
+    return text.replace(/\{\{(\w+)\}\}/g, (match, field) => {
       const value = startup[field as keyof Startup];
       return value !== undefined ? String(value) : match;
     });
+  }
+  
+  // Retorna o label amigável para um atributo
+  private getAttributeLabel(attributeId: string): string {
+    const attributeLabels: Record<string, string> = {
+      name: "Nome",
+      website: "Website",
+      description: "Descrição",
+      investment_stage: "Estágio de Investimento",
+      valuation: "Avaliação",
+      funding_goal: "Meta de Captação",
+      sector: "Setor",
+      foundation_date: "Data de Fundação",
+      location: "Localização",
+      team_size: "Tamanho da Equipe",
+      contact_email: "Email de Contato",
+      contact_phone: "Telefone de Contato",
+      priority: "Prioridade",
+      notes: "Notas",
+      status_name: "Status Atual",
+      status_date: "Data do Status"
+    };
+    
+    return attributeLabels[attributeId] || attributeId;
   }
 }
