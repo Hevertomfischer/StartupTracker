@@ -1,24 +1,30 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-// Configuração do transporter do Nodemailer usando variáveis de ambiente
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST?.trim(),
-  port: parseInt(process.env.EMAIL_PORT?.trim() || '587'),
-  secure: process.env.EMAIL_PORT?.trim() === '465', // true para porta 465, false para outras portas
-  auth: {
-    user: process.env.EMAIL_USER?.trim(),
-    pass: process.env.EMAIL_PASSWORD?.trim(),
-  },
-});
+// Verificar se a API key foi definida
+if (!process.env.RESEND_API_KEY) {
+  console.error('ERRO: RESEND_API_KEY não está definida nas variáveis de ambiente');
+}
 
-// Verificar conexão com o servidor de e-mail na inicialização
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('Erro na configuração do servidor de email:', error);
-  } else {
-    console.log('Servidor de email está pronto para enviar mensagens');
+// Inicializar o cliente Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Verificar a configuração do Resend na inicialização
+async function verifyResendConfig() {
+  try {
+    // Apenas verifica se a chave parece válida (não é vazia e tem o formato correto)
+    if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY.length < 30) {
+      console.error('ERRO: RESEND_API_KEY inválida ou muito curta');
+      return;
+    }
+    
+    console.log('Configuração do Resend inicializada');
+  } catch (error) {
+    console.error('Erro na configuração do Resend:', error);
   }
-});
+}
+
+// Verificar a configuração na inicialização
+verifyResendConfig();
 
 // Interface para dados do e-mail
 export interface EmailData {
@@ -29,7 +35,7 @@ export interface EmailData {
 }
 
 /**
- * Envia um e-mail usando as configurações definidas
+ * Envia um e-mail usando o Resend
  * @param emailData Dados do e-mail a ser enviado
  * @returns Promise com resultado do envio
  */
@@ -37,21 +43,30 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
   const { to, subject, body, from } = emailData;
   
   try {
-    // Usa o e-mail configurado como remetente padrão se não for especificado
-    const mailOptions = {
-      from: from || process.env.EMAIL_USER,
-      to,
-      subject,
-      html: body, // Suporta HTML
-    };
+    // Determinar o remetente (usar um domínio verificado no Resend é importante)
+    // O formato padrão do Resend é "Nome <onboarding@resend.dev>"
+    const defaultFrom = 'StartupOS <onboarding@resend.dev>';
+    const fromAddress = from || defaultFrom;
 
-    console.log(`Tentando enviar e-mail para: ${to}`);
+    console.log(`Tentando enviar e-mail de ${fromAddress} para: ${to}`);
     
-    const info = await transporter.sendMail(mailOptions);
-    console.log('E-mail enviado com sucesso:', info.messageId);
+    // Enviar o e-mail através do Resend
+    const { data, error } = await resend.emails.send({
+      from: fromAddress,
+      to: [to],
+      subject: subject,
+      html: body,
+    });
+
+    if (error) {
+      console.error('Erro retornado pelo Resend:', error);
+      return false;
+    }
+
+    console.log('E-mail enviado com sucesso através do Resend:', data?.id);
     return true;
   } catch (error) {
-    console.error('Erro ao enviar e-mail:', error);
+    console.error('Erro ao enviar e-mail com Resend:', error);
     return false;
   }
 }
