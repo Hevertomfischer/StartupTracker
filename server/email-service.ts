@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import { Resend, ErrorResponse } from 'resend';
 
 // Verificar se a API key foi definida
 if (!process.env.RESEND_API_KEY) {
@@ -39,7 +39,7 @@ export interface EmailData {
  * @param emailData Dados do e-mail a ser enviado
  * @returns Promise com resultado do envio
  */
-export async function sendEmail(emailData: EmailData): Promise<boolean> {
+export async function sendEmail(emailData: EmailData): Promise<{success: boolean, testMode?: boolean, testRecipient?: string}> {
   const { to, subject, body, from } = emailData;
   
   console.log('==== DETALHES DO ENVIO DE E-MAIL ====');
@@ -56,12 +56,22 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
 
     console.log(`Tentando enviar e-mail de ${fromAddress} para: ${to}`);
     
+    // Verificar o ambiente - em modo de teste, sempre enviar para o email da conta Resend
+    const isTestMode = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+    const verifiedEmail = 'contato@scventures.capital'; // Email verificado na conta Resend
+    
     // Criar payload de envio
     const payload = {
       from: fromAddress,
-      to: [to],
-      subject: subject,
-      html: body,
+      to: isTestMode ? [verifiedEmail] : [to], // Em modo de teste, sempre envia para o email verificado
+      subject: isTestMode ? `[TESTE - Destino original: ${to}] ${subject}` : subject,
+      html: isTestMode 
+        ? `<div style="background-color: #ffe0e0; padding: 10px; margin-bottom: 20px; border: 1px solid #ff0000;">
+             <strong>MODO DE TESTE:</strong> Este email seria enviado para <strong>${to}</strong><br/>
+             Para enviar para outros destinatários, verifique um domínio no Resend.
+           </div>
+           ${body}`
+        : body,
     };
     
     console.log('Payload de envio:', JSON.stringify(payload, null, 2));
@@ -74,9 +84,19 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
     const { data, error } = result;
 
     if (error) {
-      console.error('Erro retornado pelo Resend:', error);
-      console.error('Código:', error.status_code);
-      console.error('Mensagem:', error.message);
+      console.error('Erro retornado pelo Resend:', JSON.stringify(error));
+      
+      // Utilizar o tipo correto para ErrorResponse
+      const resendError = error as ErrorResponse;
+      console.error('Código:', resendError.statusCode || 'Não disponível');
+      console.error('Mensagem:', resendError.message || 'Erro desconhecido');
+      
+      // Para lidar com o erro de domínio não verificado, informar claramente no log
+      if (resendError.message && resendError.message.includes('verify a domain')) {
+        console.error('ERRO DE VERIFICAÇÃO DE DOMÍNIO: O Resend requer um domínio verificado para enviar e-mails para outros destinatários.');
+        console.error('Em modo de teste, apenas e-mails para "contato@scventures.capital" são permitidos.');
+      }
+      
       return false;
     }
 
