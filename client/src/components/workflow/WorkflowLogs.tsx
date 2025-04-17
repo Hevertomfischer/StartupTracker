@@ -151,9 +151,9 @@ export default function WorkflowLogs({ workflowId, startupId }: WorkflowLogsProp
               Status
             </label>
             <Select
-              value={statusFilter || ""}
+              value={statusFilter || "todos"}
               onValueChange={(value) => {
-                setStatusFilter(value || null);
+                setStatusFilter(value === "todos" ? null : value);
                 setPage(1); // Reset page when filter changes
               }}
             >
@@ -161,7 +161,7 @@ export default function WorkflowLogs({ workflowId, startupId }: WorkflowLogsProp
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
                 {statusOptions.map((status) => (
                   <SelectItem key={status} value={status}>
                     <span className="flex items-center">
@@ -179,9 +179,9 @@ export default function WorkflowLogs({ workflowId, startupId }: WorkflowLogsProp
               Tipo de Ação
             </label>
             <Select
-              value={actionTypeFilter || ""}
+              value={actionTypeFilter || "todos"}
               onValueChange={(value) => {
-                setActionTypeFilter(value || null);
+                setActionTypeFilter(value === "todos" ? null : value);
                 setPage(1); // Reset page when filter changes
               }}
             >
@@ -189,7 +189,7 @@ export default function WorkflowLogs({ workflowId, startupId }: WorkflowLogsProp
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
                 {actionTypeOptions.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type === "send_email" && "Enviar Email"}
