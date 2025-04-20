@@ -39,7 +39,14 @@ export interface EmailData {
  * @param emailData Dados do e-mail a ser enviado
  * @returns Promise com resultado do envio
  */
-export async function sendEmail(emailData: EmailData): Promise<{success: boolean, testMode?: boolean, testRecipient?: string, realRecipient?: string}> {
+export async function sendEmail(emailData: EmailData): Promise<{
+  success: boolean, 
+  testMode?: boolean, 
+  testRecipient?: string, 
+  realRecipient?: string,
+  errorCode?: string,
+  errorMessage?: string
+}> {
   const { to, subject, body, from } = emailData;
   
   console.log('==== DETALHES DO ENVIO DE E-MAIL ====');
@@ -51,8 +58,9 @@ export async function sendEmail(emailData: EmailData): Promise<{success: boolean
   try {
     // Determinar o remetente (usar um domínio verificado no Resend é importante)
     // O formato padrão do Resend é "Nome <onboarding@resend.dev>"
+    // Para resolver o problema de verificação de domínio, usar SEMPRE o endereço resend.dev que já está verificado
     const defaultFrom = 'StartupOS <onboarding@resend.dev>';
-    const fromAddress = from || defaultFrom;
+    const fromAddress = defaultFrom; // Ignorar qualquer outro 'from' para garantir que sempre use o domínio resend.dev
 
     console.log(`Tentando enviar e-mail de ${fromAddress} para: ${to}`);
     
@@ -110,10 +118,20 @@ export async function sendEmail(emailData: EmailData): Promise<{success: boolean
       // Para lidar com o erro de domínio não verificado, informar claramente no log
       if (resendError.message && resendError.message.includes('verify a domain')) {
         console.error('ERRO DE VERIFICAÇÃO DE DOMÍNIO: O Resend requer um domínio verificado para enviar e-mails para outros destinatários.');
-        console.error('Em modo de teste, apenas e-mails para "contato@scventures.capital" são permitidos.');
+        console.error('Para resolver isso, estamos usando o remetente padrão onboarding@resend.dev');
+        console.error('Mensagem completa do erro:', resendError.message);
+      } else if (resendError.message && resendError.message.includes('rate limit')) {
+        console.error('ERRO DE LIMITE DE TAXA: O Resend limitou o número de emails que podem ser enviados.');
+        console.error('Mensagem completa do erro:', resendError.message);
+      } else if (resendError.message) {
+        console.error('ERRO DO RESEND:', resendError.message);
       }
       
-      return { success: false };
+      return { 
+        success: false,
+        errorCode: resendError?.statusCode || 'UNKNOWN_ERROR',
+        errorMessage: resendError?.message || 'Erro desconhecido' 
+      };
     }
 
     if (isTestMode) {
@@ -141,7 +159,9 @@ export async function sendEmail(emailData: EmailData): Promise<{success: boolean
       console.error('Detalhes da resposta:', error.response);
     }
     return { 
-      success: false 
+      success: false,
+      errorCode: 'EXCEPTION',
+      errorMessage: error.message || 'Erro desconhecido ao enviar email'
     };
   } finally {
     console.log('==== FIM DO ENVIO DE E-MAIL ====');
