@@ -16,7 +16,15 @@ import {
   startupHistory,
   WorkflowLogStatusEnum
 } from "@shared/schema";
-import { createTransport } from "nodemailer";
+// Interface para os resultados de envio de email
+interface EmailResult {
+  success: boolean;
+  testMode?: boolean;
+  testRecipient?: string;
+  realRecipient?: string;
+  errorCode?: string;
+  errorMessage?: string;
+}
 
 // Classe que contém a lógica para executar workflows
 export class WorkflowEngine {
@@ -100,7 +108,7 @@ export class WorkflowEngine {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("[WorkflowEngine] Erro ao processar workflows de mudança de status:", error);
     }
   }
@@ -154,7 +162,7 @@ export class WorkflowEngine {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("[WorkflowEngine] Erro ao processar workflows de mudança de atributo:", error);
     }
   }
@@ -188,7 +196,7 @@ export class WorkflowEngine {
       
       // Todas as condições foram atendidas
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("[WorkflowEngine] Erro ao avaliar condições do workflow:", error);
       return false;
     }
@@ -248,7 +256,7 @@ export class WorkflowEngine {
         status: "SUCCESS",
         message: `Concluída execução de ${actions.length} ações do workflow`
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("[WorkflowEngine] Erro ao executar ações do workflow:", error);
       
       await this.logWorkflowEvent({
@@ -473,7 +481,7 @@ export class WorkflowEngine {
         to: processedTo,
         subject: processedSubject,
         body: finalBody
-      });
+      }) as EmailResult;
       
       if (result.success) {
         let successMsg = '';
@@ -506,7 +514,17 @@ export class WorkflowEngine {
           }
         });
       } else {
-        const errorMsg = `Falha ao enviar email para: ${processedTo}`;
+        // Construir mensagem de erro mais detalhada
+        let errorMsg = `Falha ao enviar email para: ${processedTo}`;
+        
+        // Incluir o código e mensagem de erro específicos, se disponíveis
+        if (result.errorCode) {
+          errorMsg += ` (Código: ${result.errorCode})`;
+        }
+        if (result.errorMessage) {
+          errorMsg += `: ${result.errorMessage}`;
+        }
+        
         console.error(`[WorkflowEngine] ${errorMsg}`);
         
         await this.logWorkflowEvent({
@@ -520,11 +538,13 @@ export class WorkflowEngine {
             to: processedTo,
             subject: processedSubject,
             api: "Resend",
+            errorCode: result.errorCode || "UNKNOWN",
+            errorMessage: result.errorMessage || "Erro desconhecido",
             time: new Date().toISOString()
           }
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       // Extrair mensagens específicas de erros comuns do Resend
       let errorDetail = "Erro desconhecido";
       let errorCode = "UNKNOWN_ERROR";
