@@ -39,7 +39,7 @@ export interface EmailData {
  * @param emailData Dados do e-mail a ser enviado
  * @returns Promise com resultado do envio
  */
-export async function sendEmail(emailData: EmailData): Promise<{success: boolean, testMode?: boolean, testRecipient?: string}> {
+export async function sendEmail(emailData: EmailData): Promise<{success: boolean, testMode?: boolean, testRecipient?: string, realRecipient?: string}> {
   const { to, subject, body, from } = emailData;
   
   console.log('==== DETALHES DO ENVIO DE E-MAIL ====');
@@ -56,8 +56,8 @@ export async function sendEmail(emailData: EmailData): Promise<{success: boolean
 
     console.log(`Tentando enviar e-mail de ${fromAddress} para: ${to}`);
     
-    // Verificar o ambiente - em modo de teste, sempre enviar para o email da conta Resend
-    const isTestMode = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
+    // Definir modo de teste como falso para enviar diretamente ao destinatário
+    const isTestMode = false; // Alterado de !process.env.NODE_ENV || process.env.NODE_ENV === 'development'
     const verifiedEmail = 'contato@scventures.capital'; // Email verificado na conta Resend
     
     // Criar payload de envio
@@ -83,6 +83,12 @@ export async function sendEmail(emailData: EmailData): Promise<{success: boolean
            ${processedBody}`
         : processedBody,
     };
+    
+    // Adicionar aviso em logs quando enviando para destinatário real
+    if (!isTestMode) {
+      console.log('⚠️ ATENÇÃO: Modo de produção ativo - enviando email diretamente para o destinatário real!');
+      console.log(`⚠️ Destinatário: ${to}`);
+    }
     
     console.log('Payload de envio:', JSON.stringify(payload, null, 2));
     
@@ -110,19 +116,22 @@ export async function sendEmail(emailData: EmailData): Promise<{success: boolean
       return { success: false };
     }
 
-    console.log('E-mail enviado com sucesso através do Resend:', data?.id);
-    
-    // Verificar se o e-mail foi enviado em modo de teste
     if (isTestMode) {
       console.log(`MODO DE TESTE: Email redirecionado para ${verifiedEmail} em vez de ${to}`);
+      console.log('E-mail enviado com sucesso através do Resend (modo teste):', data?.id);
       return { 
         success: true, 
         testMode: true, 
         testRecipient: verifiedEmail 
       };
+    } else {
+      console.log('✅ E-mail enviado com sucesso para destinatário real:', to);
+      console.log('✅ ID do email enviado:', data?.id);
+      return { 
+        success: true,
+        realRecipient: to
+      };
     }
-    
-    return { success: true };
   } catch (error: any) {
     console.error('Exceção ao enviar e-mail com Resend:', error);
     if (error.message) {

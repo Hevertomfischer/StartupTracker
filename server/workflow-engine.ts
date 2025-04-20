@@ -481,6 +481,8 @@ export class WorkflowEngine {
         // Verificar se o e-mail foi enviado em modo de teste
         if (result.testMode && result.testRecipient) {
           successMsg = `Email redirecionado para ${result.testRecipient} (modo de teste) ao invés de ${processedTo}`;
+        } else if (result.realRecipient) {
+          successMsg = `Email enviado com sucesso para destinatário real: ${result.realRecipient}`;
         } else {
           successMsg = `Email enviado com sucesso para: ${processedTo}`;
         }
@@ -499,6 +501,7 @@ export class WorkflowEngine {
             subject: processedSubject,
             testMode: result.testMode || false,
             testRecipient: result.testRecipient,
+            realRecipient: result.realRecipient,
             time: new Date().toISOString()
           }
         });
