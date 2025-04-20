@@ -702,7 +702,7 @@ export class WorkflowEngine {
       } else {
         console.error(`[WorkflowEngine] Falha ao atualizar atributo ${attribute}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("[WorkflowEngine] Erro ao atualizar atributo:", error);
     }
   }
@@ -770,7 +770,7 @@ export class WorkflowEngine {
       } else {
         console.error('[WorkflowEngine] Falha ao criar tarefa');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("[WorkflowEngine] Erro ao criar tarefa:", error);
     }
   }
