@@ -106,7 +106,7 @@ export interface IStorage {
   getStartup(id: string): Promise<Startup | undefined>;
   createStartup(startup: InsertStartup): Promise<Startup>;
   updateStartup(id: string, startup: Partial<InsertStartup>): Promise<Startup | undefined>;
-  updateStartupStatus(id: string, status_id: string): Promise<Startup | undefined>;
+  updateStartupStatus(id: string, status_id: string, userId?: string): Promise<Startup | undefined>;
   deleteStartup(id: string): Promise<boolean>;
 
   // Startup member operations
@@ -163,8 +163,8 @@ export interface IStorage {
   ): Promise<WorkflowLog[]>;
   
   // Workflow Execution
-  processStatusChangeWorkflows(startupId: string, statusId: string): Promise<void>;
-  processAttributeChangeWorkflows(startupId: string, attributeName: string, newValue: any): Promise<void>;
+  processStatusChangeWorkflows(startupId: string, statusId: string, userId?: string): Promise<void>;
+  processAttributeChangeWorkflows(startupId: string, attributeName: string, newValue: any, userId?: string): Promise<void>;
 
   // Seed data
   seedDatabase(): Promise<void>;
