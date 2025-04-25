@@ -13,20 +13,26 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Toggle } from "@/components/ui/toggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarIcon, HelpCircle, Info } from "lucide-react";
+import { cn } from "@/lib/utils";
 // Importação do PriorityEnum do schema compartilhado
 import { PriorityEnum } from "@shared/schema";
-import { HelpCircle, Info } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useQuery } from "@tanstack/react-query";
 
 // Atributos disponíveis da startup que podem ser incluídos no email
 const availableStartupAttributes = [
@@ -69,8 +75,25 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
   const [actionDetails, setActionDetails] = useState<any>({});
   const [selectedTab, setSelectedTab] = useState("basicInfo");
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const [actionName, setActionName] = useState<string>("");
+  
+  // Buscar usuários cadastrados no sistema
+  const { data: users = [] } = useQuery({
+    queryKey: ['/api/users'],
+    enabled: actionType === "create_task" // Só busca usuários quando estiver criando tarefa
+  });
+
+  // Atualizar os detalhes da ação quando a data for alterada
+  useEffect(() => {
+    if (selectedDate && actionType === "create_task") {
+      setActionDetails(prev => ({
+        ...prev,
+        due_date: selectedDate.toISOString()
+      }));
+    }
+  }, [selectedDate, actionType]);
 
   const handleSave = () => {
     // Inclui os atributos selecionados no corpo do email se for envio de email
@@ -342,7 +365,7 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
           )}
 
           {actionType === "create_task" && (
-            <div className="space-y-2">
+            <div className="space-y-4">
               <div>
                 <Label>Título da Tarefa</Label>
                 <Input 
@@ -360,33 +383,51 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
                   className="min-h-[120px]"
                 />
               </div>
-              <div>
-                <Label>Prioridade</Label>
-                <Select 
-                  value={actionDetails.priority || ""} 
-                  onValueChange={(value) => setActionDetails({...actionDetails, priority: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a prioridade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={PriorityEnum.LOW}>Baixa</SelectItem>
-                    <SelectItem value={PriorityEnum.MEDIUM}>Média</SelectItem>
-                    <SelectItem value={PriorityEnum.HIGH}>Alta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Data de Vencimento (dias a partir da criação)</Label>
-                <Input 
-                  type="number"
-                  value={actionDetails.dueInDays || ""}
-                  onChange={(e) => setActionDetails({...actionDetails, dueInDays: e.target.value})}
-                  min="1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Defina quantos dias a partir da criação da tarefa será o prazo de vencimento.
-                </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Prioridade</Label>
+                  <Select 
+                    value={actionDetails.priority || ""} 
+                    onValueChange={(value) => setActionDetails({...actionDetails, priority: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a prioridade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={PriorityEnum.LOW}>Baixa</SelectItem>
+                      <SelectItem value={PriorityEnum.MEDIUM}>Média</SelectItem>
+                      <SelectItem value={PriorityEnum.HIGH}>Alta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label>Data de Vencimento</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !selectedDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione uma data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
               <div>
                 <Label>Responsável pela Tarefa</Label>
@@ -400,8 +441,20 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
                   <SelectContent>
                     <SelectItem value="none">Sem responsável</SelectItem>
                     <SelectItem value="currentUser">Usuário atual</SelectItem>
-                    {/* Esta opção será substituída pelo engine pelo ID do usuário que disparou o workflow */}
                     <SelectItem value="triggerUser">Usuário que disparou a ação</SelectItem>
+                    
+                    {users && users.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                          Usuários cadastrados
+                        </div>
+                        {users.map((user: any) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name || user.email}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
