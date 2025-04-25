@@ -1061,14 +1061,14 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Workflow Execution
-  async processStatusChangeWorkflows(startupId: string, statusId: string): Promise<void> {
+  async processStatusChangeWorkflows(startupId: string, statusId: string, userId?: string): Promise<void> {
     try {
-      console.log(`[Storage] Iniciando processamento de workflows para mudança de status: Startup ${startupId}, Status ${statusId}`);
+      console.log(`[Storage] Iniciando processamento de workflows para mudança de status: Startup ${startupId}, Status ${statusId}, UserId: ${userId || 'não informado'}`);
       
       // Usar dynamic import para evitar dependência circular
       const { WorkflowEngine } = await import('./workflow-engine');
       const workflowEngine = new WorkflowEngine();
-      await workflowEngine.processStatusChangeWorkflows(startupId, statusId);
+      await workflowEngine.processStatusChangeWorkflows(startupId, statusId, userId);
       
       console.log(`[Storage] Processamento de workflows para mudança de status concluído`);
     } catch (error) {
@@ -1076,14 +1076,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async processAttributeChangeWorkflows(startupId: string, attributeName: string, newValue: any): Promise<void> {
+  async processAttributeChangeWorkflows(startupId: string, attributeName: string, newValue: any, userId?: string): Promise<void> {
     try {
-      console.log(`[Storage] Iniciando processamento de workflows para mudança de atributo: Startup ${startupId}, Atributo ${attributeName}`);
+      console.log(`[Storage] Iniciando processamento de workflows para mudança de atributo: Startup ${startupId}, Atributo ${attributeName}, UserId: ${userId || 'não informado'}`);
       
       // Usar dynamic import para evitar dependência circular
       const { WorkflowEngine } = await import('./workflow-engine');
       const workflowEngine = new WorkflowEngine();
-      await workflowEngine.processAttributeChangeWorkflows(startupId, attributeName, newValue);
+      await workflowEngine.processAttributeChangeWorkflows(startupId, attributeName, newValue, userId);
       
       console.log(`[Storage] Processamento de workflows para mudança de atributo concluído`);
     } catch (error) {

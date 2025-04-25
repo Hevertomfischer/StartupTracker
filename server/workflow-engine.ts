@@ -60,8 +60,8 @@ export class WorkflowEngine {
   }
 
   // Processa workflows acionados por mudança de status
-  async processStatusChangeWorkflows(startupId: string, statusId: string): Promise<void> {
-    console.log(`[WorkflowEngine] Processando workflows para mudança de status. StartupId: ${startupId}, StatusId: ${statusId}`);
+  async processStatusChangeWorkflows(startupId: string, statusId: string, userId?: string): Promise<void> {
+    console.log(`[WorkflowEngine] Processando workflows para mudança de status. StartupId: ${startupId}, StatusId: ${statusId}, UserId: ${userId || 'não informado'}`);
     
     try {
       // Buscar todos os workflows ativos com trigger_type = status_change
@@ -102,7 +102,7 @@ export class WorkflowEngine {
           
           if (shouldExecute) {
             console.log(`[WorkflowEngine] Executando ações do workflow: ${workflow.name} (${workflow.id})`);
-            await this.executeWorkflowActions(workflow.id, startup);
+            await this.executeWorkflowActions(workflow.id, startup, userId);
           } else {
             console.log(`[WorkflowEngine] Condições não atendidas para o workflow: ${workflow.name} (${workflow.id})`);
           }
@@ -114,8 +114,8 @@ export class WorkflowEngine {
   }
 
   // Processa workflows acionados por mudança de atributo
-  async processAttributeChangeWorkflows(startupId: string, attributeName: string, newValue: any): Promise<void> {
-    console.log(`[WorkflowEngine] Processando workflows para mudança de atributo. StartupId: ${startupId}, Atributo: ${attributeName}, Valor: ${newValue}`);
+  async processAttributeChangeWorkflows(startupId: string, attributeName: string, newValue: any, userId?: string): Promise<void> {
+    console.log(`[WorkflowEngine] Processando workflows para mudança de atributo. StartupId: ${startupId}, Atributo: ${attributeName}, Valor: ${newValue}, UserId: ${userId || 'não informado'}`);
     
     try {
       // Buscar todos os workflows ativos com trigger_type = attribute_change
@@ -156,7 +156,7 @@ export class WorkflowEngine {
           
           if (shouldExecute) {
             console.log(`[WorkflowEngine] Executando ações do workflow: ${workflow.name} (${workflow.id})`);
-            await this.executeWorkflowActions(workflow.id, startup);
+            await this.executeWorkflowActions(workflow.id, startup, userId);
           } else {
             console.log(`[WorkflowEngine] Condições não atendidas para o workflow: ${workflow.name} (${workflow.id})`);
           }
@@ -227,7 +227,7 @@ export class WorkflowEngine {
   }
 
   // Executa todas as ações de um workflow
-  private async executeWorkflowActions(workflowId: string, startup: Startup): Promise<void> {
+  private async executeWorkflowActions(workflowId: string, startup: Startup, userId?: string): Promise<void> {
     try {
       // Buscar todas as ações do workflow, ordenadas por 'order'
       const actions = await db
@@ -236,7 +236,7 @@ export class WorkflowEngine {
         .where(eq(workflowActions.workflow_id, workflowId))
         .orderBy(workflowActions.order);
       
-      console.log(`[WorkflowEngine] Executando ${actions.length} ações para o workflow ${workflowId}`);
+      console.log(`[WorkflowEngine] Executando ${actions.length} ações para o workflow ${workflowId}, UserId: ${userId || 'não informado'}`);
       
       await this.logWorkflowEvent({
         workflow_id: workflowId,
@@ -247,7 +247,7 @@ export class WorkflowEngine {
       
       // Executar cada ação na ordem
       for (const action of actions) {
-        await this.executeAction(action, startup);
+        await this.executeAction(action, startup, userId);
       }
       
       await this.logWorkflowEvent({
@@ -270,8 +270,8 @@ export class WorkflowEngine {
   }
   
   // Executa uma ação específica
-  private async executeAction(action: WorkflowAction, startup: Startup): Promise<void> {
-    console.log(`[WorkflowEngine] Executando ação: ${action.action_name} (${action.action_type})`);
+  private async executeAction(action: WorkflowAction, startup: Startup, userId?: string): Promise<void> {
+    console.log(`[WorkflowEngine] Executando ação: ${action.action_name} (${action.action_type}), UserId: ${userId || 'não informado'}`);
     
     await this.logWorkflowEvent({
       workflow_id: action.workflow_id,
@@ -291,7 +291,7 @@ export class WorkflowEngine {
           await this.executeUpdateAttributeAction(action, startup);
           break;
         case 'create_task':
-          await this.executeCreateTaskAction(action, startup);
+          await this.executeCreateTaskAction(action, startup, userId);
           break;
         default:
           console.error(`[WorkflowEngine] Tipo de ação desconhecido: ${action.action_type}`);
