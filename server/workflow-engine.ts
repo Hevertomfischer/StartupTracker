@@ -708,10 +708,10 @@ export class WorkflowEngine {
   }
   
   // Executa ação de criação de tarefa
-  private async executeCreateTaskAction(action: WorkflowAction, startup: Startup): Promise<void> {
+  private async executeCreateTaskAction(action: WorkflowAction, startup: Startup, triggeredByUserId?: string): Promise<void> {
     // Verificar e pegar detalhes da ação
     const details = action.action_details as Record<string, any>;
-    const { title, description, due_date, assignee_id, priority } = details;
+    const { title, description, dueInDays, assignee_id, priority } = details;
     
     if (!title) {
       console.error("[WorkflowEngine] Título da tarefa não especificado:", details);
@@ -750,6 +750,32 @@ export class WorkflowEngine {
       const processedTitle = this.replacePlaceholders(title, startup);
       const processedDescription = description ? this.replacePlaceholders(description, startup) : '';
       
+      // Calcular a data de vencimento baseada nos dias informados
+      let dueDate = null;
+      if (dueInDays && !isNaN(Number(dueInDays))) {
+        const days = Number(dueInDays);
+        if (days > 0) {
+          dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + days);
+          console.log(`[WorkflowEngine] Data de vencimento calculada: ${dueDate} (${dueInDays} dias)`);
+        }
+      }
+      
+      // Processar o responsável pela tarefa
+      let finalAssigneeId = null;
+      if (assignee_id) {
+        if (assignee_id === "currentUser" && triggeredByUserId) {
+          finalAssigneeId = triggeredByUserId;
+          console.log(`[WorkflowEngine] Responsável pela tarefa: usuário atual (${triggeredByUserId})`);
+        } else if (assignee_id === "triggerUser" && triggeredByUserId) {
+          finalAssigneeId = triggeredByUserId;
+          console.log(`[WorkflowEngine] Responsável pela tarefa: usuário que disparou (${triggeredByUserId})`);
+        } else if (assignee_id !== "currentUser" && assignee_id !== "triggerUser") {
+          finalAssigneeId = assignee_id;
+          console.log(`[WorkflowEngine] Responsável pela tarefa: ID específico (${assignee_id})`);
+        }
+      }
+      
       // Criar tarefa diretamente usando o db
       const [task] = await db
         .insert(tasks)
@@ -757,9 +783,9 @@ export class WorkflowEngine {
           title: processedTitle,
           description: processedDescription,
           startup_id: startup.id,
-          due_date: due_date ? new Date(due_date) : null,
-          created_by: details.created_by || null,
-          assigned_to: assignee_id || null,
+          due_date: dueDate,
+          created_by: triggeredByUserId || details.created_by || null,
+          assigned_to: finalAssigneeId,
           priority: normalizedPriority,
           status: "todo",
         })
@@ -767,11 +793,24 @@ export class WorkflowEngine {
       
       if (task) {
         console.log(`[WorkflowEngine] Tarefa criada com sucesso: ${task.id}`);
+        
+        // Informações adicionais para ajudar na depuração
+        console.log(`[WorkflowEngine] Detalhes da tarefa:`, {
+          id: task.id,
+          title: task.title,
+          due_date: task.due_date,
+          assigned_to: task.assigned_to,
+          priority: task.priority
+        });
       } else {
         console.error('[WorkflowEngine] Falha ao criar tarefa');
       }
     } catch (error: any) {
       console.error("[WorkflowEngine] Erro ao criar tarefa:", error);
+      console.error("[WorkflowEngine] Detalhes do erro:", error.message);
+      if (error.stack) {
+        console.error("[WorkflowEngine] Stack de erro:", error.stack);
+      }
     }
   }
   

@@ -384,6 +384,29 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
                   onChange={(e) => setActionDetails({...actionDetails, dueInDays: e.target.value})}
                   min="1"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Defina quantos dias a partir da criação da tarefa será o prazo de vencimento.
+                </p>
+              </div>
+              <div>
+                <Label>Responsável pela Tarefa</Label>
+                <Select 
+                  value={actionDetails.assignee_id || ""} 
+                  onValueChange={(value) => setActionDetails({...actionDetails, assignee_id: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Sem responsável</SelectItem>
+                    <SelectItem value="currentUser">Usuário atual</SelectItem>
+                    {/* Esta opção será substituída pelo engine pelo ID do usuário que disparou o workflow */}
+                    <SelectItem value="triggerUser">Usuário que disparou a ação</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  "Usuário atual" designará a tarefa para o usuário que está executando a ação que disparou o workflow.
+                </p>
               </div>
             </div>
           )}
