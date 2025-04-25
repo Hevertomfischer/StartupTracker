@@ -60,7 +60,7 @@ export async function sendEmail(emailData: EmailData): Promise<{
     // O formato padrão do Resend é "Nome <onboarding@resend.dev>"
     // Para resolver o problema de verificação de domínio, usar SEMPRE o endereço resend.dev que já está verificado
     // IMPORTANTE: O endereço onboarding@resend.dev é o único que não requer verificação de domínio
-    const defaultFrom = 'StartupOS <onboarding@resend.dev>';
+    const defaultFrom = 'Contato <contato@scventures.capital>';
     const fromAddress = defaultFrom; // Ignorar qualquer outro 'from' para garantir que sempre use o domínio resend.dev
 
     console.log(`Tentando enviar e-mail de ${fromAddress} para: ${to}`);
