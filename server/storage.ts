@@ -552,6 +552,7 @@ export class DatabaseStorage implements IStorage {
               // Usar dynamic import para evitar dependência circular
               const { WorkflowEngine } = await import('./workflow-engine');
               const workflowEngine = new WorkflowEngine();
+              // Não temos acesso ao req.user aqui, corrigiremos isso em routes.ts
               await workflowEngine.processAttributeChangeWorkflows(id, key, newValue);
             } catch (workflowError) {
               console.error(`Erro ao processar workflows para a mudança de atributo ${key}:`, workflowError);
@@ -683,6 +684,7 @@ export class DatabaseStorage implements IStorage {
               // Usar dynamic import para resolver a dependência circular
               const { WorkflowEngine } = await import('./workflow-engine');
               const workflowEngine = new WorkflowEngine();
+              // Não temos acesso ao req.user aqui, corrigiremos isso em routes.ts
               await workflowEngine.processStatusChangeWorkflows(id, status_id);
               break; // Processamos apenas uma vez
             }
