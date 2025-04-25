@@ -770,6 +770,9 @@ export class WorkflowEngine {
         } else if (assignee_id === "triggerUser" && triggeredByUserId) {
           finalAssigneeId = triggeredByUserId;
           console.log(`[WorkflowEngine] Responsável pela tarefa: usuário que disparou (${triggeredByUserId})`);
+        } else if (assignee_id === "none") {
+          finalAssigneeId = null;
+          console.log(`[WorkflowEngine] Tarefa sem responsável designado`);
         } else if (assignee_id !== "currentUser" && assignee_id !== "triggerUser") {
           finalAssigneeId = assignee_id;
           console.log(`[WorkflowEngine] Responsável pela tarefa: ID específico (${assignee_id})`);

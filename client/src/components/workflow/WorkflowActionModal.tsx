@@ -398,7 +398,7 @@ export default function WorkflowActionModal({ open, onClose, onSave }: WorkflowA
                     <SelectValue placeholder="Selecione o responsável" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sem responsável</SelectItem>
+                    <SelectItem value="none">Sem responsável</SelectItem>
                     <SelectItem value="currentUser">Usuário atual</SelectItem>
                     {/* Esta opção será substituída pelo engine pelo ID do usuário que disparou o workflow */}
                     <SelectItem value="triggerUser">Usuário que disparou a ação</SelectItem>
