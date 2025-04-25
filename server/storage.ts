@@ -578,9 +578,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateStartupStatus(id: string, status_id: string): Promise<Startup | undefined> {
+  async updateStartupStatus(id: string, status_id: string, userId?: string): Promise<Startup | undefined> {
     try {
-      console.log(`Atualizando status da startup ${id} para ${status_id}`);
+      console.log(`Atualizando status da startup ${id} para ${status_id}, disparado pelo usuário ${userId || 'desconhecido'}`);
 
       // Busca a startup antes da atualização para obter o status anterior
       const oldStartup = await this.getStartup(id);
@@ -684,8 +684,9 @@ export class DatabaseStorage implements IStorage {
               // Usar dynamic import para resolver a dependência circular
               const { WorkflowEngine } = await import('./workflow-engine');
               const workflowEngine = new WorkflowEngine();
-              // Não temos acesso ao req.user aqui, corrigiremos isso em routes.ts
-              await workflowEngine.processStatusChangeWorkflows(id, status_id);
+              
+              // Passar o ID do usuário para o processamento de workflows
+              await workflowEngine.processStatusChangeWorkflows(id, status_id, userId);
               break; // Processamos apenas uma vez
             }
           }

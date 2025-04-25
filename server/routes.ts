@@ -514,8 +514,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = req.params.id;
       const { status_id } = req.body;
+      const userId = req.user?.id;
 
-      console.log(`Updating startup ${id} status to ${status_id}`);
+      console.log(`Updating startup ${id} status to ${status_id}, triggered by user ${userId || 'unknown'}`);
       console.log('Request body:', req.body);
 
       // Validar o formato dos IDs
@@ -538,8 +539,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Status not found" });
       }
 
-      // Atualizar o status
-      const updatedStartup = await storage.updateStartupStatus(id, data.status_id);
+      // Atualizar o status e passar o ID do usuário para os workflows
+      const updatedStartup = await storage.updateStartupStatus(id, data.status_id, userId);
       console.log('Successfully updated startup status:', updatedStartup);
       return res.status(200).json(updatedStartup);
     } catch (error) {
