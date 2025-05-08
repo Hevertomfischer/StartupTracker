@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import fs from 'fs';
 import path from 'path';
+import cors from 'cors';
 
 // Garantir que a pasta de uploads existe
 const uploadsDir = path.join(process.cwd(), 'uploads');
