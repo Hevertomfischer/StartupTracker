@@ -10,7 +10,8 @@ import {
   CheckSquare,
   ShieldCheck,
   GitMerge,
-  FormInput
+  FormInput,
+  Copy
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -26,6 +27,7 @@ export function Sidebar() {
     { name: 'Times', href: '/teams', icon: Users, current: window.location.pathname === '/teams' },
     { name: 'Tarefas', href: '/tasks', icon: CheckSquare, current: window.location.pathname === '/tasks' },
     { name: 'Formulário Externo', href: '/external-form', icon: FormInput, current: window.location.pathname === '/external-form' },
+    { name: 'Código de Embed', href: '/embed-code', icon: Copy, current: window.location.pathname === '/embed-code' },
     { name: 'Calendar', href: '#', icon: Calendar, current: false },
     { name: 'Analytics', href: '#', icon: BarChart, current: false },
     { name: 'Settings', href: '#', icon: Settings, current: false },

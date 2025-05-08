@@ -29,6 +29,7 @@ import {
   uploadPitchDeck as externalFormUploadPitchDeck 
 } from "./external-form";
 import path from "path";
+import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
@@ -1253,6 +1254,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rota para o formulário externo de cadastro de startups
   app.post("/api/external/startup", externalFormUploadPitchDeck, handleExternalForm);
+  
+  // Rota para servir o script de incorporação
+  app.get("/embed.js", (req: Request, res: Response) => {
+    const embedJsPath = path.join(process.cwd(), 'client', 'public', 'embed.js');
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(embedJsPath);
+  });
 
   const httpServer = createServer(app);
   return httpServer;

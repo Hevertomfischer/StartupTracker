@@ -7,6 +7,15 @@ import { Copy, Eye } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 
+// Adiciona a definição do tipo StartupFormEmbed ao objeto window
+declare global {
+  interface Window {
+    StartupFormEmbed?: {
+      createForm: (containerId: string, options: any) => void;
+    };
+  }
+}
+
 export default function EmbedCodePage() {
   const { user } = useAuth();
   const [copied, setCopied] = useState<string | null>(null);
@@ -74,15 +83,6 @@ export default function EmbedCodePage() {
       });
     });
   };
-
-  // Adiciona a definição do tipo StartupFormEmbed ao objeto window
-  declare global {
-    interface Window {
-      StartupFormEmbed?: {
-        createForm: (containerId: string, options: any) => void;
-      };
-    }
-  }
 
   // Função para prévia do formulário
   const initializePreview = () => {
