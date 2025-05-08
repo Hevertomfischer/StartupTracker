@@ -29,7 +29,6 @@ import {
   uploadPitchDeck as externalFormUploadPitchDeck 
 } from "./external-form";
 import path from "path";
-import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
