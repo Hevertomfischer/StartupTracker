@@ -10,6 +10,7 @@ import UserManagement from "@/pages/UserManagement";
 import TaskManagement from "@/pages/TaskManagement";
 import SimpleRoleManagement from "@/pages/SimpleRoleManagement";
 import WorkflowManagementNew from "@/pages/WorkflowManagementNew";
+import ExternalForm from "@/pages/ExternalForm";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute, AdminRoute, InvestorRoute } from "@/lib/protected-route";
 import { UserRoleEnum } from "@shared/schema";
@@ -24,6 +25,7 @@ function Router() {
       <AdminRoute path="/roles" component={SimpleRoleManagement} />
       <AdminRoute path="/workflows" component={WorkflowManagementNew} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/external-form" component={ExternalForm} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1251,6 +1251,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Excluir o PitchDeck de uma startup
   app.delete("/api/startups/:startupId/pitch-deck", isInvestor, deletePitchDeck);
 
+  // Rota para o formulário externo de cadastro de startups
+  app.post("/api/external/startup", externalFormUploadPitchDeck, handleExternalForm);
+
   const httpServer = createServer(app);
   return httpServer;
 }
