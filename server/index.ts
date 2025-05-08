@@ -15,6 +15,14 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const app = express();
+
+// Configuração do CORS para permitir solicitações de qualquer origem
+app.use(cors({
+  origin: '*', // Permite todas as origens
+  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

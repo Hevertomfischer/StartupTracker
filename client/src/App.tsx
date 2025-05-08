@@ -12,6 +12,7 @@ import SimpleRoleManagement from "@/pages/SimpleRoleManagement";
 import WorkflowManagementNew from "@/pages/WorkflowManagementNew";
 import ExternalForm from "@/pages/ExternalForm";
 import ExternalFormEmbed from "@/pages/ExternalFormEmbed";
+import EmbedCodePage from "@/pages/EmbedCodePage";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute, AdminRoute, InvestorRoute } from "@/lib/protected-route";
 import { UserRoleEnum } from "@shared/schema";
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/external-form" component={ExternalForm} />
       <Route path="/external-form-embed" component={ExternalFormEmbed} />
+      <ProtectedRoute path="/embed-code" component={EmbedCodePage} />
       <Route component={NotFound} />
     </Switch>
   );
