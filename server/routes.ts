@@ -24,6 +24,10 @@ import {
   deleteAttachment,
   deletePitchDeck
 } from "./file-controller";
+import { 
+  handleExternalForm, 
+  uploadPitchDeck as externalFormUploadPitchDeck 
+} from "./external-form";
 import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
