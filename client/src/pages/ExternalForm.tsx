@@ -370,7 +370,11 @@ export default function ExternalForm() {
                   <FormDescription>
                     Envie uma apresentação em formato PDF ou PowerPoint (máx. 10MB)
                   </FormDescription>
-                  <FormMessage>{form.formState.errors.pitch_deck?.message}</FormMessage>
+                  {form.formState.errors.pitch_deck?.message && (
+                    <p className="text-sm font-medium text-destructive">
+                      {form.formState.errors.pitch_deck.message.toString()}
+                    </p>
+                  )}
                 </FormItem>
               </div>
 
