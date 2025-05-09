@@ -110,7 +110,12 @@ export default function ExternalFormEmbed() {
       const result = await response.json();
       
       if (!response.ok) {
-        throw new Error(result.message || "Erro ao cadastrar startup");
+        const error = new Error(result.message || "Erro ao cadastrar startup");
+        // Adicionar os detalhes do erro à propriedade 'cause' do erro
+        if (result.errors) {
+          (error as any).cause = { errors: result.errors };
+        }
+        throw error;
       }
 
       setIsSuccess(true);
@@ -129,9 +134,28 @@ export default function ExternalFormEmbed() {
       }
     } catch (error) {
       console.error("Erro ao enviar formulário:", error);
+      
+      // Tentar extrair mensagens de erro detalhadas da resposta da API
+      let errorMessage = "Ocorreu um erro inesperado";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Verificar se temos um erro de API com detalhes
+        if (error.cause && typeof error.cause === 'object' && 'errors' in error.cause) {
+          const apiErrors = (error.cause as any).errors;
+          if (Array.isArray(apiErrors) && apiErrors.length > 0) {
+            // Extrair mensagens de erro específicas
+            errorMessage = apiErrors.map((err: any) => 
+              `${err.field}: ${err.message}`
+            ).join('\n');
+          }
+        }
+      }
+      
       toast({
         title: "Erro ao cadastrar startup",
-        description: error instanceof Error ? error.message : "Ocorreu um erro inesperado",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

@@ -53,19 +53,17 @@ const upload = multer({
 // Schema para validação dos dados do formulário externo
 const externalFormSchema = z.object({
   name: z.string().min(1, "Nome da startup é obrigatório"),
-  ceo_name: z.string().min(1, "Nome do CEO é obrigatório"),
-  ceo_email: z.string().email("E-mail do CEO inválido"),
-  ceo_whatsapp: z.string().min(1, "Whatsapp do CEO é obrigatório"),
-  foundation_year: z.string().min(1, "Ano da fundação é obrigatório"),
-  problem: z.string().min(1, "Problema que resolve é obrigatório"),
-  solution: z.string().min(1, "Solução para o problema é obrigatório"),
-  differentials: z.string().min(1, "Diferenciais da startup são obrigatórios"),
-  mrr: z.string().min(1, "Faturamento do último mês é obrigatório"),
-  business_model: z.string().min(1, "Modelo de negócio é obrigatório"),
-  sector: z.string().optional(),
-  city: z.string().min(1, "Cidade é obrigatória"),
-  state: z.string().min(1, "Estado é obrigatório"),
-  website: z.string().optional(),
+  description: z.string().min(10, "Descrição da startup deve ter pelo menos 10 caracteres"),
+  website: z.string().url("URL do website inválida").optional().or(z.literal("")),
+  ceo_name: z.string().min(3, "Nome do CEO deve ter pelo menos 3 caracteres"),
+  ceo_email: z.string().email("Email do CEO inválido"),
+  ceo_phone: z.string().min(10, "Telefone do CEO deve ter pelo menos 10 caracteres"),
+  industry: z.string().min(2, "Indústria/Setor deve ter pelo menos 2 caracteres"),
+  founding_date: z.string().optional(),
+  employee_count: z.coerce.number().int().min(1, "Número de funcionários deve ser pelo menos 1"),
+  investment_stage: z.string().min(2, "Estágio de investimento deve ter pelo menos 2 caracteres"),
+  annual_revenue: z.coerce.number().optional(),
+  valuation: z.coerce.number().optional(),
 });
 
 // Middleware de upload para o pitch deck
@@ -88,16 +86,19 @@ export const handleExternalForm = async (req: Request, res: Response) => {
       name: formData.name,
       ceo_name: formData.ceo_name,
       ceo_email: formData.ceo_email,
-      ceo_whatsapp: formData.ceo_whatsapp,
-      description: `${formData.problem}\n\n${formData.solution}\n\n${formData.differentials}`,
-      mrr: parseInt(formData.mrr.replace(/\D/g, '')) || 0,
-      business_model: formData.business_model,
-      sector: formData.sector || null,
-      city: formData.city,
-      state: formData.state,
+      ceo_whatsapp: formData.ceo_phone, // Usando o campo de telefone como whatsapp
+      description: formData.description,
+      mrr: formData.annual_revenue || 0,
+      business_model: formData.investment_stage, // Usando estágio de investimento como modelo de negócio
+      sector: formData.industry || null,
+      employee_count: formData.employee_count,
+      city: "Não informado", // Valores padrão para campos não presentes no formulário novo
+      state: "Não informado",
       website: formData.website || null,
-      location: `${formData.city}, ${formData.state}`,
-      foundation_date: new Date(`${formData.foundation_year}-01-01`).toISOString(),
+      location: "Não informado",
+      foundation_date: formData.founding_date 
+        ? new Date(formData.founding_date).toISOString() 
+        : new Date().toISOString(),
       status_id: "e74a05a6-6612-49af-95a1-f42b035d5c4d", // Cadastrada (primeiro status)
       pitch_deck_id: req.file.filename,
       created_at: new Date(),
