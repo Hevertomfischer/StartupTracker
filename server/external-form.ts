@@ -80,6 +80,17 @@ export const handleExternalForm = async (req: Request, res: Response) => {
     // Validar dados do formulário
     const formData = externalFormSchema.parse(req.body);
 
+    // Primeiro, criar o registro do arquivo na tabela de attachments
+    const pitchDeckId = uuidv4();
+    await storage.createAttachment({
+      id: pitchDeckId,
+      filename: req.file.filename,
+      original_name: req.file.originalname,
+      mime_type: req.file.mimetype,
+      size: req.file.size,
+      created_at: new Date(),
+    });
+
     // Preparar dados para criação da startup
     const startupData = {
       id: uuidv4(),
@@ -100,7 +111,7 @@ export const handleExternalForm = async (req: Request, res: Response) => {
         ? new Date(formData.founding_date).toISOString() 
         : new Date().toISOString(),
       status_id: "e74a05a6-6612-49af-95a1-f42b035d5c4d", // Cadastrada (primeiro status)
-      pitch_deck_id: req.file.filename,
+      pitch_deck_id: pitchDeckId, // Agora usando o UUID válido
       created_at: new Date(),
       updated_at: new Date(),
     };
