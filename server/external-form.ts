@@ -95,10 +95,11 @@ export const handleExternalForm = async (req: Request, res: Response) => {
       city: formData.city,
       state: formData.state,
       website: formData.website || null,
-      foundation_date: new Date().toISOString(),
+      founding_date: new Date().toISOString(),
       status_id: "e74a05a6-6612-49af-95a1-f42b035d5c4d", // Cadastrada (primeiro status)
-      // Campos opcionais
+      // Campos obrigatórios pelo schema
       description: `Problema: ${formData.business_model} | Solução: ${formData.industry} | Diferenciais: ${formData.differentials}`,
+      investment_stage: "Não informado", // Campo obrigatório
       mrr: 0,
       tam: formData.valuation || null,
     };
