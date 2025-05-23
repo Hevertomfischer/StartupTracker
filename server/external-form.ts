@@ -78,6 +78,9 @@ export const handleExternalForm = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'O Pitch Deck é obrigatório.' });
     }
 
+    // Debug: Ver o que está chegando no req.body
+    console.log('Dados recebidos no req.body:', req.body);
+
     // Validar dados do formulário
     const formData = externalFormSchema.parse(req.body);
 
