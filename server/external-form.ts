@@ -76,6 +76,7 @@ export const handleExternalForm = async (req: Request, res: Response) => {
     console.log('=== PROCESSANDO FORMULÁRIO EXTERNO ===');
     console.log('Body recebido:', req.body);
     console.log('Arquivo recebido:', req.file ? 'SIM' : 'NÃO');
+    console.log('Nome da startup sendo cadastrada:', req.body.name);
 
     // Verificar se o arquivo foi enviado
     if (!req.file) {
