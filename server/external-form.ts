@@ -81,7 +81,7 @@ export const handleExternalForm = async (req: Request, res: Response) => {
     // Validar dados do formulário
     const formData = externalFormSchema.parse(req.body);
 
-    // Preparar dados para criação da startup
+    // Preparar dados para criação da startup com todos os campos necessários
     const startupData = {
       name: formData.name,
       ceo_name: formData.ceo_name,
@@ -97,23 +97,15 @@ export const handleExternalForm = async (req: Request, res: Response) => {
       website: formData.website || null,
       founding_date: new Date().toISOString(),
       status_id: "e74a05a6-6612-49af-95a1-f42b035d5c4d", // Cadastrada (primeiro status)
-      // Campos obrigatórios pelo schema
+      // Campos obrigatórios pelo schema - preenchidos com valores padrão
       description: `Problema: ${formData.business_model} | Solução: ${formData.industry} | Diferenciais: ${formData.differentials}`,
-      investment_stage: "Não informado", // Campo obrigatório
+      investment_stage: "Não informado",
       mrr: 0,
       tam: formData.valuation || null,
     };
 
-    // Criar um schema específico para o formulário externo
-    const externalStartupSchema = insertStartupSchema.extend({
-      description: z.string().optional(),
-      investment_stage: z.string().optional(),
-    }).omit({
-      // Remove campos que não temos no formulário externo
-    });
-
-    // Usar o schema específico para validar os dados
-    const parsedData = externalStartupSchema.parse(startupData);
+    // Usar o schema padrão agora que temos todos os campos necessários
+    const parsedData = insertStartupSchema.parse(startupData);
 
     // Criar a startup no sistema
     const startup = await storage.createStartup(parsedData);
