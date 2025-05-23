@@ -21,18 +21,19 @@ import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
-  description: z.string().min(10, "Descrição deve ter pelo menos 10 caracteres"),
-  website: z.string().url("URL do website inválida").optional().or(z.literal("")),
   ceo_name: z.string().min(3, "Nome do CEO deve ter pelo menos 3 caracteres"),
   ceo_email: z.string().email("Email do CEO inválido"),
-  ceo_phone: z.string().min(10, "Telefone do CEO deve ter pelo menos 10 caracteres"),
-  industry: z.string().min(2, "Indústria deve ter pelo menos 2 caracteres"),
-  founding_date: z.string().optional(),
+  ceo_phone: z.string().min(10, "Telefone deve ter pelo menos 10 caracteres"),
+  business_model: z.string().min(2, "Modelo de Negócios deve ter pelo menos 2 caracteres"),
+  industry: z.string().min(2, "Solução para o Problema deve ter pelo menos 2 caracteres"),
+  differentials: z.string().min(10, "Diferenciais da Startup deve ter pelo menos 10 caracteres"),
   employee_count: z.coerce.number().int().min(1, "Número de funcionários deve ser pelo menos 1"),
-  investment_stage: z.string().min(2, "Estágio de investimento deve ter pelo menos 2 caracteres"),
-  annual_revenue: z.coerce.number().optional(),
+  sector: z.string().min(2, "Setor deve ter pelo menos 2 caracteres"),
+  city: z.string().min(2, "Cidade deve ter pelo menos 2 caracteres"),
+  state: z.string().min(2, "Estado deve ter pelo menos 2 caracteres"),
+  website: z.string().url("URL do website inválida").optional().or(z.literal("")),
+  pitch_deck: z.any().optional(),
   valuation: z.coerce.number().optional(),
-  pitch_deck: z.any().optional(), // Aceitamos qualquer valor para o upload de arquivo
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -45,16 +46,17 @@ export default function ExternalForm() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      description: "",
-      website: "",
       ceo_name: "",
       ceo_email: "",
       ceo_phone: "",
+      business_model: "",
       industry: "",
-      founding_date: "",
+      differentials: "",
       employee_count: 1,
-      investment_stage: "",
-      annual_revenue: undefined,
+      sector: "",
+      city: "",
+      state: "",
+      website: "",
       valuation: undefined,
     },
   });
@@ -143,240 +145,231 @@ export default function ExternalForm() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Informações da Startup</h3>
-                <Separator />
-                
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome da Startup *</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome da Startup *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Descrição da Startup *</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field} 
-                          rows={4}
-                          placeholder="Descreva brevemente sua startup, produto/serviço e proposta de valor"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="ceo_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome CEO *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="website"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Website</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="https://www.example.com" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="ceo_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>E-mail CEO *</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="industry"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Indústria/Setor *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Ex: Fintech, Healthtech, Edtech" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="ceo_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Whatsapp CEO *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="founding_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Data de Fundação</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="date" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="business_model"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Problema que Resolve *</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                  <FormField
-                    control={form.control}
-                    name="employee_count"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Número de Funcionários *</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="number" min={1} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+              <FormField
+                control={form.control}
+                name="industry"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Solução para o Problema *</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Informações do CEO/Fundador</h3>
-                <Separator />
+              <FormField
+                control={form.control}
+                name="differentials"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Diferenciais da Startup *</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} rows={3} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="ceo_name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome do CEO/Fundador *</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="employee_count"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Funcionários ativos hoje (MÊS) *</FormLabel>
+                    <FormControl>
+                      <Input {...field} type="number" min={1} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="ceo_email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email do CEO/Fundador *</FormLabel>
-                        <FormControl>
-                          <Input {...field} type="email" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="business_model"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modelo de Negócios *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                  <FormField
-                    control={form.control}
-                    name="ceo_phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefone do CEO/Fundador *</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
+              <FormField
+                control={form.control}
+                name="sector"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Setor *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Setor de atuação" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Informações Financeiras</h3>
-                <Separator />
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cidade *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="investment_stage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Estágio de Investimento *</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Ex: Seed, Series A, Bootstrapped" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado *</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="annual_revenue"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Receita Anual (R$)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            type="number" 
-                            min={0} 
-                            onChange={(e) => {
-                              const value = e.target.value === "" ? undefined : Number(e.target.value);
-                              field.onChange(value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Site da Startup</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="https://www.example.com" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                  <FormField
-                    control={form.control}
-                    name="valuation"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Valuation (R$)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            type="number" 
-                            min={0}
-                            onChange={(e) => {
-                              const value = e.target.value === "" ? undefined : Number(e.target.value);
-                              field.onChange(value);
-                            }}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <FormItem className="space-y-2">
+                <FormLabel>Pitch Deck *</FormLabel>
+                <div>
+                  <Input 
+                    type="file" 
+                    accept=".pdf,.ppt,.pptx" 
+                    onChange={(e) => {
+                      form.setValue('pitch_deck', e.target.files);
+                    }}
                   />
                 </div>
-              </div>
+                <FormDescription>
+                  Arquivos permitidos
+                </FormDescription>
+                {form.formState.errors.pitch_deck?.message && (
+                  <p className="text-sm font-medium text-destructive">
+                    {form.formState.errors.pitch_deck.message.toString()}
+                  </p>
+                )}
+              </FormItem>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Documentos</h3>
-                <Separator />
-
-                <FormItem className="space-y-2">
-                  <FormLabel>Pitch Deck</FormLabel>
-                  <div>
-                    <Input 
-                      type="file" 
-                      accept=".pdf,.ppt,.pptx" 
-                      onChange={(e) => {
-                        form.setValue('pitch_deck', e.target.files);
-                      }}
-                    />
-                  </div>
-                  <FormDescription>
-                    Envie uma apresentação em formato PDF ou PowerPoint (máx. 10MB)
-                  </FormDescription>
-                  {form.formState.errors.pitch_deck?.message && (
-                    <p className="text-sm font-medium text-destructive">
-                      {form.formState.errors.pitch_deck.message.toString()}
-                    </p>
-                  )}
-                </FormItem>
-              </div>
+              <FormField
+                control={form.control}
+                name="valuation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valuation</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="number" 
+                        min={0}
+                        placeholder="Qual é o valor da sua startup? (Valuation R$ milhões)"
+                        onChange={(e) => {
+                          const value = e.target.value === "" ? undefined : Number(e.target.value);
+                          field.onChange(value);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="flex justify-center mt-6">
                 <Button 

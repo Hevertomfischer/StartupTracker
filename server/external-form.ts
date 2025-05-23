@@ -53,16 +53,17 @@ const upload = multer({
 // Schema para validação dos dados do formulário externo
 const externalFormSchema = z.object({
   name: z.string().min(1, "Nome da startup é obrigatório"),
-  description: z.string().min(10, "Descrição da startup deve ter pelo menos 10 caracteres"),
-  website: z.string().url("URL do website inválida").optional().or(z.literal("")),
   ceo_name: z.string().min(3, "Nome do CEO deve ter pelo menos 3 caracteres"),
   ceo_email: z.string().email("Email do CEO inválido"),
-  ceo_phone: z.string().min(10, "Telefone do CEO deve ter pelo menos 10 caracteres"),
-  industry: z.string().min(2, "Indústria/Setor deve ter pelo menos 2 caracteres"),
-  founding_date: z.string().optional(),
+  ceo_phone: z.string().min(10, "Telefone deve ter pelo menos 10 caracteres"),
+  business_model: z.string().min(2, "Modelo de negócios deve ter pelo menos 2 caracteres"),
+  industry: z.string().min(2, "Solução para o problema deve ter pelo menos 2 caracteres"),
+  differentials: z.string().min(10, "Diferenciais da startup deve ter pelo menos 10 caracteres"),
   employee_count: z.coerce.number().int().min(1, "Número de funcionários deve ser pelo menos 1"),
-  investment_stage: z.string().min(2, "Estágio de investimento deve ter pelo menos 2 caracteres"),
-  annual_revenue: z.coerce.number().optional(),
+  sector: z.string().min(2, "Setor deve ter pelo menos 2 caracteres"),
+  city: z.string().min(2, "Cidade deve ter pelo menos 2 caracteres"),
+  state: z.string().min(2, "Estado deve ter pelo menos 2 caracteres"),
+  website: z.string().url("URL do website inválida").optional().or(z.literal("")),
   valuation: z.coerce.number().optional(),
 });
 
@@ -80,25 +81,26 @@ export const handleExternalForm = async (req: Request, res: Response) => {
     // Validar dados do formulário
     const formData = externalFormSchema.parse(req.body);
 
-    // Preparar dados para criação da startup (sem pitch_deck_id por enquanto)
+    // Preparar dados para criação da startup
     const startupData = {
       name: formData.name,
       ceo_name: formData.ceo_name,
       ceo_email: formData.ceo_email,
-      ceo_whatsapp: formData.ceo_phone, // Usando o campo de telefone como whatsapp
-      description: formData.description,
-      mrr: formData.annual_revenue || 0,
-      business_model: formData.investment_stage, // Usando estágio de investimento como modelo de negócio
-      sector: formData.industry || null,
+      ceo_whatsapp: formData.ceo_phone,
+      business_model: formData.business_model,
+      problem_solution: formData.industry, // Solução para o problema
+      differentials: formData.differentials,
+      sector: formData.sector,
       employee_count: formData.employee_count,
-      city: "Não informado", // Valores padrão para campos não presentes no formulário novo
-      state: "Não informado",
+      city: formData.city,
+      state: formData.state,
       website: formData.website || null,
-      foundation_date: formData.founding_date 
-        ? new Date(formData.founding_date).toISOString() 
-        : new Date().toISOString(),
+      foundation_date: new Date().toISOString(),
       status_id: "e74a05a6-6612-49af-95a1-f42b035d5c4d", // Cadastrada (primeiro status)
-      // pitch_deck_id será adicionado depois
+      // Campos opcionais
+      description: `Problema: ${formData.business_model} | Solução: ${formData.industry} | Diferenciais: ${formData.differentials}`,
+      mrr: 0,
+      tam: formData.valuation || null,
     };
 
     // Usar o schema do Drizzle para validar os dados
