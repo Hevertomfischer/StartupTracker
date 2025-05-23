@@ -73,78 +73,23 @@ export const uploadPitchDeck = upload.single('pitch_deck');
 // Controlador para processar o formulário externo
 export const handleExternalForm = async (req: Request, res: Response) => {
   try {
-    // Verificar se o arquivo foi enviado
-    if (!req.file) {
-      return res.status(400).json({ message: 'O Pitch Deck é obrigatório.' });
-    }
+    console.log('=== PROCESSANDO FORMULÁRIO EXTERNO ===');
+    console.log('Body recebido:', req.body);
+    console.log('Arquivo recebido:', req.file ? 'SIM' : 'NÃO');
 
-    // Debug: Ver o que está chegando no req.body
-    console.log('Dados recebidos no req.body:', req.body);
-
-    // Usar dados diretamente do req.body sem validação Zod (temporário)
-    const formData = req.body;
-
-    // Preparar dados para criação da startup com todos os campos necessários
-    const startupData = {
-      name: formData.name,
-      ceo_name: formData.ceo_name,
-      ceo_email: formData.ceo_email,
-      ceo_whatsapp: formData.ceo_phone,
-      business_model: formData.business_model,
-      problem_solution: formData.industry, // Solução para o problema
-      differentials: formData.differentials,
-      sector: formData.sector,
-      employee_count: formData.employee_count,
-      city: formData.city,
-      state: formData.state,
-      website: formData.website || null,
-      founding_date: new Date().toISOString(),
-      status_id: "e74a05a6-6612-49af-95a1-f42b035d5c4d", // Cadastrada (primeiro status)
-      // Campos obrigatórios pelo schema - preenchidos com valores padrão
-      description: `Problema: ${formData.business_model} | Solução: ${formData.industry} | Diferenciais: ${formData.differentials}`,
-      investment_stage: "Não informado",
-      mrr: 0,
-      tam: formData.valuation || null,
-    };
-
-    // Não usar validação Zod por enquanto - dados diretos
-    const parsedData = startupData;
-
-    // Criar a startup no sistema
-    const startup = await storage.createStartup(parsedData);
-
-    // Registrar no histórico de status
-    await storage.createStartupStatusHistoryEntry({
-      startup_id: startup.id,
-      status_id: startup.status_id!,
-      status_name: "Cadastrada", // Nome do status para exibição
-      start_date: new Date(),
-      end_date: null,
-    });
-
+    // Resposta de teste simples primeiro
     return res.status(201).json({
       success: true,
-      message: 'Startup cadastrada com sucesso!',
-      startupId: startup.id
+      message: 'Teste: Dados recebidos com sucesso!',
+      data: req.body,
+      file: req.file ? req.file.filename : null
     });
-  } catch (error) {
-    console.error('Erro ao processar formulário externo:', error);
-    
-    // Verificar se é um erro de validação do Zod
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        success: false,
-        message: 'Erro de validação dos dados',
-        errors: error.errors.map(e => ({
-          field: e.path.join('.'),
-          message: e.message
-        }))
-      });
-    }
 
+  } catch (error) {
+    console.error('Erro no teste:', error);
     return res.status(500).json({
       success: false,
-      message: 'Erro ao processar o cadastro da startup.'
+      message: 'Erro no teste.'
     });
   }
 };
