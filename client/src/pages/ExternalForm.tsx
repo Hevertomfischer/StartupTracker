@@ -64,26 +64,37 @@ export default function ExternalForm() {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
+      console.log("Dados do formulário antes do envio:", data);
+      
       const formData = new FormData();
       
       // Adicionar todos os campos de texto
       Object.entries(data).forEach(([key, value]) => {
         if (key !== "pitch_deck" && value !== undefined) {
+          console.log(`Adicionando campo ${key}:`, value);
           formData.append(key, String(value));
         }
       });
       
       // Adicionar pitch deck se presente
       if (data.pitch_deck && data.pitch_deck.length > 0) {
+        console.log("Adicionando arquivo pitch_deck:", data.pitch_deck[0].name);
         formData.append('pitch_deck', data.pitch_deck[0]);
+      } else {
+        console.log("ERRO: Nenhum arquivo pitch_deck encontrado!");
+        throw new Error("Por favor, selecione um arquivo para o Pitch Deck.");
       }
+
+      console.log("Enviando requisição para /api/external/startup");
 
       const response = await fetch('/api/external/startup', {
         method: 'POST',
         body: formData,
       });
 
+      console.log("Response status:", response.status);
       const result = await response.json();
+      console.log("Response data:", result);
       
       if (!response.ok) {
         throw new Error(result.message || "Erro ao cadastrar startup");
