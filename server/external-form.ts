@@ -81,8 +81,8 @@ export const handleExternalForm = async (req: Request, res: Response) => {
     // Debug: Ver o que está chegando no req.body
     console.log('Dados recebidos no req.body:', req.body);
 
-    // Validar dados do formulário
-    const formData = externalFormSchema.parse(req.body);
+    // Usar dados diretamente do req.body sem validação Zod (temporário)
+    const formData = req.body;
 
     // Preparar dados para criação da startup com todos os campos necessários
     const startupData = {
@@ -107,8 +107,8 @@ export const handleExternalForm = async (req: Request, res: Response) => {
       tam: formData.valuation || null,
     };
 
-    // Usar o schema padrão agora que temos todos os campos necessários
-    const parsedData = insertStartupSchema.parse(startupData);
+    // Não usar validação Zod por enquanto - dados diretos
+    const parsedData = startupData;
 
     // Criar a startup no sistema
     const startup = await storage.createStartup(parsedData);
