@@ -104,8 +104,16 @@ export const handleExternalForm = async (req: Request, res: Response) => {
       tam: formData.valuation || null,
     };
 
-    // Usar o schema do Drizzle para validar os dados
-    const parsedData = insertStartupSchema.parse(startupData);
+    // Criar um schema específico para o formulário externo
+    const externalStartupSchema = insertStartupSchema.extend({
+      description: z.string().optional(),
+      investment_stage: z.string().optional(),
+    }).omit({
+      // Remove campos que não temos no formulário externo
+    });
+
+    // Usar o schema específico para validar os dados
+    const parsedData = externalStartupSchema.parse(startupData);
 
     // Criar a startup no sistema
     const startup = await storage.createStartup(parsedData);
