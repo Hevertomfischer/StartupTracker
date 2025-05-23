@@ -11,6 +11,9 @@ import {
   statuses,
   type Status,
   type InsertStatus,
+  files,
+  type File,
+  type InsertFile,
   startupHistory,
   type StartupHistory,
   type InsertStartupHistory,
@@ -216,6 +219,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return deactivatedUser;
+  }
+
+  // File operations
+  async createFile(file: any): Promise<any> {
+    const [newFile] = await db.insert(files).values(file).returning();
+    return newFile;
   }
 
   // User Role operations

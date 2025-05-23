@@ -80,20 +80,8 @@ export const handleExternalForm = async (req: Request, res: Response) => {
     // Validar dados do formulário
     const formData = externalFormSchema.parse(req.body);
 
-    // Primeiro, criar o registro do arquivo na tabela de files
-    const pitchDeckId = uuidv4();
-    await storage.createFile({
-      id: pitchDeckId,
-      filename: req.file.filename,
-      original_name: req.file.originalname,
-      mimetype: req.file.mimetype,
-      size: req.file.size,
-      path: `uploads/${req.file.filename}`,
-    });
-
-    // Preparar dados para criação da startup
+    // Preparar dados para criação da startup (sem pitch_deck_id por enquanto)
     const startupData = {
-      id: uuidv4(),
       name: formData.name,
       ceo_name: formData.ceo_name,
       ceo_email: formData.ceo_email,
@@ -106,26 +94,15 @@ export const handleExternalForm = async (req: Request, res: Response) => {
       city: "Não informado", // Valores padrão para campos não presentes no formulário novo
       state: "Não informado",
       website: formData.website || null,
-      location: "Não informado",
       foundation_date: formData.founding_date 
         ? new Date(formData.founding_date).toISOString() 
         : new Date().toISOString(),
       status_id: "e74a05a6-6612-49af-95a1-f42b035d5c4d", // Cadastrada (primeiro status)
-      pitch_deck_id: pitchDeckId, // Agora usando o UUID válido
-      created_at: new Date(),
-      updated_at: new Date(),
+      // pitch_deck_id será adicionado depois
     };
 
-    // Criar um schema específico para o formulário externo que permite pitch_deck_id como UUID
-    const externalStartupSchema = insertStartupSchema.extend({
-      id: z.string().uuid(),
-      pitch_deck_id: z.string().uuid().optional(),
-      created_at: z.date(),
-      updated_at: z.date(),
-    });
-
-    // Usar o schema específico para validar os dados
-    const parsedData = externalStartupSchema.parse(startupData);
+    // Usar o schema do Drizzle para validar os dados
+    const parsedData = insertStartupSchema.parse(startupData);
 
     // Criar a startup no sistema
     const startup = await storage.createStartup(parsedData);
