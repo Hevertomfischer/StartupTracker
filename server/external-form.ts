@@ -77,19 +77,66 @@ export const handleExternalForm = async (req: Request, res: Response) => {
     console.log('Body recebido:', req.body);
     console.log('Arquivo recebido:', req.file ? 'SIM' : 'NÃO');
 
-    // Resposta de teste simples primeiro
+    // Verificar se o arquivo foi enviado
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'O Pitch Deck é obrigatório.' 
+      });
+    }
+
+    // Usar dados diretamente do req.body
+    const formData = req.body;
+
+    // Preparar dados para criação da startup
+    const startupData = {
+      name: formData.name,
+      ceo_name: formData.ceo_name,
+      ceo_email: formData.ceo_email,
+      ceo_whatsapp: formData.ceo_phone,
+      business_model: formData.business_model,
+      problem_solution: formData.industry,
+      differentials: formData.differentials,
+      sector: formData.sector,
+      employee_count: parseInt(formData.employee_count) || 1,
+      city: formData.city,
+      state: formData.state,
+      website: formData.website || null,
+      founding_date: new Date().toISOString(),
+      status_id: "e74a05a6-6612-49af-95a1-f42b035d5c4d", // Cadastrada
+      description: `Problema: ${formData.business_model} | Solução: ${formData.industry} | Diferenciais: ${formData.differentials}`,
+      investment_stage: "Não informado",
+      mrr: 0,
+      tam: parseInt(formData.valuation) || null,
+    };
+
+    console.log('Dados preparados para criação:', startupData);
+
+    // Criar a startup no sistema (sem validação Zod)
+    const startup = await storage.createStartup(startupData);
+
+    // Registrar no histórico de status
+    await storage.createStartupStatusHistoryEntry({
+      startup_id: startup.id,
+      status_id: startup.status_id!,
+      status_name: "Cadastrada",
+      start_date: new Date(),
+      end_date: null,
+    });
+
+    console.log('Startup criada com sucesso:', startup.id);
+
     return res.status(201).json({
       success: true,
-      message: 'Teste: Dados recebidos com sucesso!',
-      data: req.body,
-      file: req.file ? req.file.filename : null
+      message: 'Startup cadastrada com sucesso!',
+      startupId: startup.id
     });
 
   } catch (error) {
-    console.error('Erro no teste:', error);
+    console.error('Erro ao processar formulário externo:', error);
     return res.status(500).json({
       success: false,
-      message: 'Erro no teste.'
+      message: 'Erro ao processar o cadastro da startup.'
     });
   }
 };
