@@ -80,15 +80,15 @@ export const handleExternalForm = async (req: Request, res: Response) => {
     // Validar dados do formulário
     const formData = externalFormSchema.parse(req.body);
 
-    // Primeiro, criar o registro do arquivo na tabela de attachments
+    // Primeiro, criar o registro do arquivo na tabela de files
     const pitchDeckId = uuidv4();
-    await storage.createAttachment({
+    await storage.createFile({
       id: pitchDeckId,
       filename: req.file.filename,
       original_name: req.file.originalname,
-      mime_type: req.file.mimetype,
+      mimetype: req.file.mimetype,
       size: req.file.size,
-      created_at: new Date(),
+      path: `uploads/${req.file.filename}`,
     });
 
     // Preparar dados para criação da startup
@@ -116,8 +116,16 @@ export const handleExternalForm = async (req: Request, res: Response) => {
       updated_at: new Date(),
     };
 
-    // Usar o schema do Drizzle para validar os dados
-    const parsedData = insertStartupSchema.parse(startupData);
+    // Criar um schema específico para o formulário externo que permite pitch_deck_id como UUID
+    const externalStartupSchema = insertStartupSchema.extend({
+      id: z.string().uuid(),
+      pitch_deck_id: z.string().uuid().optional(),
+      created_at: z.date(),
+      updated_at: z.date(),
+    });
+
+    // Usar o schema específico para validar os dados
+    const parsedData = externalStartupSchema.parse(startupData);
 
     // Criar a startup no sistema
     const startup = await storage.createStartup(parsedData);

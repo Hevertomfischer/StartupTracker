@@ -94,6 +94,9 @@ export interface IStorage {
   getUserAccessiblePages(userId: string): Promise<SystemPage[]>;
   checkUserPageAccess(userId: string, pagePath: string): Promise<boolean>;
 
+  // File operations
+  createFile(file: any): Promise<any>;
+
   // Status operations
   getStatuses(): Promise<Status[]>;
   getStatus(id: string): Promise<Status | undefined>;
