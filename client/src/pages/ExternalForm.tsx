@@ -338,26 +338,28 @@ export default function ExternalForm() {
                 )}
               />
 
-              <FormItem className="space-y-2">
-                <FormLabel>Pitch Deck *</FormLabel>
-                <div>
-                  <Input 
-                    type="file" 
-                    accept=".pdf,.ppt,.pptx" 
-                    onChange={(e) => {
-                      form.setValue('pitch_deck', e.target.files);
-                    }}
-                  />
-                </div>
-                <FormDescription>
-                  Arquivos permitidos
-                </FormDescription>
-                {form.formState.errors.pitch_deck?.message && (
-                  <p className="text-sm font-medium text-destructive">
-                    {form.formState.errors.pitch_deck.message.toString()}
-                  </p>
+              <FormField
+                control={form.control}
+                name="pitch_deck"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Pitch Deck *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="file" 
+                        accept=".pdf,.ppt,.pptx" 
+                        onChange={(e) => {
+                          field.onChange(e.target.files);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Arquivos permitidos: PDF, PowerPoint
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </FormItem>
+              />
 
               <FormField
                 control={form.control}
