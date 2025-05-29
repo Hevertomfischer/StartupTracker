@@ -11,7 +11,8 @@ import {
   ShieldCheck,
   GitMerge,
   FormInput,
-  Copy
+  Copy,
+  Upload
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -54,6 +55,13 @@ export function Sidebar() {
       href: '/workflows', 
       icon: GitMerge, 
       current: window.location.pathname === '/workflows' 
+    });
+    
+    links.push({ 
+      name: 'Importar Dados', 
+      href: '/import', 
+      icon: Upload, 
+      current: window.location.pathname === '/import' 
     });
   }
 

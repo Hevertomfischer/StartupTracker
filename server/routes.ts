@@ -28,6 +28,11 @@ import {
   handleExternalForm, 
   uploadPitchDeck as externalFormUploadPitchDeck 
 } from "./external-form";
+import { 
+  uploadImportFile, 
+  processImportFile, 
+  getImportTemplate 
+} from "./import-controller";
 import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -1253,6 +1258,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rota para o formulário externo de cadastro de startups
   app.post("/api/external/startup", externalFormUploadPitchDeck, handleExternalForm);
+
+  // Rotas para importação de dados
+  
+  // Download do template de importação
+  app.get("/api/import/template", isAdmin, getImportTemplate);
+  
+  // Upload e processamento de arquivo de importação
+  app.post("/api/import/startups", isAdmin, uploadImportFile, processImportFile);
   
   // Rota para servir o script de incorporação
   app.get("/embed.js", (req: Request, res: Response) => {
