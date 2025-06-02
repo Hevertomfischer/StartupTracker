@@ -16,6 +16,7 @@ interface FileAnalysis {
   preview: any[];
   total_rows: number;
   filename: string;
+  message?: string;
 }
 
 interface ImportResult {
@@ -91,20 +92,25 @@ export default function ImportPage() {
       return;
     }
 
+    console.log('Iniciando análise do arquivo:', selectedFile.name);
     setIsAnalyzing(true);
 
     try {
       const formData = new FormData();
       formData.append('import_file', selectedFile);
 
+      console.log('Enviando requisição para /api/import/analyze');
       const response = await fetch('/api/import/analyze', {
         method: 'POST',
         body: formData,
       });
 
+      console.log('Status da resposta:', response.status);
       const result: FileAnalysis = await response.json();
+      console.log('Resultado da análise completo:', result);
 
       if (result.success) {
+        console.log('Análise bem-sucedida, definindo fileAnalysis:', result);
         setFileAnalysis(result);
         
         // Inicializar mapeamento vazio
@@ -112,6 +118,7 @@ export default function ImportPage() {
         result.headers.forEach(header => {
           initialMapping[header] = '';
         });
+        console.log('Mapeamento inicial criado:', initialMapping);
         setColumnMapping(initialMapping);
 
         toast({
@@ -119,19 +126,22 @@ export default function ImportPage() {
           description: `${result.headers.length} colunas detectadas em ${result.total_rows} linhas.`,
         });
       } else {
+        console.log('Análise falhou:', result);
         toast({
           title: "Erro na análise",
-          description: "Erro ao analisar arquivo",
+          description: result.message || "Erro ao analisar arquivo",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error('Erro na análise:', error);
       toast({
         title: "Erro na análise",
         description: "Erro interno do servidor. Tente novamente.",
         variant: "destructive",
       });
     } finally {
+      console.log('Finalizando análise, setIsAnalyzing(false)');
       setIsAnalyzing(false);
     }
   };
