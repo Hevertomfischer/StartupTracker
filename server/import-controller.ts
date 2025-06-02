@@ -180,7 +180,7 @@ function validateRow(row: Partial<StartupMapping>, index: number): { isValid: bo
 
 export const uploadImportFile = upload.single('import_file');
 
-export const processImportFile = async (req: Request, res: Response) => {
+export const analyzeImportFile = async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -227,19 +227,101 @@ export const processImportFile = async (req: Request, res: Response) => {
       });
     }
 
-    // Mapear colunas
+    // Retornar apenas as colunas detectadas e preview dos dados
     const headers = Object.keys(data[0]);
-    const columnMapping = mapColumns(headers);
+    const preview = data.slice(0, 5); // Primeiras 5 linhas para preview
     
     console.log('Colunas detectadas:', headers);
-    console.log('Mapeamento aplicado:', columnMapping);
 
-    // Processar e validar dados
+    return res.status(200).json({
+      success: true,
+      headers,
+      preview,
+      total_rows: data.length,
+      filename: file.originalname
+    });
+
+  } catch (error) {
+    console.error('Erro ao analisar arquivo:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor ao analisar o arquivo'
+    });
+  }
+};
+
+export const processImportFile = async (req: Request, res: Response) => {
+  try {
+    const { columnMapping, filename } = req.body;
+    
+    if (!columnMapping || !filename) {
+      return res.status(400).json({
+        success: false,
+        message: 'Mapeamento de colunas e nome do arquivo são obrigatórios'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nenhum arquivo foi enviado'
+      });
+    }
+
+    const file = req.file;
+    const fileExtension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
+    
+    let data: any[] = [];
+    
+    if (fileExtension === '.csv') {
+      // Processar CSV
+      const csvText = file.buffer.toString('utf-8');
+      const parseResult = Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        delimiter: ';' // Padrão brasileiro
+      });
+      
+      if (parseResult.errors.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Erro ao processar CSV',
+          errors: parseResult.errors
+        });
+      }
+      
+      data = parseResult.data;
+    } else {
+      // Processar Excel
+      const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      data = XLSX.utils.sheet_to_json(worksheet);
+    }
+
+    if (data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'O arquivo está vazio ou não contém dados válidos'
+      });
+    }
+
+    console.log('Mapeamento recebido:', columnMapping);
+
+    // Processar dados usando o mapeamento manual
     const processedData: Partial<StartupMapping>[] = [];
     const validationErrors: string[] = [];
     
     data.forEach((row, index) => {
-      const processedRow = processRow(row, columnMapping);
+      const processedRow: Partial<StartupMapping> = {};
+      
+      // Aplicar mapeamento manual
+      Object.entries(columnMapping).forEach(([fileColumn, dbField]) => {
+        if (dbField && row[fileColumn] !== undefined && row[fileColumn] !== null && row[fileColumn] !== '') {
+          processedRow[dbField as keyof StartupMapping] = String(row[fileColumn]).trim();
+        }
+      });
+      
       const validation = validateRow(processedRow, index);
       
       if (validation.isValid) {

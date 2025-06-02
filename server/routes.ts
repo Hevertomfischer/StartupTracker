@@ -30,6 +30,7 @@ import {
 } from "./external-form";
 import { 
   uploadImportFile, 
+  analyzeImportFile,
   processImportFile, 
   getImportTemplate 
 } from "./import-controller";
@@ -1264,7 +1265,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Download do template de importação
   app.get("/api/import/template", isAdmin, getImportTemplate);
   
-  // Upload e processamento de arquivo de importação
+  // Análise inicial do arquivo (retorna colunas detectadas)
+  app.post("/api/import/analyze", isAdmin, uploadImportFile, analyzeImportFile);
+  
+  // Processamento final com mapeamento de colunas
   app.post("/api/import/startups", isAdmin, uploadImportFile, processImportFile);
   
   // Rota para servir o script de incorporação
