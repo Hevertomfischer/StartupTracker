@@ -716,8 +716,44 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteStartup(id: string): Promise<boolean> {
-    const result = await db.delete(startups).where(eq(startups.id, id));
-    return result.count > 0;
+    try {
+      // Executar exclusão em transação para garantir integridade
+      await db.transaction(async (tx) => {
+        // 1. Deletar comentários de tasks relacionadas à startup
+        await tx.execute(sql`
+          DELETE FROM ${taskComments} 
+          WHERE ${taskComments.task_id} IN (
+            SELECT ${tasks.id} FROM ${tasks} WHERE ${tasks.startup_id} = ${id}
+          )
+        `);
+
+        // 2. Deletar tasks da startup
+        await tx.delete(tasks).where(eq(tasks.startup_id, id));
+
+        // 3. Deletar logs de workflow da startup
+        await tx.delete(workflowLogs).where(eq(workflowLogs.startup_id, id));
+
+        // 4. Deletar anexos/arquivos da startup
+        await tx.delete(files).where(eq(files.startup_id, id));
+
+        // 5. Deletar histórico de status da startup
+        await tx.delete(startupStatusHistory).where(eq(startupStatusHistory.startup_id, id));
+
+        // 6. Deletar histórico geral da startup
+        await tx.delete(startupHistory).where(eq(startupHistory.startup_id, id));
+
+        // 7. Deletar membros da startup
+        await tx.delete(startupMembers).where(eq(startupMembers.startup_id, id));
+
+        // 8. Finalmente, deletar a startup
+        await tx.delete(startups).where(eq(startups.id, id));
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting startup:", error);
+      throw error;
+    }
   }
 
   // Startup member operations
