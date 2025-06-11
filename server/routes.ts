@@ -1263,9 +1263,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rotas para importação de dados
 
-  // Download do template de importação
-  app.get("/api/import/template", isAdmin, getImportTemplate);
-
   // Análise inicial do arquivo (retorna colunas detectadas)
   app.post("/api/import/analyze", isAdmin, uploadImportFile, analyzeImportFile);
 

@@ -170,7 +170,7 @@ function processRowData(row: any, columnMapping: Record<string, string>, rowInde
   
   // Processar cada mapeamento
   Object.entries(columnMapping).forEach(([fileColumn, dbField]) => {
-    if (dbField && row[fileColumn] !== undefined && row[fileColumn] !== null) {
+    if (dbField && dbField !== '' && row[fileColumn] !== undefined && row[fileColumn] !== null) {
       const fieldValidation = validateField(dbField, row[fileColumn], rowIndex);
       
       // Agregar erros e warnings
@@ -481,50 +481,4 @@ export const downloadErrorReport = async (req: Request, res: Response) => {
   }
 };
 
-export const getImportTemplate = async (req: Request, res: Response) => {
-  try {
-    const templateData = [
-      {
-        'Nome da Startup': 'Exemplo Tech',
-        'Nome do CEO': 'João Silva',
-        'Email do CEO': 'joao@exemplo.com',
-        'Telefone/WhatsApp': '(11) 99999-9999',
-        'Modelo de Negócio': 'SaaS B2B',
-        'Setor': 'Tecnologia',
-        'Número de Funcionários': '10',
-        'Cidade': 'São Paulo',
-        'Estado': 'SP',
-        'Website': 'https://exemplo.com',
-        'Descrição': 'Startup focada em soluções tecnológicas',
-        'MRR (R$)': '50000',
-        'Quantidade de Clientes': '100'
-      }
-    ];
 
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(templateData);
-    
-    const columnWidths = [
-      { wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 18 },
-      { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 15 },
-      { wch: 8 }, { wch: 25 }, { wch: 30 }, { wch: 12 }, { wch: 15 }
-    ];
-    
-    worksheet['!cols'] = columnWidths;
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Template Startups');
-    
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename=template_startups.xlsx');
-    
-    return res.send(buffer);
-    
-  } catch (error) {
-    console.error('Erro ao gerar template:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Erro ao gerar template'
-    });
-  }
-};

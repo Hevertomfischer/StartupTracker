@@ -13,7 +13,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Upload, 
-  Download, 
   FileSpreadsheet, 
   AlertCircle, 
   CheckCircle, 
@@ -166,7 +165,7 @@ export default function ImportPage() {
   const validateMapping = (): boolean => {
     if (!fileAnalysis) return false;
     
-    const mappedFields = Object.values(columnMapping).filter(field => field !== '' && field !== '__not_mapped__');
+    const mappedFields = Object.values(columnMapping).filter(field => field !== '');
     const requiredFields = Object.entries(fileAnalysis.available_fields)
       .filter(([_, config]) => config.required)
       .map(([field, _]) => field);
@@ -294,36 +293,7 @@ export default function ImportPage() {
     if (fileInput) fileInput.value = '';
   };
 
-  const downloadTemplate = async () => {
-    try {
-      const response = await fetch('/api/import/template');
-      
-      if (!response.ok) {
-        throw new Error('Erro ao baixar template');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'template_startups.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast({
-        title: "Template baixado",
-        description: "Use este arquivo como modelo para importar suas startups.",
-      });
-    } catch (error) {
-      toast({
-        title: "Erro ao baixar template",
-        description: "Não foi possível baixar o arquivo de template.",
-        variant: "destructive",
-      });
-    }
-  };
+  
 
   // Indicador de progresso
   const StepIndicator = () => (
@@ -368,74 +338,54 @@ export default function ImportPage() {
 
       {/* Etapa 1: Upload de Arquivo */}
       {currentStep === 1 && (
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Download className="h-5 w-5" />
-                Template de Exemplo (Opcional)
-              </CardTitle>
-              <CardDescription>
-                Baixe um template com exemplo de formato
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={downloadTemplate} className="w-full" variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Baixar Template
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Upload de Arquivo
-              </CardTitle>
-              <CardDescription>
-                Envie seu arquivo Excel (.xlsx, .xls) ou CSV
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="file-input">Selecionar Arquivo</Label>
-                  <Input
-                    id="file-input"
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={handleFileSelect}
-                    disabled={isAnalyzing}
-                  />
-                  {selectedFile && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Arquivo: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
-                    </p>
-                  )}
-                </div>
-
-                <Button 
-                  onClick={analyzeFile} 
-                  disabled={!selectedFile || isAnalyzing}
-                  className="w-full"
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                      Analisando...
-                    </>
-                  ) : (
-                    <>
-                      <ArrowRight className="h-4 w-4 mr-2" />
-                      Próximo: Mapeamento de Colunas
-                    </>
-                  )}
-                </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Upload de Arquivo
+            </CardTitle>
+            <CardDescription>
+              Envie seu arquivo Excel (.xlsx, .xls) ou CSV com os dados das startups
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="file-input">Selecionar Arquivo</Label>
+                <Input
+                  id="file-input"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={handleFileSelect}
+                  disabled={isAnalyzing}
+                />
+                {selectedFile && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Arquivo: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+                  </p>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+
+              <Button 
+                onClick={analyzeFile} 
+                disabled={!selectedFile || isAnalyzing}
+                className="w-full"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                    Analisando...
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight className="h-4 w-4 mr-2" />
+                    Próximo: Mapeamento de Colunas
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Etapa 2: Mapeamento de Colunas */}
@@ -482,7 +432,7 @@ export default function ImportPage() {
                               <SelectValue placeholder="Selecionar campo..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="__not_mapped__">-- Não mapear --</SelectItem>
+                              <SelectItem value="">-- Não mapear --</SelectItem>
                               {Object.entries(fileAnalysis.available_fields).map(([field, config]) => (
                                 <SelectItem key={field} value={field}>
                                   <div className="flex items-center gap-2">
