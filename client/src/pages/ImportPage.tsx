@@ -128,13 +128,16 @@ export default function ImportPage() {
           initialMapping[header] = '';
         });
         
-        // Atualizar estados
+        // Primeiro definir os dados
         setFileAnalysis(result);
         setColumnMapping(initialMapping);
-        setShowMapping(true);
-        setCurrentStep(2);
-
-        console.log('Estado configurado - showMapping: true, currentStep: 2');
+        
+        // Usar requestAnimationFrame para garantir que a mudança de estado aconteça
+        requestAnimationFrame(() => {
+          setCurrentStep(2);
+          setShowMapping(true);
+          console.log('Estado configurado via requestAnimationFrame - showMapping: true, currentStep: 2');
+        });
 
         toast({
           title: "Arquivo analisado",
