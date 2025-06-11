@@ -70,12 +70,22 @@ export default function ImportPage() {
   const { toast } = useToast();
 
   // Debug log
-  console.log('ImportPage - Estado atual:', {
-    currentStep,
-    hasFile: !!selectedFile,
-    hasAnalysis: !!fileAnalysis,
-    analysisHeaders: fileAnalysis?.headers?.length || 0
-  });
+  useEffect(() => {
+    console.log('ImportPage - Estado atual:', {
+      currentStep,
+      hasFile: !!selectedFile,
+      hasAnalysis: !!fileAnalysis,
+      analysisHeaders: fileAnalysis?.headers?.length || 0
+    });
+  }, [currentStep, selectedFile, fileAnalysis]);
+
+  // Controle automático de transição para mapping
+  useEffect(() => {
+    if (fileAnalysis?.success && fileAnalysis.headers.length > 0 && currentStep === 'upload') {
+      console.log('Transição automática para mapping detectada');
+      setCurrentStep('mapping');
+    }
+  }, [fileAnalysis, currentStep]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -85,7 +95,7 @@ export default function ImportPage() {
       
       if (validExtensions.includes(fileExtension)) {
         setSelectedFile(file);
-        // Reset all states when new file is selected
+        // Reset estados relacionados ao processamento anterior
         setFileAnalysis(null);
         setColumnMapping({});
         setImportResult(null);
@@ -136,15 +146,9 @@ export default function ImportPage() {
           initialMapping[header] = '';
         });
 
-        // Atualizar estados de forma sequencial
+        // Atualizar estados sequencialmente
         setFileAnalysis(result);
         setColumnMapping(initialMapping);
-        
-        // Aguardar próximo ciclo de renderização para mudar o step
-        setTimeout(() => {
-          setCurrentStep('mapping');
-          console.log('Mudando para step mapping');
-        }, 100);
 
         toast({
           title: "Arquivo analisado com sucesso",
@@ -160,6 +164,9 @@ export default function ImportPage() {
         description: error instanceof Error ? error.message : "Erro interno do servidor",
         variant: "destructive",
       });
+      // Reset em caso de erro
+      setFileAnalysis(null);
+      setColumnMapping({});
     } finally {
       setIsAnalyzing(false);
     }
