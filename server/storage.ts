@@ -717,47 +717,42 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStartup(id: string): Promise<boolean> {
     try {
-      // Executar exclusão em transação para garantir integridade
-      await db.transaction(async (tx) => {
-        // 1. Deletar comentários de tasks relacionadas à startup
-        const relatedTasks = await tx
-          .select({ id: tasks.id })
-          .from(tasks)
-          .where(eq(tasks.startup_id, id));
-        
-        if (relatedTasks.length > 0) {
-          const taskIds = relatedTasks.map(task => task.id);
-          for (const taskId of taskIds) {
-            await tx.delete(taskComments).where(eq(taskComments.task_id, taskId));
-          }
-        }
+      console.log(`Iniciando exclusão da startup ${id}`);
+      
+      // Usar SQL direto para evitar problemas de sintaxe do ORM
+      await db.execute(sql`
+        DO $$
+        BEGIN
+          -- 1. Deletar comentários de tasks relacionadas
+          DELETE FROM task_comments 
+          WHERE task_id IN (
+            SELECT id FROM tasks WHERE startup_id = ${id}
+          );
+          
+          -- 2. Deletar tasks da startup
+          DELETE FROM tasks WHERE startup_id = ${id};
+          
+          -- 3. Deletar logs de workflow da startup
+          DELETE FROM workflow_logs WHERE startup_id = ${id};
+          
+          -- 4. Deletar arquivos da startup
+          DELETE FROM files WHERE startup_id = ${id};
+          
+          -- 5. Deletar histórico de status da startup
+          DELETE FROM startup_status_history WHERE startup_id = ${id};
+          
+          -- 6. Deletar histórico geral da startup
+          DELETE FROM startup_history WHERE startup_id = ${id};
+          
+          -- 7. Deletar membros da startup
+          DELETE FROM startup_members WHERE startup_id = ${id};
+          
+          -- 8. Finalmente, deletar a startup
+          DELETE FROM startups WHERE id = ${id};
+        END $$;
+      `);
 
-        // 2. Deletar tasks da startup
-        await tx.delete(tasks).where(eq(tasks.startup_id, id));
-
-        // 3. Deletar logs de workflow da startup
-        await tx.delete(workflowLogs).where(eq(workflowLogs.startup_id, id));
-
-        // 4. Deletar anexos/arquivos da startup
-        await tx.delete(files).where(eq(files.startup_id, id));
-
-        // 5. Deletar histórico de status da startup
-        await tx.delete(startupStatusHistory).where(eq(startupStatusHistory.startup_id, id));
-
-        // 6. Deletar histórico geral da startup
-        await tx.delete(startupHistory).where(eq(startupHistory.startup_id, id));
-
-        // 7. Deletar membros da startup
-        await tx.delete(startupMembers).where(eq(startupMembers.startup_id, id));
-
-        // 8. Finalmente, deletar a startup
-        const result = await tx.delete(startups).where(eq(startups.id, id));
-        
-        if (result.count === 0) {
-          throw new Error("Startup not found");
-        }
-      });
-
+      console.log(`Exclusão da startup ${id} concluída com sucesso`);
       return true;
     } catch (error) {
       console.error("Error deleting startup:", error);
