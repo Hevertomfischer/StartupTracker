@@ -66,11 +66,10 @@ export default function ImportPage() {
   const [fileAnalysis, setFileAnalysis] = useState<FileAnalysis | null>(null);
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
-  const [showMapping, setShowMapping] = useState(false);
   const { toast } = useToast();
 
   // Debug logs para rastrear o estado
-  console.log('ImportPage renderizado - currentStep:', currentStep, 'fileAnalysis:', !!fileAnalysis, 'showMapping:', showMapping);
+  console.log('ImportPage renderizado - currentStep:', currentStep, 'fileAnalysis:', !!fileAnalysis);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -84,7 +83,6 @@ export default function ImportPage() {
         setColumnMapping({});
         setImportResult(null);
         setCurrentStep(1);
-        setShowMapping(false);
       } else {
         toast({
           title: "Formato inválido",
@@ -132,7 +130,6 @@ export default function ImportPage() {
         setFileAnalysis(result);
         setColumnMapping(initialMapping);
         setCurrentStep(2);
-        setShowMapping(true);
         
         console.log('Estado configurado - avançando para etapa 2');
 
@@ -293,7 +290,6 @@ export default function ImportPage() {
     setColumnMapping({});
     setImportResult(null);
     setCurrentStep(1);
-    setShowMapping(false);
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
