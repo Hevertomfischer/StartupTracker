@@ -1,6 +1,5 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { flushSync } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -129,18 +128,13 @@ export default function ImportPage() {
           initialMapping[header] = '';
         });
         
-        // Usar flushSync para forçar atualização imediata
-        flushSync(() => {
-          setFileAnalysis(result);
-          setColumnMapping(initialMapping);
-        });
+        // Atualizar estado sequencialmente
+        setFileAnalysis(result);
+        setColumnMapping(initialMapping);
+        setCurrentStep(2);
+        setShowMapping(true);
         
-        flushSync(() => {
-          setCurrentStep(2);
-          setShowMapping(true);
-        });
-        
-        console.log('Estado configurado com flushSync - showMapping: true, currentStep: 2');
+        console.log('Estado configurado - avançando para etapa 2');
 
         toast({
           title: "Arquivo analisado",
@@ -449,10 +443,7 @@ export default function ImportPage() {
       )}
 
       {/* Etapa 2: Mapeamento de Colunas */}
-      {(() => {
-        console.log('Verificando condições da Etapa 2:', { currentStep, hasFileAnalysis: !!fileAnalysis, showMapping });
-        return showMapping && fileAnalysis;
-      })() && (
+      {currentStep === 2 && fileAnalysis && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
