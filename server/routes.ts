@@ -400,7 +400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       return res.status(200).json(status);
     } catch (error) {
-      console.error(`Error fetching status:`, error);
+      console.error("Error fetching status:", error);
       return res.status(500).json({ message: "Failed to fetch status" });
     }
   });
@@ -476,7 +476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       return res.status(200).json(startup);
     } catch (error) {
-      console.error(`Error fetching startup:`, error);
+      console.error("Error fetching startup:", error);
       return res.status(500).json({ message: "Failed to fetch startup" });
     }
   });
@@ -1006,7 +1006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const actions = await storage.getWorkflowActions(workflowId);
       return res.status(200).json(actions);
     } catch (error) {
-      console.error(`Error fetching workflow actions:`, error);
+      console.error("Error fetching workflow actions:", error);
       return res.status(500).json({ message: "Failed to fetch workflow actions" });
     }
   });
@@ -1062,7 +1062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const conditions = await storage.getWorkflowConditions(workflowId);
       return res.status(200).json(conditions);
     } catch (error) {
-      console.error(`Error fetching workflow conditions:`, error);
+      console.error("Error fetching workflow conditions:", error);
       return res.status(500).json({ message: "Failed to fetch workflow conditions" });
     }
   });
