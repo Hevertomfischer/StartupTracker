@@ -175,7 +175,7 @@ export default function ImportPage() {
   const validateMapping = (): boolean => {
     if (!fileAnalysis) return false;
     
-    const mappedFields = Object.values(columnMapping).filter(field => field !== '');
+    const mappedFields = Object.values(columnMapping).filter(field => field !== '' && field !== '__not_mapped__');
     const requiredFields = Object.entries(fileAnalysis.available_fields)
       .filter(([_, config]) => config.required)
       .map(([field, _]) => field);
@@ -503,7 +503,7 @@ export default function ImportPage() {
                               <SelectValue placeholder="Selecionar campo..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">-- Não mapear --</SelectItem>
+                              <SelectItem value="__not_mapped__">-- Não mapear --</SelectItem>
                               {Object.entries(fileAnalysis.available_fields).map(([field, config]) => (
                                 <SelectItem key={field} value={field}>
                                   <div className="flex items-center gap-2">
