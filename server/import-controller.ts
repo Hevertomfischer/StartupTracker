@@ -1,3 +1,4 @@
+
 import { Request, Response } from "express";
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
@@ -22,160 +23,195 @@ const upload = multer({
   }
 });
 
-// Mapeamento de colunas do arquivo para campos da startup
-interface StartupMapping {
+// Interface para resultado de validação
+interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+// Interface para resultado da importação
+interface ImportResult {
+  success: boolean;
+  message: string;
+  imported_count: number;
+  total_rows: number;
+  errors: Array<{
+    row: number;
+    field: string;
+    value: any;
+    error: string;
+  }>;
+  warnings: Array<{
+    row: number;
+    field: string;
+    value: any;
+    warning: string;
+  }>;
+}
+
+// Mapeamento de campos obrigatórios
+const REQUIRED_FIELDS = ['name', 'ceo_name', 'ceo_email'];
+
+// Campos disponíveis para mapeamento com seus tipos e validações
+const AVAILABLE_FIELDS = {
   // Campos obrigatórios
-  name?: string;
-  ceo_name?: string;
-  ceo_email?: string;
+  'name': { label: 'Nome da Startup', required: true, type: 'string' },
+  'ceo_name': { label: 'Nome do CEO', required: true, type: 'string' },
+  'ceo_email': { label: 'Email do CEO', required: true, type: 'email' },
   
   // Campos opcionais
-  ceo_whatsapp?: string;
-  business_model?: string;
-  problem_solution?: string;
-  differentials?: string;
-  sector?: string;
-  employee_count?: string;
-  city?: string;
-  state?: string;
-  website?: string;
-  investment_stage?: string;
-  mrr?: string;
-  tam?: string;
-  sam?: string;
-  som?: string;
-  description?: string;
-  
-  // Status será sempre "Cadastrada" por padrão
-}
-
-const defaultColumnMapping: Record<string, keyof StartupMapping> = {
-  // Variações para nome da startup
-  'nome': 'name',
-  'nome_startup': 'name',
-  'startup': 'name',
-  'empresa': 'name',
-  'razao_social': 'name',
-  
-  // Variações para CEO
-  'ceo': 'ceo_name',
-  'fundador': 'ceo_name',
-  'diretor': 'ceo_name',
-  'responsavel': 'ceo_name',
-  
-  // Variações para email
-  'email': 'ceo_email',
-  'email_ceo': 'ceo_email',
-  'contato': 'ceo_email',
-  
-  // Variações para telefone
-  'telefone': 'ceo_whatsapp',
-  'whatsapp': 'ceo_whatsapp',
-  'celular': 'ceo_whatsapp',
-  'phone': 'ceo_whatsapp',
-  
-  // Variações para modelo de negócio
-  'modelo_negocio': 'business_model',
-  'negocio': 'business_model',
-  'atividade': 'business_model',
-  
-  // Variações para setor
-  'setor': 'sector',
-  'segmento': 'sector',
-  'area': 'sector',
-  'industria': 'sector',
-  
-  // Variações para funcionários
-  'funcionarios': 'employee_count',
-  'colaboradores': 'employee_count',
-  'equipe': 'employee_count',
-  'team_size': 'employee_count',
-  
-  // Variações para localização
-  'cidade': 'city',
-  'municipio': 'city',
-  'estado': 'state',
-  'uf': 'state',
-  
-  // Variações para website
-  'site': 'website',
-  'url': 'website',
-  'homepage': 'website',
-  
-  // Variações para descrição
-  'descricao': 'description',
-  'sobre': 'description',
-  'resumo': 'description',
-  
-  // Variações para métricas
-  'receita': 'mrr',
-  'faturamento': 'mrr',
-  'valuation': 'tam',
-  'valor': 'tam'
+  'description': { label: 'Descrição', required: false, type: 'string' },
+  'website': { label: 'Website', required: false, type: 'url' },
+  'sector': { label: 'Setor', required: false, type: 'string' },
+  'business_model': { label: 'Modelo de Negócio', required: false, type: 'string' },
+  'category': { label: 'Categoria', required: false, type: 'string' },
+  'market': { label: 'Mercado', required: false, type: 'string' },
+  'ceo_whatsapp': { label: 'WhatsApp do CEO', required: false, type: 'string' },
+  'ceo_linkedin': { label: 'LinkedIn do CEO', required: false, type: 'url' },
+  'city': { label: 'Cidade', required: false, type: 'string' },
+  'state': { label: 'Estado', required: false, type: 'string' },
+  'mrr': { label: 'MRR (R$)', required: false, type: 'number' },
+  'client_count': { label: 'Quantidade de Clientes', required: false, type: 'number' },
+  'accumulated_revenue_current_year': { label: 'Receita Acumulada Ano Atual', required: false, type: 'number' },
+  'total_revenue_last_year': { label: 'Receita Total Ano Passado', required: false, type: 'number' },
+  'total_revenue_previous_year': { label: 'Receita Total Ano Anterior', required: false, type: 'number' },
+  'partner_count': { label: 'Quantidade de Sócios', required: false, type: 'number' },
+  'tam': { label: 'TAM (R$)', required: false, type: 'number' },
+  'sam': { label: 'SAM (R$)', required: false, type: 'number' },
+  'som': { label: 'SOM (R$)', required: false, type: 'number' },
+  'founding_date': { label: 'Data de Fundação', required: false, type: 'date' },
+  'due_date': { label: 'Data de Vencimento', required: false, type: 'date' },
+  'problem_solution': { label: 'Problema/Solução', required: false, type: 'string' },
+  'problem_solved': { label: 'Problema Resolvido', required: false, type: 'string' },
+  'differentials': { label: 'Diferenciais', required: false, type: 'string' },
+  'competitors': { label: 'Concorrentes', required: false, type: 'string' },
+  'positive_points': { label: 'Pontos Positivos', required: false, type: 'string' },
+  'attention_points': { label: 'Pontos de Atenção', required: false, type: 'string' },
+  'scangels_value_add': { label: 'Valor Agregado SCAngels', required: false, type: 'string' },
+  'no_investment_reason': { label: 'Motivo Não Investimento', required: false, type: 'string' },
+  'google_drive_link': { label: 'Link Google Drive', required: false, type: 'url' },
+  'origin_lead': { label: 'Origem Lead', required: false, type: 'string' },
+  'referred_by': { label: 'Indicado Por', required: false, type: 'string' },
+  'priority': { label: 'Prioridade', required: false, type: 'string' },
+  'observations': { label: 'Observações', required: false, type: 'string' }
 };
 
-function normalizeColumnName(columnName: string): string {
-  return columnName
-    .toLowerCase()
-    .trim()
-    .replace(/[áàâãä]/g, 'a')
-    .replace(/[éèêë]/g, 'e')
-    .replace(/[íìîï]/g, 'i')
-    .replace(/[óòôõö]/g, 'o')
-    .replace(/[úùûü]/g, 'u')
-    .replace(/[ç]/g, 'c')
-    .replace(/[^a-z0-9]/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_|_$/g, '');
+function validateField(fieldName: string, value: any, rowIndex: number): ValidationResult {
+  const result: ValidationResult = { isValid: true, errors: [], warnings: [] };
+  
+  if (!AVAILABLE_FIELDS[fieldName]) {
+    return result;
+  }
+  
+  const fieldConfig = AVAILABLE_FIELDS[fieldName];
+  
+  // Verificar se campo obrigatório está vazio
+  if (fieldConfig.required && (!value || String(value).trim() === '')) {
+    result.isValid = false;
+    result.errors.push(`Linha ${rowIndex + 2}: ${fieldConfig.label} é obrigatório`);
+    return result;
+  }
+  
+  // Se valor está vazio e não é obrigatório, não validar
+  if (!value || String(value).trim() === '') {
+    return result;
+  }
+  
+  const strValue = String(value).trim();
+  
+  // Validações por tipo
+  switch (fieldConfig.type) {
+    case 'email':
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(strValue)) {
+        result.isValid = false;
+        result.errors.push(`Linha ${rowIndex + 2}: ${fieldConfig.label} deve ser um email válido`);
+      }
+      break;
+      
+    case 'url':
+      try {
+        new URL(strValue);
+      } catch {
+        if (!strValue.startsWith('http://') && !strValue.startsWith('https://')) {
+          result.warnings.push(`Linha ${rowIndex + 2}: ${fieldConfig.label} pode não ser uma URL válida (considere adicionar http:// ou https://)`);
+        } else {
+          result.errors.push(`Linha ${rowIndex + 2}: ${fieldConfig.label} deve ser uma URL válida`);
+          result.isValid = false;
+        }
+      }
+      break;
+      
+    case 'number':
+      const numValue = parseFloat(strValue.replace(/[^\d.,\-]/g, '').replace(',', '.'));
+      if (isNaN(numValue)) {
+        result.warnings.push(`Linha ${rowIndex + 2}: ${fieldConfig.label} não é um número válido, será ignorado`);
+      }
+      break;
+      
+    case 'date':
+      const dateValue = new Date(strValue);
+      if (isNaN(dateValue.getTime())) {
+        result.warnings.push(`Linha ${rowIndex + 2}: ${fieldConfig.label} não é uma data válida, será ignorado`);
+      }
+      break;
+  }
+  
+  return result;
 }
 
-function mapColumns(headers: string[]): Record<string, keyof StartupMapping> {
-  const mapping: Record<string, keyof StartupMapping> = {};
+function processRowData(row: any, columnMapping: Record<string, string>, rowIndex: number): {
+  data: any;
+  validation: ValidationResult;
+} {
+  const processedData: any = {};
+  const validation: ValidationResult = { isValid: true, errors: [], warnings: [] };
   
-  headers.forEach(header => {
-    const normalizedHeader = normalizeColumnName(header);
-    if (defaultColumnMapping[normalizedHeader]) {
-      mapping[header] = defaultColumnMapping[normalizedHeader];
+  // Processar cada mapeamento
+  Object.entries(columnMapping).forEach(([fileColumn, dbField]) => {
+    if (dbField && row[fileColumn] !== undefined && row[fileColumn] !== null) {
+      const fieldValidation = validateField(dbField, row[fileColumn], rowIndex);
+      
+      // Agregar erros e warnings
+      validation.errors.push(...fieldValidation.errors);
+      validation.warnings.push(...fieldValidation.warnings);
+      
+      if (!fieldValidation.isValid) {
+        validation.isValid = false;
+      }
+      
+      // Processar valor se válido
+      if (fieldValidation.isValid || !AVAILABLE_FIELDS[dbField]?.required) {
+        const value = String(row[fileColumn]).trim();
+        
+        switch (AVAILABLE_FIELDS[dbField]?.type) {
+          case 'number':
+            const numValue = parseFloat(value.replace(/[^\d.,\-]/g, '').replace(',', '.'));
+            processedData[dbField] = isNaN(numValue) ? null : numValue;
+            break;
+            
+          case 'date':
+            const dateValue = new Date(value);
+            processedData[dbField] = isNaN(dateValue.getTime()) ? null : dateValue;
+            break;
+            
+          default:
+            processedData[dbField] = value;
+        }
+      }
     }
   });
   
-  return mapping;
-}
-
-function processRow(row: any, columnMapping: Record<string, keyof StartupMapping>): Partial<StartupMapping> {
-  const processedRow: Partial<StartupMapping> = {};
-  
-  Object.entries(row).forEach(([originalColumn, value]) => {
-    const mappedField = columnMapping[originalColumn];
-    if (mappedField && value !== undefined && value !== null && value !== '') {
-      processedRow[mappedField] = String(value).trim();
+  // Verificar campos obrigatórios
+  REQUIRED_FIELDS.forEach(field => {
+    if (!processedData[field] || String(processedData[field]).trim() === '') {
+      validation.isValid = false;
+      validation.errors.push(`Linha ${rowIndex + 2}: ${AVAILABLE_FIELDS[field].label} é obrigatório`);
     }
   });
   
-  return processedRow;
-}
-
-function validateRow(row: Partial<StartupMapping>, index: number): { isValid: boolean; errors: string[] } {
-  const errors: string[] = [];
-  
-  if (!row.name || row.name.trim() === '') {
-    errors.push(`Linha ${index + 2}: Nome da startup é obrigatório`);
-  }
-  
-  if (!row.ceo_name || row.ceo_name.trim() === '') {
-    errors.push(`Linha ${index + 2}: Nome do CEO é obrigatório`);
-  }
-  
-  if (!row.ceo_email || row.ceo_email.trim() === '') {
-    errors.push(`Linha ${index + 2}: Email do CEO é obrigatório`);
-  } else if (!/\S+@\S+\.\S+/.test(row.ceo_email)) {
-    errors.push(`Linha ${index + 2}: Email inválido`);
-  }
-  
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
+  return { data: processedData, validation };
 }
 
 export const uploadImportFile = upload.single('import_file');
@@ -195,12 +231,11 @@ export const analyzeImportFile = async (req: Request, res: Response) => {
     let data: any[] = [];
     
     if (fileExtension === '.csv') {
-      // Processar CSV
       const csvText = file.buffer.toString('utf-8');
       const parseResult = Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
-        delimiter: ';' // Padrão brasileiro
+        delimiter: ';'
       });
       
       if (parseResult.errors.length > 0) {
@@ -213,7 +248,6 @@ export const analyzeImportFile = async (req: Request, res: Response) => {
       
       data = parseResult.data;
     } else {
-      // Processar Excel
       const workbook = XLSX.read(file.buffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
@@ -227,9 +261,8 @@ export const analyzeImportFile = async (req: Request, res: Response) => {
       });
     }
 
-    // Retornar apenas as colunas detectadas e preview dos dados
     const headers = Object.keys(data[0]);
-    const preview = data.slice(0, 5); // Primeiras 5 linhas para preview
+    const preview = data.slice(0, 5);
     
     console.log('Colunas detectadas:', headers);
 
@@ -238,7 +271,8 @@ export const analyzeImportFile = async (req: Request, res: Response) => {
       headers,
       preview,
       total_rows: data.length,
-      filename: file.originalname
+      filename: file.originalname,
+      available_fields: AVAILABLE_FIELDS
     });
 
   } catch (error) {
@@ -274,12 +308,11 @@ export const processImportFile = async (req: Request, res: Response) => {
     let data: any[] = [];
     
     if (fileExtension === '.csv') {
-      // Processar CSV
       const csvText = file.buffer.toString('utf-8');
       const parseResult = Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
-        delimiter: ';' // Padrão brasileiro
+        delimiter: ';'
       });
       
       if (parseResult.errors.length > 0) {
@@ -292,84 +325,75 @@ export const processImportFile = async (req: Request, res: Response) => {
       
       data = parseResult.data;
     } else {
-      // Processar Excel
       const workbook = XLSX.read(file.buffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       data = XLSX.utils.sheet_to_json(worksheet);
     }
 
-    if (data.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'O arquivo está vazio ou não contém dados válidos'
-      });
-    }
+    console.log('Iniciando processamento da importação...');
 
-    console.log('Mapeamento recebido:', columnMapping);
+    const importResult: ImportResult = {
+      success: true,
+      message: '',
+      imported_count: 0,
+      total_rows: data.length,
+      errors: [],
+      warnings: []
+    };
 
-    // Processar dados usando o mapeamento manual
-    const processedData: Partial<StartupMapping>[] = [];
-    const validationErrors: string[] = [];
+    const validStartups: any[] = [];
     
-    data.forEach((row, index) => {
-      const processedRow: Partial<StartupMapping> = {};
-      
-      // Aplicar mapeamento manual
-      Object.entries(columnMapping).forEach(([fileColumn, dbField]) => {
-        if (dbField && row[fileColumn] !== undefined && row[fileColumn] !== null && row[fileColumn] !== '') {
-          processedRow[dbField as keyof StartupMapping] = String(row[fileColumn]).trim();
-        }
-      });
-      
-      const validation = validateRow(processedRow, index);
+    // Processar cada linha
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      const { data: processedData, validation } = processRowData(row, columnMapping, i);
       
       if (validation.isValid) {
-        processedData.push(processedRow);
+        // Adicionar campos padrão
+        const startupData = {
+          ...processedData,
+          status_id: "e74a05a6-6612-49af-95a1-f42b035d5c4d", // Status "Cadastrada"
+          description: processedData.description || `Startup importada: ${processedData.name}`,
+          investment_stage: processedData.investment_stage || "Não informado"
+        };
+        
+        validStartups.push(startupData);
       } else {
-        validationErrors.push(...validation.errors);
+        // Adicionar erros
+        validation.errors.forEach(error => {
+          const errorParts = error.split(': ');
+          const rowInfo = errorParts[0];
+          const fieldAndError = errorParts[1] || error;
+          
+          importResult.errors.push({
+            row: i + 2,
+            field: fieldAndError.split(' ')[0] || 'unknown',
+            value: '',
+            error: fieldAndError
+          });
+        });
       }
-    });
-
-    if (validationErrors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Erros de validação encontrados',
-        errors: validationErrors,
-        preview: data.slice(0, 5) // Primeiras 5 linhas para preview
+      
+      // Adicionar warnings
+      validation.warnings.forEach(warning => {
+        const warningParts = warning.split(': ');
+        const rowInfo = warningParts[0];
+        const fieldAndWarning = warningParts[1] || warning;
+        
+        importResult.warnings.push({
+          row: i + 2,
+          field: fieldAndWarning.split(' ')[0] || 'unknown',
+          value: '',
+          warning: fieldAndWarning
+        });
       });
     }
 
-    // Converter para formato do banco
-    const startupsToCreate = processedData.map(row => ({
-      name: row.name!,
-      ceo_name: row.ceo_name || '',
-      ceo_email: row.ceo_email || '',
-      ceo_whatsapp: row.ceo_whatsapp || null,
-      business_model: row.business_model || null,
-      problem_solution: row.problem_solution || null,
-      differentials: row.differentials || null,
-      sector: row.sector || null,
-      employee_count: row.employee_count ? parseInt(row.employee_count) : null,
-      city: row.city || null,
-      state: row.state || null,
-      website: row.website || null,
-      status_id: "e74a05a6-6612-49af-95a1-f42b035d5c4d", // Status "Cadastrada"
-      description: row.description || `Startup importada: ${row.name}`,
-      investment_stage: row.investment_stage || "Não informado",
-      mrr: row.mrr ? parseFloat(row.mrr) : 0,
-      tam: row.tam ? parseFloat(row.tam) : null,
-      sam: row.sam ? parseFloat(row.sam) : null,
-      som: row.som ? parseFloat(row.som) : null,
-    }));
-
-    // Salvar no banco de dados
-    const createdStartups = [];
-    const creationErrors = [];
-    
-    for (let i = 0; i < startupsToCreate.length; i++) {
+    // Salvar startups válidas no banco
+    for (const startupData of validStartups) {
       try {
-        const startup = await storage.createStartup(startupsToCreate[i]);
+        const startup = await storage.createStartup(startupData);
         
         // Criar entrada no histórico de status
         await storage.createStartupStatusHistoryEntry({
@@ -380,26 +404,79 @@ export const processImportFile = async (req: Request, res: Response) => {
           end_date: null,
         });
         
-        createdStartups.push(startup);
+        importResult.imported_count++;
       } catch (error) {
-        creationErrors.push(`Erro ao criar startup "${startupsToCreate[i].name}": ${error}`);
+        console.error('Erro ao criar startup:', error);
+        importResult.errors.push({
+          row: -1,
+          field: 'database',
+          value: startupData.name || 'Unknown',
+          error: `Erro ao salvar startup: ${error}`
+        });
       }
     }
 
-    return res.status(200).json({
-      success: true,
-      message: `Importação concluída! ${createdStartups.length} startups foram cadastradas.`,
-      imported_count: createdStartups.length,
-      total_rows: data.length,
-      errors: creationErrors.length > 0 ? creationErrors : undefined,
-      column_mapping: columnMapping
-    });
+    // Definir mensagem final
+    if (importResult.imported_count === data.length) {
+      importResult.message = `Importação concluída com sucesso! ${importResult.imported_count} startups foram cadastradas.`;
+    } else if (importResult.imported_count > 0) {
+      importResult.message = `Importação parcial: ${importResult.imported_count} de ${data.length} startups foram cadastradas. ${importResult.errors.length} registros com erro.`;
+    } else {
+      importResult.success = false;
+      importResult.message = `Nenhuma startup foi importada. Todos os ${data.length} registros apresentaram erro.`;
+    }
+
+    return res.status(200).json(importResult);
 
   } catch (error) {
     console.error('Erro no processamento do arquivo:', error);
     return res.status(500).json({
       success: false,
-      message: 'Erro interno do servidor ao processar o arquivo'
+      message: 'Erro interno do servidor ao processar o arquivo',
+      imported_count: 0,
+      total_rows: 0,
+      errors: [{ row: -1, field: 'system', value: '', error: error.toString() }],
+      warnings: []
+    });
+  }
+};
+
+export const downloadErrorReport = async (req: Request, res: Response) => {
+  try {
+    const { errors } = req.body;
+    
+    if (!errors || !Array.isArray(errors)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Lista de erros é obrigatória'
+      });
+    }
+
+    // Criar CSV com erros
+    const csvHeaders = ['Linha', 'Campo', 'Valor', 'Erro'];
+    const csvRows = errors.map(error => [
+      error.row,
+      error.field,
+      error.value,
+      error.error
+    ]);
+    
+    const csvContent = [
+      csvHeaders.join(';'),
+      ...csvRows.map(row => row.map(cell => `"${cell}"`).join(';'))
+    ].join('\n');
+    
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=relatorio_erros_importacao.csv');
+    res.setHeader('Content-Length', Buffer.byteLength(csvContent, 'utf8'));
+    
+    return res.send('\uFEFF' + csvContent); // BOM para UTF-8
+    
+  } catch (error) {
+    console.error('Erro ao gerar relatório:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Erro ao gerar relatório de erros'
     });
   }
 };
@@ -419,35 +496,21 @@ export const getImportTemplate = async (req: Request, res: Response) => {
         'Estado': 'SP',
         'Website': 'https://exemplo.com',
         'Descrição': 'Startup focada em soluções tecnológicas',
-        'Estágio de Investimento': 'Seed',
         'MRR (R$)': '50000',
-        'Valuation (R$)': '1000000'
+        'Quantidade de Clientes': '100'
       }
     ];
 
     const workbook = XLSX.utils.book_new();
     const worksheet = XLSX.utils.json_to_sheet(templateData);
     
-    // Configurar largura das colunas
     const columnWidths = [
-      { wch: 20 }, // Nome da Startup
-      { wch: 20 }, // Nome do CEO
-      { wch: 25 }, // Email do CEO
-      { wch: 18 }, // Telefone
-      { wch: 15 }, // Modelo de Negócio
-      { wch: 15 }, // Setor
-      { wch: 12 }, // Funcionários
-      { wch: 15 }, // Cidade
-      { wch: 8 },  // Estado
-      { wch: 25 }, // Website
-      { wch: 30 }, // Descrição
-      { wch: 18 }, // Estágio
-      { wch: 12 }, // MRR
-      { wch: 15 }  // Valuation
+      { wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 18 },
+      { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 15 },
+      { wch: 8 }, { wch: 25 }, { wch: 30 }, { wch: 12 }, { wch: 15 }
     ];
     
     worksheet['!cols'] = columnWidths;
-    
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Template Startups');
     
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });

@@ -30,9 +30,10 @@ import {
 } from "./external-form";
 import { 
   uploadImportFile, 
-  analyzeImportFile,
+  analyzeImportFile, 
   processImportFile, 
-  getImportTemplate 
+  getImportTemplate,
+  downloadErrorReport
 } from "./import-controller";
 import path from "path";
 
@@ -824,6 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const completedTask = await storage.completeTask(id);
+      ```text
       return res.status(200).json(completedTask);
     } catch (error) {
       console.error("Error completing task:", error);
@@ -983,7 +985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = req.params.id;
       console.log(`Attempting to delete workflow with ID: ${id}`);
-      
+
       const success = await storage.deleteWorkflow(id);
       console.log(`Delete workflow result: ${success}`);
 
@@ -997,7 +999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to delete workflow" });
     }
   });
-  
+
   // Workflow actions routes
   app.get("/api/workflows/:workflowId/actions", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -1009,21 +1011,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to fetch workflow actions" });
     }
   });
-  
+
   app.post("/api/workflows/:workflowId/actions", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const workflowId = req.params.workflowId;
-      
+
       console.log('Recebendo dados de ação de workflow:', JSON.stringify(req.body, null, 2));
       console.log('Schema esperado:', JSON.stringify(insertWorkflowActionSchema.shape, null, 2));
-      
+
       const data = insertWorkflowActionSchema.parse({
         ...req.body,
         workflow_id: workflowId
       });
-      
+
       console.log('Dados após parse:', JSON.stringify(data, null, 2));
-      
+
       const action = await storage.createWorkflowAction(data);
       return res.status(201).json(action);
     } catch (error) {
@@ -1037,23 +1039,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to create workflow action" });
     }
   });
-  
+
   app.delete("/api/workflows/actions/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
       const success = await storage.deleteWorkflowAction(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Workflow action not found" });
       }
-      
+
       return res.status(204).end();
     } catch (error) {
       console.error("Error deleting workflow action:", error);
       return res.status(500).json({ message: "Failed to delete workflow action" });
     }
   });
-  
+
   // Workflow conditions routes
   app.get("/api/workflows/:workflowId/conditions", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -1065,7 +1067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to fetch workflow conditions" });
     }
   });
-  
+
   app.post("/api/workflows/:workflowId/conditions", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const workflowId = req.params.workflowId;
@@ -1073,7 +1075,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         workflow_id: workflowId
       });
-      
+
       const condition = await storage.createWorkflowCondition(data);
       return res.status(201).json(condition);
     } catch (error) {
@@ -1085,49 +1087,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(500).json({ message: "Failed to create workflow condition" });
     }
   });
-  
+
   app.delete("/api/workflows/conditions/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
       const success = await storage.deleteWorkflowCondition(id);
-      
+
       if (!success) {
         return res.status(404).json({ message: "Workflow condition not found" });
       }
-      
+
       return res.status(204).end();
     } catch (error) {
       console.error("Error deleting workflow condition:", error);
       return res.status(500).json({ message: "Failed to delete workflow condition" });
     }
   });
-  
+
   // Rota para obter logs de workflow
   app.get("/api/workflow-logs", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const { workflow_id, startup_id, status, limit = "100", page = "1" } = req.query;
-      
+
       const filters: Record<string, any> = {};
-      
+
       if (workflow_id) filters.workflow_id = workflow_id as string;
       if (startup_id) filters.startup_id = startup_id as string;
       if (status) filters.status = status as string;
-      
+
       const pageSize = parseInt(limit as string);
       const currentPage = parseInt(page as string);
-      
+
       const logs = await storage.getWorkflowLogs(filters, {
         pageSize,
         page: currentPage,
       });
-      
+
       return res.status(200).json(logs);
     } catch (error) {
       console.error("Error fetching workflow logs:", error);
       return res.status(500).json({ message: "Failed to fetch workflow logs" });
     }
   });
-  
+
   // Rota para obter todos os logs de workflow com filtragem e paginação
   app.get("/api/workflow-logs", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -1139,30 +1141,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         page = "1", 
         limit = "10" 
       } = req.query;
-      
+
       // Construir filtros com base nos parâmetros da requisição
       const filters: Record<string, any> = {};
       if (status) filters.status = status;
       if (action_type) filters.action_type = action_type;
       if (workflow_id) filters.workflow_id = workflow_id;
       if (startup_id) filters.startup_id = startup_id;
-      
+
       // Configurar paginação
       const pageNum = parseInt(page as string);
       const pageSize = parseInt(limit as string);
-      
+
       const logs = await storage.getWorkflowLogs(filters, {
         page: pageNum,
         pageSize
       });
-      
+
       return res.status(200).json(logs);
     } catch (error) {
       console.error("Error fetching workflow logs:", error);
       return res.status(500).json({ message: "Failed to fetch workflow logs" });
     }
   });
-  
+
   // Rota para obter logs específicos de uma startup
   app.get("/api/startups/:id/workflow-logs", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -1173,28 +1175,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         page = "1", 
         limit = "10" 
       } = req.query;
-      
+
       // Construir filtros com base nos parâmetros da requisição
       const filters: Record<string, any> = { startup_id: id };
       if (status) filters.status = status;
       if (action_type) filters.action_type = action_type;
-      
+
       // Configurar paginação
       const pageNum = parseInt(page as string);
       const pageSize = parseInt(limit as string);
-      
+
       const logs = await storage.getWorkflowLogs(filters, {
         page: pageNum,
         pageSize
       });
-      
+
       return res.status(200).json(logs);
     } catch (error) {
       console.error("Error fetching startup workflow logs:", error);
       return res.status(500).json({ message: "Failed to fetch startup workflow logs" });
     }
   });
-  
+
   // Rota para obter logs específicos de um workflow
   app.get("/api/workflows/:id/logs", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -1205,21 +1207,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         page = "1", 
         limit = "10" 
       } = req.query;
-      
+
       // Construir filtros com base nos parâmetros da requisição
       const filters: Record<string, any> = { workflow_id: id };
       if (status) filters.status = status;
       if (action_type) filters.action_type = action_type;
-      
+
       // Configurar paginação
       const pageNum = parseInt(page as string);
       const pageSize = parseInt(limit as string);
-      
+
       const logs = await storage.getWorkflowLogs(filters, {
         page: pageNum,
         pageSize
       });
-      
+
       return res.status(200).json(logs);
     } catch (error) {
       console.error("Error fetching workflow logs:", error);
@@ -1261,16 +1263,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/external/startup", externalFormUploadPitchDeck, handleExternalForm);
 
   // Rotas para importação de dados
-  
+
   // Download do template de importação
   app.get("/api/import/template", isAdmin, getImportTemplate);
-  
+
   // Análise inicial do arquivo (retorna colunas detectadas)
   app.post("/api/import/analyze", isAdmin, uploadImportFile, analyzeImportFile);
-  
+
   // Processamento final com mapeamento de colunas
   app.post("/api/import/startups", isAdmin, uploadImportFile, processImportFile);
   
+  // Adicionar rota para download do relatório de erros
+  app.post("/api/import/error-report", isAdmin, uploadImportFile, downloadErrorReport);
+
   // Rota para servir o script de incorporação
   app.get("/embed.js", (req: Request, res: Response) => {
     const embedJsPath = path.join(process.cwd(), 'client', 'public', 'embed.js');
