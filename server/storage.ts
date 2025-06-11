@@ -726,36 +726,38 @@ export class DatabaseStorage implements IStorage {
         return false;
       }
 
-      // Usar SQL direto com a estrutura correta das tabelas
+      // Usar SQL direto com tipos explícitos para resolver erro de parâmetro
       await db.execute(sql`
         DO $$
+        DECLARE
+          startup_uuid UUID := ${id}::UUID;
         BEGIN
           -- 1. Deletar comentários de tasks relacionadas
           DELETE FROM task_comments 
           WHERE task_id IN (
-            SELECT id FROM tasks WHERE startup_id = ${id}
+            SELECT id FROM tasks WHERE startup_id = startup_uuid
           );
           
           -- 2. Deletar tasks da startup
-          DELETE FROM tasks WHERE startup_id = ${id};
+          DELETE FROM tasks WHERE startup_id = startup_uuid;
           
           -- 3. Deletar logs de workflow da startup
-          DELETE FROM workflow_logs WHERE startup_id = ${id};
+          DELETE FROM workflow_logs WHERE startup_id = startup_uuid;
           
           -- 4. Deletar anexos da startup (não os arquivos diretamente)
-          DELETE FROM startup_attachments WHERE startup_id = ${id};
+          DELETE FROM startup_attachments WHERE startup_id = startup_uuid;
           
           -- 5. Deletar histórico de status da startup
-          DELETE FROM startup_status_history WHERE startup_id = ${id};
+          DELETE FROM startup_status_history WHERE startup_id = startup_uuid;
           
           -- 6. Deletar histórico geral da startup
-          DELETE FROM startup_history WHERE startup_id = ${id};
+          DELETE FROM startup_history WHERE startup_id = startup_uuid;
           
           -- 7. Deletar membros da startup
-          DELETE FROM startup_members WHERE startup_id = ${id};
+          DELETE FROM startup_members WHERE startup_id = startup_uuid;
           
           -- 8. Finalmente, deletar a startup
-          DELETE FROM startups WHERE id = ${id};
+          DELETE FROM startups WHERE id = startup_uuid;
         END $$;
       `);
 
