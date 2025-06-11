@@ -1,0 +1,24 @@
+[vite] connecting...
+client:618 [vite] connected.
+ImportPage.tsx:73 ImportPage renderizado - currentStep: 1 fileAnalysis: false showMapping: false
+ImportPage.tsx:449 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false, showMapping: false}
+ImportPage.tsx:73 ImportPage renderizado - currentStep: 1 fileAnalysis: false showMapping: false
+ImportPage.tsx:449 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false, showMapping: false}
+ImportPage.tsx:73 ImportPage renderizado - currentStep: 1 fileAnalysis: false showMapping: false
+ImportPage.tsx:449 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false, showMapping: false}
+ImportPage.tsx:73 ImportPage renderizado - currentStep: 1 fileAnalysis: false showMapping: false
+ImportPage.tsx:449 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false, showMapping: false}
+ImportPage.tsx:73 ImportPage renderizado - currentStep: 1 fileAnalysis: false showMapping: false
+ImportPage.tsx:449 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false, showMapping: false}
+ImportPage.tsx:73 ImportPage renderizado - currentStep: 1 fileAnalysis: false showMapping: false
+ImportPage.tsx:449 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false, showMapping: false}
+ImportPage.tsx:123 Análise bem-sucedida, configurando estado para mapeamento: {success: true, headers: Array(35), preview: Array(5), total_rows: 403, filename: 'Jira_corrijido.csv', …}
+ImportPage.tsx:73 ImportPage renderizado - currentStep: 1 fileAnalysis: false showMapping: false
+ImportPage.tsx:449 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false, showMapping: false}
+ImportPage.tsx:73 ImportPage renderizado - currentStep: 1 fileAnalysis: false showMapping: false
+ImportPage.tsx:449 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false, showMapping: false}
+ImportPage.tsx:139 Estado configurado via requestAnimationFrame - showMapping: true, currentStep: 2
+ImportPage.tsx:73 ImportPage renderizado - currentStep: 1 fileAnalysis: false showMapping: false
+ImportPage.tsx:449 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false, showMapping: false}
+ImportPage.tsx:73 ImportPage renderizado - currentStep: 1 fileAnalysis: false showMapping: false
+ImportPage.tsx:449 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false, showMapping: false}

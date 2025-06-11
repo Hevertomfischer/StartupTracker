@@ -1,5 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -128,16 +129,18 @@ export default function ImportPage() {
           initialMapping[header] = '';
         });
         
-        // Primeiro definir os dados
-        setFileAnalysis(result);
-        setColumnMapping(initialMapping);
+        // Usar flushSync para forçar atualização imediata
+        flushSync(() => {
+          setFileAnalysis(result);
+          setColumnMapping(initialMapping);
+        });
         
-        // Usar requestAnimationFrame para garantir que a mudança de estado aconteça
-        requestAnimationFrame(() => {
+        flushSync(() => {
           setCurrentStep(2);
           setShowMapping(true);
-          console.log('Estado configurado via requestAnimationFrame - showMapping: true, currentStep: 2');
         });
+        
+        console.log('Estado configurado com flushSync - showMapping: true, currentStep: 2');
 
         toast({
           title: "Arquivo analisado",
@@ -296,6 +299,7 @@ export default function ImportPage() {
     setColumnMapping({});
     setImportResult(null);
     setCurrentStep(1);
+    setShowMapping(false);
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
