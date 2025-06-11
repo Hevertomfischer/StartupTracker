@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -66,10 +66,11 @@ export default function ImportPage() {
   const [fileAnalysis, setFileAnalysis] = useState<FileAnalysis | null>(null);
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [showMapping, setShowMapping] = useState(false);
   const { toast } = useToast();
 
   // Debug logs para rastrear o estado
-  console.log('ImportPage renderizado - currentStep:', currentStep, 'fileAnalysis:', !!fileAnalysis);
+  console.log('ImportPage renderizado - currentStep:', currentStep, 'fileAnalysis:', !!fileAnalysis, 'showMapping:', showMapping);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -83,6 +84,7 @@ export default function ImportPage() {
         setColumnMapping({});
         setImportResult(null);
         setCurrentStep(1);
+        setShowMapping(false);
       } else {
         toast({
           title: "Formato inválido",
@@ -126,13 +128,13 @@ export default function ImportPage() {
           initialMapping[header] = '';
         });
         
-        // Usar setTimeout para garantir que as atualizações de estado sejam aplicadas em sequência
-        setTimeout(() => {
-          setFileAnalysis(result);
-          setColumnMapping(initialMapping);
-          console.log('Alterando currentStep para 2');
-          setCurrentStep(2);
-        }, 100);
+        // Atualizar estados
+        setFileAnalysis(result);
+        setColumnMapping(initialMapping);
+        setShowMapping(true);
+        setCurrentStep(2);
+
+        console.log('Estado configurado - showMapping: true, currentStep: 2');
 
         toast({
           title: "Arquivo analisado",
@@ -441,8 +443,8 @@ export default function ImportPage() {
 
       {/* Etapa 2: Mapeamento de Colunas */}
       {(() => {
-        console.log('Verificando condições da Etapa 2:', { currentStep, hasFileAnalysis: !!fileAnalysis });
-        return currentStep === 2 && fileAnalysis;
+        console.log('Verificando condições da Etapa 2:', { currentStep, hasFileAnalysis: !!fileAnalysis, showMapping });
+        return showMapping && fileAnalysis;
       })() && (
         <Card>
           <CardHeader>
