@@ -455,21 +455,13 @@ export default function ImportPage() {
       })() && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <FileSpreadsheet className="h-5 w-5" />
-                  Mapeamento de Colunas
-                </CardTitle>
-                <CardDescription>
-                  Configure como as colunas serão mapeadas para os campos da startup
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" onClick={resetProcess}>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Recomeçar
-              </Button>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5" />
+              Mapeamento de Colunas
+            </CardTitle>
+            <CardDescription>
+              Configure como as colunas serão mapeadas para os campos da startup
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
