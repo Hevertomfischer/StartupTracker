@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -57,8 +57,10 @@ interface ImportResult {
   warnings: ImportWarning[];
 }
 
+type ImportStep = 'upload' | 'mapping' | 'processing' | 'results';
+
 export default function ImportPage() {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState<ImportStep>('upload');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -67,8 +69,13 @@ export default function ImportPage() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const { toast } = useToast();
 
-  // Debug logs para rastrear o estado
-  console.log('ImportPage renderizado - currentStep:', currentStep, 'fileAnalysis:', !!fileAnalysis);
+  // Debug log
+  console.log('ImportPage - Estado atual:', {
+    currentStep,
+    hasFile: !!selectedFile,
+    hasAnalysis: !!fileAnalysis,
+    analysisHeaders: fileAnalysis?.headers?.length || 0
+  });
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -78,10 +85,11 @@ export default function ImportPage() {
       
       if (validExtensions.includes(fileExtension)) {
         setSelectedFile(file);
+        // Reset all states when new file is selected
         setFileAnalysis(null);
         setColumnMapping({});
         setImportResult(null);
-        setCurrentStep(1);
+        setCurrentStep('upload');
       } else {
         toast({
           title: "Formato inválido",
@@ -114,40 +122,42 @@ export default function ImportPage() {
         body: formData,
       });
 
-      const result: FileAnalysis = await response.json();
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-      if (result.success) {
-        console.log('Análise bem-sucedida, configurando estado para mapeamento:', result);
-        
-        // Inicializar mapeamento vazio
+      const result: FileAnalysis = await response.json();
+      console.log('Análise recebida:', result);
+
+      if (result.success && result.headers && result.headers.length > 0) {
+        // Preparar mapeamento inicial
         const initialMapping: Record<string, string> = {};
         result.headers.forEach(header => {
           initialMapping[header] = '';
         });
-        
-        // Atualizar estado sequencialmente
+
+        // Atualizar estados de forma sequencial
         setFileAnalysis(result);
         setColumnMapping(initialMapping);
-        setCurrentStep(2);
         
-        console.log('Estado configurado - avançando para etapa 2');
+        // Aguardar próximo ciclo de renderização para mudar o step
+        setTimeout(() => {
+          setCurrentStep('mapping');
+          console.log('Mudando para step mapping');
+        }, 100);
 
         toast({
-          title: "Arquivo analisado",
+          title: "Arquivo analisado com sucesso",
           description: `${result.headers.length} colunas detectadas em ${result.total_rows} linhas.`,
         });
       } else {
-        toast({
-          title: "Erro na análise",
-          description: result.message || "Erro ao analisar arquivo",
-          variant: "destructive",
-        });
+        throw new Error(result.message || "Resultado de análise inválido");
       }
     } catch (error) {
       console.error('Erro na análise:', error);
       toast({
         title: "Erro na análise",
-        description: "Erro interno do servidor. Tente novamente.",
+        description: error instanceof Error ? error.message : "Erro interno do servidor",
         variant: "destructive",
       });
     } finally {
@@ -179,7 +189,7 @@ export default function ImportPage() {
       
       toast({
         title: "Mapeamento incompleto",
-        description: `Os campos obrigatórios não mapeados: ${missingLabels}`,
+        description: `Campos obrigatórios não mapeados: ${missingLabels}`,
         variant: "destructive",
       });
       return false;
@@ -194,7 +204,7 @@ export default function ImportPage() {
     }
 
     setIsImporting(true);
-    setCurrentStep(3);
+    setCurrentStep('processing');
 
     try {
       const formData = new FormData();
@@ -207,8 +217,13 @@ export default function ImportPage() {
         body: formData,
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const result: ImportResult = await response.json();
       setImportResult(result);
+      setCurrentStep('results');
 
       if (result.success) {
         toast({
@@ -233,6 +248,7 @@ export default function ImportPage() {
         warnings: []
       };
       setImportResult(errorResult);
+      setCurrentStep('results');
       
       toast({
         title: "Erro na importação",
@@ -288,42 +304,59 @@ export default function ImportPage() {
     setFileAnalysis(null);
     setColumnMapping({});
     setImportResult(null);
-    setCurrentStep(1);
+    setCurrentStep('upload');
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
 
-  
+  const goBackToMapping = () => {
+    setCurrentStep('mapping');
+    setImportResult(null);
+  };
 
   // Indicador de progresso
-  const StepIndicator = () => (
-    <div className="flex items-center justify-center mb-8">
-      <div className="flex items-center">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-          currentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
-        }`}>
-          1
+  const StepIndicator = () => {
+    const getStepNumber = (step: ImportStep): number => {
+      switch (step) {
+        case 'upload': return 1;
+        case 'mapping': return 2;
+        case 'processing':
+        case 'results': return 3;
+        default: return 1;
+      }
+    };
+
+    const currentStepNumber = getStepNumber(currentStep);
+
+    return (
+      <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+            currentStepNumber >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+          }`}>
+            1
+          </div>
+          <div className="mx-2 text-xs font-medium text-gray-600">Upload</div>
+          <div className={`w-12 h-0.5 ${currentStepNumber >= 2 ? 'bg-blue-500' : 'bg-gray-200'}`}></div>
+          
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+            currentStepNumber >= 2 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+          }`}>
+            2
+          </div>
+          <div className="mx-2 text-xs font-medium text-gray-600">Mapeamento</div>
+          <div className={`w-12 h-0.5 ${currentStepNumber >= 3 ? 'bg-blue-500' : 'bg-gray-200'}`}></div>
+          
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+            currentStepNumber >= 3 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
+          }`}>
+            3
+          </div>
+          <div className="mx-2 text-xs font-medium text-gray-600">Importação</div>
         </div>
-        <div className="mx-2 text-xs font-medium text-gray-600">Upload</div>
-        <div className={`w-12 h-0.5 ${currentStep >= 2 ? 'bg-blue-500' : 'bg-gray-200'}`}></div>
-        
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-          currentStep >= 2 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
-        }`}>
-          2
-        </div>
-        <div className="mx-2 text-xs font-medium text-gray-600">Mapeamento</div>
-        <div className={`w-12 h-0.5 ${currentStep >= 3 ? 'bg-blue-500' : 'bg-gray-200'}`}></div>
-        
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-          currentStep >= 3 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-600'
-        }`}>
-          3
-        </div>
-        <div className="mx-2 text-xs font-medium text-gray-600">Importação</div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="container py-6 space-y-6">
@@ -337,7 +370,7 @@ export default function ImportPage() {
       <StepIndicator />
 
       {/* Etapa 1: Upload de Arquivo */}
-      {currentStep === 1 && (
+      {currentStep === 'upload' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -374,12 +407,12 @@ export default function ImportPage() {
                 {isAnalyzing ? (
                   <>
                     <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                    Analisando...
+                    Analisando arquivo...
                   </>
                 ) : (
                   <>
                     <ArrowRight className="h-4 w-4 mr-2" />
-                    Próximo: Mapeamento de Colunas
+                    Analisar e Próximo
                   </>
                 )}
               </Button>
@@ -389,7 +422,7 @@ export default function ImportPage() {
       )}
 
       {/* Etapa 2: Mapeamento de Colunas */}
-      {currentStep === 2 && fileAnalysis && (
+      {currentStep === 'mapping' && fileAnalysis && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -397,7 +430,7 @@ export default function ImportPage() {
               Mapeamento de Colunas
             </CardTitle>
             <CardDescription>
-              Configure como as colunas serão mapeadas para os campos da startup
+              Configure como as colunas do arquivo serão mapeadas para os campos do sistema
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -460,12 +493,12 @@ export default function ImportPage() {
               </ScrollArea>
 
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setCurrentStep(1)}>
+                <Button variant="outline" onClick={() => setCurrentStep('upload')}>
                   Voltar
                 </Button>
                 <Button onClick={processImport}>
                   <ArrowRight className="h-4 w-4 mr-2" />
-                  Próximo: Importar Dados
+                  Iniciar Importação
                 </Button>
               </div>
             </div>
@@ -473,129 +506,141 @@ export default function ImportPage() {
         </Card>
       )}
 
-      {/* Etapa 3: Resultado da Importação */}
-      {currentStep === 3 && (
+      {/* Etapa 3: Processamento */}
+      {currentStep === 'processing' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isImporting ? (
-                <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
-              ) : importResult?.success ? (
+              <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+              Processando Importação
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <div className="text-lg font-medium">Importando dados...</div>
+              <div className="text-sm text-muted-foreground mt-2">
+                Por favor, aguarde enquanto processamos seu arquivo.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Etapa 4: Resultados */}
+      {currentStep === 'results' && importResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {importResult.success ? (
                 <CheckCircle className="h-5 w-5 text-green-500" />
               ) : (
                 <AlertCircle className="h-5 w-5 text-red-500" />
               )}
-              {isImporting ? 'Processando Importação...' : 'Resultado da Importação'}
+              Resultado da Importação
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {isImporting ? (
-              <div className="text-center py-8">
-                <div className="text-lg font-medium">Importando dados...</div>
-                <div className="text-sm text-muted-foreground mt-2">
-                  Por favor, aguarde enquanto processamos seu arquivo.
-                </div>
+            <div className="space-y-6">
+              <Alert variant={importResult.success ? "default" : "destructive"}>
+                <AlertDescription>{importResult.message}</AlertDescription>
+              </Alert>
+
+              {/* Estatísticas */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Total Processadas</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{importResult.total_rows}</div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-green-600">Importadas com Sucesso</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">{importResult.imported_count}</div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm text-red-600">Com Erro</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-red-600">{importResult.errors.length}</div>
+                  </CardContent>
+                </Card>
               </div>
-            ) : importResult && (
-              <div className="space-y-6">
-                <Alert variant={importResult.success ? "default" : "destructive"}>
-                  <AlertDescription>{importResult.message}</AlertDescription>
-                </Alert>
 
-                {/* Estatísticas */}
-                <div className="grid gap-4 md:grid-cols-3">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Total Processadas</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{importResult.total_rows}</div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm text-green-600">Importadas com Sucesso</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-green-600">{importResult.imported_count}</div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm text-red-600">Com Erro</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold text-red-600">{importResult.errors.length}</div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Erros */}
-                {importResult.errors.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-medium flex items-center gap-2">
-                        <AlertCircle className="h-5 w-5 text-red-500" />
-                        Erros Encontrados ({importResult.errors.length})
-                      </h3>
-                      <Button onClick={downloadErrorReport} variant="outline" size="sm">
-                        <FileDown className="h-4 w-4 mr-2" />
-                        Baixar Relatório CSV
-                      </Button>
-                    </div>
-                    
-                    <ScrollArea className="h-48 border rounded">
-                      <div className="p-4 space-y-2">
-                        {importResult.errors.slice(0, 20).map((error, index) => (
-                          <div key={index} className="text-sm p-2 bg-red-50 border border-red-200 rounded">
-                            <span className="font-medium">Linha {error.row}:</span> {error.error}
-                          </div>
-                        ))}
-                        {importResult.errors.length > 20 && (
-                          <div className="text-sm text-muted-foreground text-center py-2">
-                            ... e mais {importResult.errors.length - 20} erros. Baixe o relatório completo.
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                )}
-
-                {/* Warnings */}
-                {importResult.warnings && importResult.warnings.length > 0 && (
-                  <div className="space-y-4">
+              {/* Erros */}
+              {importResult.errors.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                      Avisos ({importResult.warnings.length})
+                      <AlertCircle className="h-5 w-5 text-red-500" />
+                      Erros Encontrados ({importResult.errors.length})
                     </h3>
-                    
-                    <ScrollArea className="h-32 border rounded">
-                      <div className="p-4 space-y-2">
-                        {importResult.warnings.slice(0, 10).map((warning, index) => (
-                          <div key={index} className="text-sm p-2 bg-yellow-50 border border-yellow-200 rounded">
-                            <span className="font-medium">Linha {warning.row}:</span> {warning.warning}
-                          </div>
-                        ))}
-                        {importResult.warnings.length > 10 && (
-                          <div className="text-sm text-muted-foreground text-center py-2">
-                            ... e mais {importResult.warnings.length - 10} avisos.
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
+                    <Button onClick={downloadErrorReport} variant="outline" size="sm">
+                      <FileDown className="h-4 w-4 mr-2" />
+                      Baixar Relatório CSV
+                    </Button>
                   </div>
-                )}
-
-                <div className="flex justify-center">
-                  <Button onClick={resetProcess}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Nova Importação
-                  </Button>
+                  
+                  <ScrollArea className="h-48 border rounded">
+                    <div className="p-4 space-y-2">
+                      {importResult.errors.slice(0, 20).map((error, index) => (
+                        <div key={index} className="text-sm p-2 bg-red-50 border border-red-200 rounded">
+                          <span className="font-medium">Linha {error.row}:</span> {error.error}
+                        </div>
+                      ))}
+                      {importResult.errors.length > 20 && (
+                        <div className="text-sm text-muted-foreground text-center py-2">
+                          ... e mais {importResult.errors.length - 20} erros. Baixe o relatório completo.
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
                 </div>
+              )}
+
+              {/* Warnings */}
+              {importResult.warnings && importResult.warnings.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                    Avisos ({importResult.warnings.length})
+                  </h3>
+                  
+                  <ScrollArea className="h-32 border rounded">
+                    <div className="p-4 space-y-2">
+                      {importResult.warnings.slice(0, 10).map((warning, index) => (
+                        <div key={index} className="text-sm p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <span className="font-medium">Linha {warning.row}:</span> {warning.warning}
+                        </div>
+                      ))}
+                      {importResult.warnings.length > 10 && (
+                        <div className="text-sm text-muted-foreground text-center py-2">
+                          ... e mais {importResult.warnings.length - 10} avisos.
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
+              <div className="flex justify-between">
+                <Button variant="outline" onClick={goBackToMapping}>
+                  Voltar ao Mapeamento
+                </Button>
+                <Button onClick={resetProcess}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Nova Importação
+                </Button>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -613,7 +658,7 @@ export default function ImportPage() {
               <h4 className="font-semibold mb-2">1. Upload do Arquivo</h4>
               <p className="text-muted-foreground">
                 Envie um arquivo Excel ou CSV com os dados das startups. 
-                Não é necessário seguir um template específico.
+                O sistema analisará automaticamente a estrutura do arquivo.
               </p>
             </div>
 
@@ -621,7 +666,7 @@ export default function ImportPage() {
               <h4 className="font-semibold mb-2">2. Mapeamento de Colunas</h4>
               <p className="text-muted-foreground">
                 Associe cada coluna do seu arquivo aos campos correspondentes no sistema.
-                Campos obrigatórios devem ser mapeados.
+                Campos obrigatórios devem ser mapeados obrigatoriamente.
               </p>
             </div>
 
@@ -629,7 +674,7 @@ export default function ImportPage() {
               <h4 className="font-semibold mb-2">3. Validação e Importação</h4>
               <p className="text-muted-foreground">
                 O sistema valida os dados e importa apenas registros válidos.
-                Erros são relatados detalhadamente.
+                Erros são relatados detalhadamente para correção.
               </p>
             </div>
           </div>
