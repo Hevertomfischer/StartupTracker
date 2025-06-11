@@ -68,6 +68,9 @@ export default function ImportPage() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const { toast } = useToast();
 
+  // Debug logs para rastrear o estado
+  console.log('ImportPage renderizado - currentStep:', currentStep, 'fileAnalysis:', !!fileAnalysis);
+
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -115,6 +118,7 @@ export default function ImportPage() {
       const result: FileAnalysis = await response.json();
 
       if (result.success) {
+        console.log('Análise bem-sucedida, configurando estado para mapeamento:', result);
         setFileAnalysis(result);
         
         // Inicializar mapeamento vazio
@@ -123,6 +127,8 @@ export default function ImportPage() {
           initialMapping[header] = '';
         });
         setColumnMapping(initialMapping);
+        
+        console.log('Alterando currentStep para 2');
         setCurrentStep(2);
 
         toast({
@@ -431,7 +437,10 @@ export default function ImportPage() {
       )}
 
       {/* Etapa 2: Mapeamento de Colunas */}
-      {currentStep === 2 && fileAnalysis && (
+      {(() => {
+        console.log('Verificando condições da Etapa 2:', { currentStep, hasFileAnalysis: !!fileAnalysis });
+        return currentStep === 2 && fileAnalysis;
+      })() && (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
