@@ -1,0 +1,22 @@
+ImportPage renderizado - currentStep: 1 fileAnalysis: false
+ImportPage.tsx:441 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false}
+ImportPage.tsx:72 ImportPage renderizado - currentStep: 1 fileAnalysis: false
+ImportPage.tsx:441 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false}
+ImportPage.tsx:72 ImportPage renderizado - currentStep: 1 fileAnalysis: false
+ImportPage.tsx:441 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false}
+ImportPage.tsx:72 ImportPage renderizado - currentStep: 1 fileAnalysis: false
+ImportPage.tsx:441 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false}
+ImportPage.tsx:72 ImportPage renderizado - currentStep: 1 fileAnalysis: false
+ImportPage.tsx:441 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false}
+ImportPage.tsx:72 ImportPage renderizado - currentStep: 1 fileAnalysis: false
+ImportPage.tsx:441 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false}
+ImportPage.tsx:121 Análise bem-sucedida, configurando estado para mapeamento: {success: true, headers: Array(35), preview: Array(5), total_rows: 403, filename: 'Jira_corrijido.csv', …}available_fields: {name: {…}, ceo_name: {…}, ceo_email: {…}, description: {…}, website: {…}, …}filename: "Jira_corrijido.csv"headers: (35) ['Diferenciais da Startup', 'Quantidade de Clientes', 'Receita Acumulada no Ano corrente', 'Receita Total do último Ano', 'Receita total do penúltimo Ano', 'TAM', 'SAM', 'SOM', 'Principais Concorrentes', 'Como a SCAngels pode agregar valor na Startup?', 'Setor', 'Modelo de Negócio', 'Quem Indicou', 'Priority', 'Origem Lead', 'Problema que Resolve', 'Como Resolve o Problema', 'Assignee', 'Status', 'Data Fundação', 'Site da Startup', 'Motivo não investimento', 'Quantidade de Sócios', 'Receita Recorrente Mensal (MRR)', 'Cidade', 'Estado', 'Linkedin CEO', 'E-mail do CEO', 'Whatsapp do CEO', 'Nome do CEO', 'Created', 'Description', 'Summary', 'Pontos Positivos', 'Pontos de Atenção']preview: (5) [{…}, {…}, {…}, {…}, {…}]success: truetotal_rows: 403[[Prototype]]: Object
+ImportPage.tsx:131 Alterando currentStep para 2
+ImportPage.tsx:72 ImportPage renderizado - currentStep: 1 fileAnalysis: false
+ImportPage.tsx:441 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false}
+ImportPage.tsx:72 ImportPage renderizado - currentStep: 1 fileAnalysis: false
+ImportPage.tsx:441 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false}
+ImportPage.tsx:72 ImportPage renderizado - currentStep: 1 fileAnalysis: false
+ImportPage.tsx:441 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false}
+ImportPage.tsx:72 ImportPage renderizado - currentStep: 1 fileAnalysis: false
+ImportPage.tsx:441 Verificando condições da Etapa 2: {currentStep: 1, hasFileAnalysis: false}

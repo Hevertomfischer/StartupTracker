@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -119,17 +119,20 @@ export default function ImportPage() {
 
       if (result.success) {
         console.log('Análise bem-sucedida, configurando estado para mapeamento:', result);
-        setFileAnalysis(result);
         
         // Inicializar mapeamento vazio
         const initialMapping: Record<string, string> = {};
         result.headers.forEach(header => {
           initialMapping[header] = '';
         });
-        setColumnMapping(initialMapping);
         
-        console.log('Alterando currentStep para 2');
-        setCurrentStep(2);
+        // Usar setTimeout para garantir que as atualizações de estado sejam aplicadas em sequência
+        setTimeout(() => {
+          setFileAnalysis(result);
+          setColumnMapping(initialMapping);
+          console.log('Alterando currentStep para 2');
+          setCurrentStep(2);
+        }, 100);
 
         toast({
           title: "Arquivo analisado",
