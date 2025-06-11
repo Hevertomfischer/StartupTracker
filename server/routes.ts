@@ -825,7 +825,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const completedTask = await storage.completeTask(id);
-      ```text
       return res.status(200).json(completedTask);
     } catch (error) {
       console.error("Error completing task:", error);
@@ -984,10 +983,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/workflows/:id", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const id = req.params.id;
-      console.log(`Attempting to delete workflow with ID: ${id}`);
+      console.log("Attempting to delete workflow with ID:", id);
 
       const success = await storage.deleteWorkflow(id);
-      console.log(`Delete workflow result: ${success}`);
+      console.log("Delete workflow result:", success);
 
       if (!success) {
         return res.status(404).json({ message: "Workflow not found" });
