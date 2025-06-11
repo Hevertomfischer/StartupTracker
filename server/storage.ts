@@ -720,12 +720,17 @@ export class DatabaseStorage implements IStorage {
       // Executar exclusão em transação para garantir integridade
       await db.transaction(async (tx) => {
         // 1. Deletar comentários de tasks relacionadas à startup
-        await tx.execute(sql`
-          DELETE FROM ${taskComments} 
-          WHERE ${taskComments.task_id} IN (
-            SELECT ${tasks.id} FROM ${tasks} WHERE ${tasks.startup_id} = ${id}
-          )
-        `);
+        const relatedTasks = await tx
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(eq(tasks.startup_id, id));
+        
+        if (relatedTasks.length > 0) {
+          const taskIds = relatedTasks.map(task => task.id);
+          for (const taskId of taskIds) {
+            await tx.delete(taskComments).where(eq(taskComments.task_id, taskId));
+          }
+        }
 
         // 2. Deletar tasks da startup
         await tx.delete(tasks).where(eq(tasks.startup_id, id));
@@ -746,7 +751,11 @@ export class DatabaseStorage implements IStorage {
         await tx.delete(startupMembers).where(eq(startupMembers.startup_id, id));
 
         // 8. Finalmente, deletar a startup
-        await tx.delete(startups).where(eq(startups.id, id));
+        const result = await tx.delete(startups).where(eq(startups.id, id));
+        
+        if (result.count === 0) {
+          throw new Error("Startup not found");
+        }
       });
 
       return true;
