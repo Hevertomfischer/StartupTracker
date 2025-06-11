@@ -719,7 +719,14 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log(`Iniciando exclusão da startup ${id}`);
       
-      // Usar SQL direto para evitar problemas de sintaxe do ORM
+      // Verificar se a startup existe primeiro
+      const startup = await db.select().from(startups).where(eq(startups.id, id));
+      if (startup.length === 0) {
+        console.log(`Startup ${id} não encontrada`);
+        return false;
+      }
+
+      // Usar SQL direto com a estrutura correta das tabelas
       await db.execute(sql`
         DO $$
         BEGIN
@@ -735,8 +742,8 @@ export class DatabaseStorage implements IStorage {
           -- 3. Deletar logs de workflow da startup
           DELETE FROM workflow_logs WHERE startup_id = ${id};
           
-          -- 4. Deletar arquivos da startup
-          DELETE FROM files WHERE startup_id = ${id};
+          -- 4. Deletar anexos da startup (não os arquivos diretamente)
+          DELETE FROM startup_attachments WHERE startup_id = ${id};
           
           -- 5. Deletar histórico de status da startup
           DELETE FROM startup_status_history WHERE startup_id = ${id};
