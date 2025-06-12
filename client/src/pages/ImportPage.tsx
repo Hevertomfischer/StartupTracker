@@ -81,11 +81,11 @@ export default function ImportPage() {
 
   // Controle automático de transição para mapping
   useEffect(() => {
-    if (fileAnalysis?.success && fileAnalysis.headers.length > 0 && currentStep === 'upload') {
-      console.log('Transição automática para mapping detectada');
+    if (fileAnalysis?.success && fileAnalysis.headers && fileAnalysis.headers.length > 0 && currentStep === 'upload') {
+      console.log('Transição automática para mapping detectada - mudando step');
       setCurrentStep('mapping');
     }
-  }, [fileAnalysis, currentStep]);
+  }, [fileAnalysis]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -147,6 +147,7 @@ export default function ImportPage() {
         });
 
         // Atualizar estados sequencialmente
+        console.log('Definindo fileAnalysis:', result);
         setFileAnalysis(result);
         setColumnMapping(initialMapping);
 
