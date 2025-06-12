@@ -87,13 +87,11 @@ export default function ImportPage() {
     if (fileAnalysis?.success && 
         fileAnalysis.headers && 
         fileAnalysis.headers.length > 0 && 
-        currentStep === 'upload' &&
-        Object.keys(columnMapping).length === 0) {
+        currentStep === 'upload') {
       
       console.log('=== Detectada análise completa, iniciando transição ===', {
         headers: fileAnalysis.headers.length,
-        currentStep,
-        mappingEmpty: Object.keys(columnMapping).length === 0
+        currentStep
       });
 
       // Preparar mapeamento inicial
@@ -113,7 +111,7 @@ export default function ImportPage() {
         description: `${fileAnalysis.headers.length} colunas detectadas em ${fileAnalysis.total_rows} linhas.`,
       });
     }
-  }, [fileAnalysis, currentStep, columnMapping, toast]);
+  }, [fileAnalysis, currentStep, toast]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
