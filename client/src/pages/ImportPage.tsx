@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -69,23 +69,47 @@ export default function ImportPage() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const { toast } = useToast();
 
-  // Debug log
+  // Debug log melhorado
   useEffect(() => {
-    console.log('ImportPage - Estado atual:', {
+    console.log('=== ImportPage Estado Debug ===', {
       currentStep,
       hasFile: !!selectedFile,
+      fileName: selectedFile?.name,
       hasAnalysis: !!fileAnalysis,
-      analysisHeaders: fileAnalysis?.headers?.length || 0
+      analysisSuccess: fileAnalysis?.success,
+      analysisHeaders: fileAnalysis?.headers?.length || 0,
+      timestamp: new Date().toISOString()
     });
   }, [currentStep, selectedFile, fileAnalysis]);
 
-  // Controle automático de transição para mapping
-  useEffect(() => {
-    if (fileAnalysis?.success && fileAnalysis.headers && fileAnalysis.headers.length > 0 && currentStep === 'upload') {
-      console.log('Transição automática para mapping detectada - mudando step');
-      setCurrentStep('mapping');
+  // Transição automática para mapping usando useCallback para evitar dependências circulares
+  const handleAnalysisComplete = useCallback((analysis: FileAnalysis) => {
+    console.log('=== Processando análise completa ===', analysis);
+    
+    if (analysis?.success && analysis.headers && analysis.headers.length > 0) {
+      // Preparar mapeamento inicial
+      const initialMapping: Record<string, string> = {};
+      analysis.headers.forEach(header => {
+        initialMapping[header] = '';
+      });
+
+      // Atualizar estados em sequência controlada
+      console.log('Definindo estados: analysis e mapping');
+      setFileAnalysis(analysis);
+      setColumnMapping(initialMapping);
+      
+      // Forçar transição para mapping após próxima renderização
+      setTimeout(() => {
+        console.log('Executando transição para mapping');
+        setCurrentStep('mapping');
+      }, 50);
+
+      toast({
+        title: "Arquivo analisado com sucesso",
+        description: `${analysis.headers.length} colunas detectadas em ${analysis.total_rows} linhas.`,
+      });
     }
-  }, [fileAnalysis]);
+  }, [toast]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -94,6 +118,7 @@ export default function ImportPage() {
       const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
       
       if (validExtensions.includes(fileExtension)) {
+        console.log('Arquivo selecionado:', file.name);
         setSelectedFile(file);
         // Reset estados relacionados ao processamento anterior
         setFileAnalysis(null);
@@ -121,12 +146,14 @@ export default function ImportPage() {
       return;
     }
 
+    console.log('Iniciando análise do arquivo:', selectedFile.name);
     setIsAnalyzing(true);
 
     try {
       const formData = new FormData();
       formData.append('import_file', selectedFile);
 
+      console.log('Enviando requisição para /api/import/analyze');
       const response = await fetch('/api/import/analyze', {
         method: 'POST',
         body: formData,
@@ -137,24 +164,11 @@ export default function ImportPage() {
       }
 
       const result: FileAnalysis = await response.json();
-      console.log('Análise recebida:', result);
+      console.log('Análise recebida do servidor:', result);
 
       if (result.success && result.headers && result.headers.length > 0) {
-        // Preparar mapeamento inicial
-        const initialMapping: Record<string, string> = {};
-        result.headers.forEach(header => {
-          initialMapping[header] = '';
-        });
-
-        // Atualizar estados sequencialmente
-        console.log('Definindo fileAnalysis:', result);
-        setFileAnalysis(result);
-        setColumnMapping(initialMapping);
-
-        toast({
-          title: "Arquivo analisado com sucesso",
-          description: `${result.headers.length} colunas detectadas em ${result.total_rows} linhas.`,
-        });
+        // Usar callback para processar análise
+        handleAnalysisComplete(result);
       } else {
         throw new Error(result.message || "Resultado de análise inválido");
       }
@@ -308,6 +322,7 @@ export default function ImportPage() {
   };
 
   const resetProcess = () => {
+    console.log('Resetando processo de importação');
     setSelectedFile(null);
     setFileAnalysis(null);
     setColumnMapping({});
@@ -376,6 +391,17 @@ export default function ImportPage() {
       </div>
 
       <StepIndicator />
+
+      {/* Debug Info */}
+      <Card className="border-yellow-200 bg-yellow-50">
+        <CardContent className="p-4">
+          <div className="text-sm">
+            <strong>Debug:</strong> Step={currentStep}, File={selectedFile?.name || 'null'}, 
+            Analysis={fileAnalysis ? 'present' : 'null'}, 
+            Headers={fileAnalysis?.headers?.length || 0}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Etapa 1: Upload de Arquivo */}
       {currentStep === 'upload' && (
