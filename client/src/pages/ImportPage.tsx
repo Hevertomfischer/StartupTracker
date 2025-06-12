@@ -82,34 +82,38 @@ export default function ImportPage() {
     });
   }, [currentStep, selectedFile, fileAnalysis]);
 
-  // Transição automática para mapping usando useCallback para evitar dependências circulares
-  const handleAnalysisComplete = useCallback((analysis: FileAnalysis) => {
-    console.log('=== Processando análise completa ===', analysis);
-    
-    if (analysis?.success && analysis.headers && analysis.headers.length > 0) {
+  // Efeito para detectar quando a análise está completa e fazer transição automática
+  useEffect(() => {
+    if (fileAnalysis?.success && 
+        fileAnalysis.headers && 
+        fileAnalysis.headers.length > 0 && 
+        currentStep === 'upload' &&
+        Object.keys(columnMapping).length === 0) {
+      
+      console.log('=== Detectada análise completa, iniciando transição ===', {
+        headers: fileAnalysis.headers.length,
+        currentStep,
+        mappingEmpty: Object.keys(columnMapping).length === 0
+      });
+
       // Preparar mapeamento inicial
       const initialMapping: Record<string, string> = {};
-      analysis.headers.forEach(header => {
+      fileAnalysis.headers.forEach(header => {
         initialMapping[header] = '';
       });
 
-      // Atualizar estados em sequência controlada
-      console.log('Definindo estados: analysis e mapping');
-      setFileAnalysis(analysis);
+      // Definir mapeamento primeiro
       setColumnMapping(initialMapping);
       
-      // Forçar transição para mapping após próxima renderização
-      setTimeout(() => {
-        console.log('Executando transição para mapping');
-        setCurrentStep('mapping');
-      }, 50);
+      // Mudar para mapping imediatamente
+      setCurrentStep('mapping');
 
       toast({
         title: "Arquivo analisado com sucesso",
-        description: `${analysis.headers.length} colunas detectadas em ${analysis.total_rows} linhas.`,
+        description: `${fileAnalysis.headers.length} colunas detectadas em ${fileAnalysis.total_rows} linhas.`,
       });
     }
-  }, [toast]);
+  }, [fileAnalysis, currentStep, columnMapping, toast]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -167,8 +171,8 @@ export default function ImportPage() {
       console.log('Análise recebida do servidor:', result);
 
       if (result.success && result.headers && result.headers.length > 0) {
-        // Usar callback para processar análise
-        handleAnalysisComplete(result);
+        console.log('=== Definindo análise do arquivo ===', result);
+        setFileAnalysis(result);
       } else {
         throw new Error(result.message || "Resultado de análise inválido");
       }
@@ -322,12 +326,12 @@ export default function ImportPage() {
   };
 
   const resetProcess = () => {
-    console.log('Resetando processo de importação');
+    console.log('=== Resetando processo de importação ===');
+    setCurrentStep('upload');
     setSelectedFile(null);
     setFileAnalysis(null);
     setColumnMapping({});
     setImportResult(null);
-    setCurrentStep('upload');
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
