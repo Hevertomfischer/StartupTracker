@@ -169,7 +169,9 @@ function processRowData(row: any, columnMapping: Record<string, string>, rowInde
   const validation: ValidationResult = { isValid: true, errors: [], warnings: [] };
   
   // Processar cada mapeamento
+  console.log(`Processando mapeamento para linha ${rowIndex + 1}:`, columnMapping);
   Object.entries(columnMapping).forEach(([fileColumn, dbField]) => {
+    console.log(`Mapeamento: ${fileColumn} -> ${dbField}, Valor: "${row[fileColumn]}"`);
     if (dbField && dbField !== '' && row[fileColumn] !== undefined && row[fileColumn] !== null) {
       const fieldValidation = validateField(dbField, row[fileColumn], rowIndex);
       
@@ -286,9 +288,20 @@ export const analyzeImportFile = async (req: Request, res: Response) => {
 
 export const processImportFile = async (req: Request, res: Response) => {
   try {
-    const { columnMapping, filename } = req.body;
+    let columnMapping;
+    try {
+      columnMapping = JSON.parse(req.body.columnMapping || '{}');
+    } catch (e) {
+      columnMapping = req.body.columnMapping || {};
+    }
     
-    if (!columnMapping || !filename) {
+    const filename = req.body.filename;
+    
+    console.log('Column mapping raw:', req.body.columnMapping);
+    console.log('Column mapping parsed:', columnMapping);
+    console.log('Filename:', filename);
+    
+    if (!columnMapping || Object.keys(columnMapping).length === 0 || !filename) {
       return res.status(400).json({
         success: false,
         message: 'Mapeamento de colunas e nome do arquivo são obrigatórios'
@@ -334,6 +347,7 @@ export const processImportFile = async (req: Request, res: Response) => {
     console.log('Iniciando processamento da importação...');
     console.log('Column Mapping recebido:', columnMapping);
     console.log('Primeiras 2 linhas dos dados:', data.slice(0, 2));
+    console.log('Colunas detectadas no arquivo:', Object.keys(data[0] || {}));
 
     const importResult: ImportResult = {
       success: true,
