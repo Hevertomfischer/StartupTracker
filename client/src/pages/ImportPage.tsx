@@ -124,8 +124,9 @@ export default function ImportPage() {
   }, [state.selectedFile, updateState, toast]);
 
   const updateColumnMapping = useCallback((fileColumn: string, dbField: string) => {
+    const mappedField = dbField === '__none__' ? '' : dbField;
     updateState({
-      columnMapping: { ...state.columnMapping, [fileColumn]: dbField }
+      columnMapping: { ...state.columnMapping, [fileColumn]: mappedField }
     });
   }, [state.columnMapping, updateState]);
 
@@ -427,14 +428,14 @@ export default function ImportPage() {
                         <TableCell className="font-medium">{header}</TableCell>
                         <TableCell>
                           <Select
-                            value={state.columnMapping[header] || ''}
+                            value={state.columnMapping[header] || '__none__'}
                             onValueChange={(value) => updateColumnMapping(header, value)}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecionar campo..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">-- Não mapear --</SelectItem>
+                              <SelectItem value="__none__">-- Não mapear --</SelectItem>
                               {Object.entries(state.fileAnalysis.available_fields).map(([field, config]: [string, any]) => (
                                 <SelectItem key={field} value={field}>
                                   <div className="flex items-center gap-2">
