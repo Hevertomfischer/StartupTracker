@@ -332,6 +332,8 @@ export const processImportFile = async (req: Request, res: Response) => {
     }
 
     console.log('Iniciando processamento da importação...');
+    console.log('Column Mapping recebido:', columnMapping);
+    console.log('Primeiras 2 linhas dos dados:', data.slice(0, 2));
 
     const importResult: ImportResult = {
       success: true,
@@ -347,7 +349,10 @@ export const processImportFile = async (req: Request, res: Response) => {
     // Processar cada linha
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
+      console.log(`Processando linha ${i + 1}:`, row);
       const { data: processedData, validation } = processRowData(row, columnMapping, i);
+      console.log(`Dados processados linha ${i + 1}:`, processedData);
+      console.log(`Validação linha ${i + 1}:`, validation);
       
       if (validation.isValid) {
         // Adicionar campos padrão
