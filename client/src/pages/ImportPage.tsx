@@ -82,36 +82,7 @@ export default function ImportPage() {
     });
   }, [currentStep, selectedFile, fileAnalysis]);
 
-  // Efeito para detectar quando a análise está completa e fazer transição automática
-  useEffect(() => {
-    if (fileAnalysis?.success && 
-        fileAnalysis.headers && 
-        fileAnalysis.headers.length > 0 && 
-        currentStep === 'upload') {
-      
-      console.log('=== Detectada análise completa, iniciando transição ===', {
-        headers: fileAnalysis.headers.length,
-        currentStep
-      });
 
-      // Preparar mapeamento inicial
-      const initialMapping: Record<string, string> = {};
-      fileAnalysis.headers.forEach(header => {
-        initialMapping[header] = '';
-      });
-
-      // Definir mapeamento primeiro
-      setColumnMapping(initialMapping);
-      
-      // Mudar para mapping imediatamente
-      setCurrentStep('mapping');
-
-      toast({
-        title: "Arquivo analisado com sucesso",
-        description: `${fileAnalysis.headers.length} colunas detectadas em ${fileAnalysis.total_rows} linhas.`,
-      });
-    }
-  }, [fileAnalysis, currentStep, toast]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -170,7 +141,22 @@ export default function ImportPage() {
 
       if (result.success && result.headers && result.headers.length > 0) {
         console.log('=== Definindo análise do arquivo ===', result);
+        
+        // Preparar mapeamento inicial
+        const initialMapping: Record<string, string> = {};
+        result.headers.forEach(header => {
+          initialMapping[header] = '';
+        });
+
+        // Definir todos os estados de uma vez para evitar race conditions
         setFileAnalysis(result);
+        setColumnMapping(initialMapping);
+        setCurrentStep('mapping');
+
+        toast({
+          title: "Arquivo analisado com sucesso",
+          description: `${result.headers.length} colunas detectadas em ${result.total_rows} linhas.`,
+        });
       } else {
         throw new Error(result.message || "Resultado de análise inválido");
       }
