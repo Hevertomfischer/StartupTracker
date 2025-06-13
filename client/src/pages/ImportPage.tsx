@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -59,32 +58,61 @@ interface ImportResult {
 
 type ImportStep = 'upload' | 'mapping' | 'processing' | 'results';
 
+interface ImportState {
+  currentStep: ImportStep;
+  selectedFile: File | null;
+  isAnalyzing: boolean;
+  isImporting: boolean;
+  fileAnalysis: FileAnalysis | null;
+  columnMapping: Record<string, string>;
+  importResult: ImportResult | null;
+}
+
 export default function ImportPage() {
-  const [currentStep, setCurrentStep] = useState<ImportStep>('upload');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
-  const [fileAnalysis, setFileAnalysis] = useState<FileAnalysis | null>(null);
-  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const componentId = useRef(Math.random().toString(36).substr(2, 9));
+  const [state, setState] = useState<ImportState>({
+    currentStep: 'upload',
+    selectedFile: null,
+    isAnalyzing: false,
+    isImporting: false,
+    fileAnalysis: null,
+    columnMapping: {},
+    importResult: null,
+  });
+
   const { toast } = useToast();
 
-  // Debug log melhorado
+  // Comprehensive debugging
   useEffect(() => {
-    console.log('=== ImportPage Estado Debug ===', {
-      currentStep,
-      hasFile: !!selectedFile,
-      fileName: selectedFile?.name,
-      hasAnalysis: !!fileAnalysis,
-      analysisSuccess: fileAnalysis?.success,
-      analysisHeaders: fileAnalysis?.headers?.length || 0,
+    console.log(`=== ImportPage ${componentId.current} - Component Mounted ===`);
+    return () => {
+      console.log(`=== ImportPage ${componentId.current} - Component Unmounted ===`);
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log(`=== ImportPage ${componentId.current} - State Change ===`, {
+      currentStep: state.currentStep,
+      hasFile: !!state.selectedFile,
+      fileName: state.selectedFile?.name,
+      hasAnalysis: !!state.fileAnalysis,
+      analysisSuccess: state.fileAnalysis?.success,
+      analysisHeaders: state.fileAnalysis?.headers?.length || 0,
+      mappingCount: Object.keys(state.columnMapping).length,
       timestamp: new Date().toISOString()
     });
-  }, [currentStep, selectedFile, fileAnalysis]);
+  }, [state]);
 
+  const updateState = useCallback((updates: Partial<ImportState>) => {
+    console.log(`=== ImportPage ${componentId.current} - State Update ===`, updates);
+    setState(prev => {
+      const newState = { ...prev, ...updates };
+      console.log(`=== ImportPage ${componentId.current} - New State ===`, newState);
+      return newState;
+    });
+  }, []);
 
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const validExtensions = ['.xlsx', '.xls', '.csv'];
@@ -92,12 +120,13 @@ export default function ImportPage() {
       
       if (validExtensions.includes(fileExtension)) {
         console.log('Arquivo selecionado:', file.name);
-        setSelectedFile(file);
-        // Reset estados relacionados ao processamento anterior
-        setFileAnalysis(null);
-        setColumnMapping({});
-        setImportResult(null);
-        setCurrentStep('upload');
+        updateState({
+          selectedFile: file,
+          fileAnalysis: null,
+          columnMapping: {},
+          importResult: null,
+          currentStep: 'upload'
+        });
       } else {
         toast({
           title: "Formato inválido",
@@ -107,10 +136,10 @@ export default function ImportPage() {
         event.target.value = '';
       }
     }
-  };
+  }, [updateState, toast]);
 
-  const analyzeFile = async () => {
-    if (!selectedFile) {
+  const analyzeFile = useCallback(async () => {
+    if (!state.selectedFile) {
       toast({
         title: "Nenhum arquivo selecionado",
         description: "Por favor, selecione um arquivo antes de analisar.",
@@ -119,12 +148,12 @@ export default function ImportPage() {
       return;
     }
 
-    console.log('Iniciando análise do arquivo:', selectedFile.name);
-    setIsAnalyzing(true);
+    console.log('Iniciando análise do arquivo:', state.selectedFile.name);
+    updateState({ isAnalyzing: true });
 
     try {
       const formData = new FormData();
-      formData.append('import_file', selectedFile);
+      formData.append('import_file', state.selectedFile);
 
       console.log('Enviando requisição para /api/import/analyze');
       const response = await fetch('/api/import/analyze', {
@@ -148,10 +177,13 @@ export default function ImportPage() {
           initialMapping[header] = '';
         });
 
-        // Definir todos os estados de uma vez para evitar race conditions
-        setFileAnalysis(result);
-        setColumnMapping(initialMapping);
-        setCurrentStep('mapping');
+        // Atualizar todos os estados de uma vez
+        updateState({
+          fileAnalysis: result,
+          columnMapping: initialMapping,
+          currentStep: 'mapping',
+          isAnalyzing: false
+        });
 
         toast({
           title: "Arquivo analisado com sucesso",
@@ -167,26 +199,25 @@ export default function ImportPage() {
         description: error instanceof Error ? error.message : "Erro interno do servidor",
         variant: "destructive",
       });
-      // Reset em caso de erro
-      setFileAnalysis(null);
-      setColumnMapping({});
-    } finally {
-      setIsAnalyzing(false);
+      updateState({
+        fileAnalysis: null,
+        columnMapping: {},
+        isAnalyzing: false
+      });
     }
-  };
+  }, [state.selectedFile, updateState, toast]);
 
-  const updateColumnMapping = (fileColumn: string, dbField: string) => {
-    setColumnMapping(prev => ({
-      ...prev,
-      [fileColumn]: dbField
-    }));
-  };
+  const updateColumnMapping = useCallback((fileColumn: string, dbField: string) => {
+    updateState({
+      columnMapping: { ...state.columnMapping, [fileColumn]: dbField }
+    });
+  }, [state.columnMapping, updateState]);
 
-  const validateMapping = (): boolean => {
-    if (!fileAnalysis) return false;
+  const validateMapping = useCallback((): boolean => {
+    if (!state.fileAnalysis) return false;
     
-    const mappedFields = Object.values(columnMapping).filter(field => field !== '');
-    const requiredFields = Object.entries(fileAnalysis.available_fields)
+    const mappedFields = Object.values(state.columnMapping).filter(field => field !== '');
+    const requiredFields = Object.entries(state.fileAnalysis.available_fields)
       .filter(([_, config]) => config.required)
       .map(([field, _]) => field);
     
@@ -194,7 +225,7 @@ export default function ImportPage() {
     
     if (missingRequired.length > 0) {
       const missingLabels = missingRequired.map(field => 
-        fileAnalysis.available_fields[field]?.label || field
+        state.fileAnalysis!.available_fields[field]?.label || field
       ).join(', ');
       
       toast({
@@ -206,21 +237,20 @@ export default function ImportPage() {
     }
 
     return true;
-  };
+  }, [state.fileAnalysis, state.columnMapping, toast]);
 
-  const processImport = async () => {
-    if (!selectedFile || !fileAnalysis || !validateMapping()) {
+  const processImport = useCallback(async () => {
+    if (!state.selectedFile || !state.fileAnalysis || !validateMapping()) {
       return;
     }
 
-    setIsImporting(true);
-    setCurrentStep('processing');
+    updateState({ isImporting: true, currentStep: 'processing' });
 
     try {
       const formData = new FormData();
-      formData.append('import_file', selectedFile);
-      formData.append('columnMapping', JSON.stringify(columnMapping));
-      formData.append('filename', fileAnalysis.filename);
+      formData.append('import_file', state.selectedFile);
+      formData.append('columnMapping', JSON.stringify(state.columnMapping));
+      formData.append('filename', state.fileAnalysis.filename);
 
       const response = await fetch('/api/import/startups', {
         method: 'POST',
@@ -232,8 +262,12 @@ export default function ImportPage() {
       }
 
       const result: ImportResult = await response.json();
-      setImportResult(result);
-      setCurrentStep('results');
+      
+      updateState({
+        importResult: result,
+        currentStep: 'results',
+        isImporting: false
+      });
 
       if (result.success) {
         toast({
@@ -257,21 +291,23 @@ export default function ImportPage() {
         errors: [{ row: -1, field: 'system', value: '', error: 'Erro interno do servidor' }],
         warnings: []
       };
-      setImportResult(errorResult);
-      setCurrentStep('results');
+      
+      updateState({
+        importResult: errorResult,
+        currentStep: 'results',
+        isImporting: false
+      });
       
       toast({
         title: "Erro na importação",
         description: "Erro interno do servidor. Tente novamente.",
         variant: "destructive",
       });
-    } finally {
-      setIsImporting(false);
     }
-  };
+  }, [state.selectedFile, state.fileAnalysis, state.columnMapping, validateMapping, updateState, toast]);
 
-  const downloadErrorReport = async () => {
-    if (!importResult || importResult.errors.length === 0) return;
+  const downloadErrorReport = useCallback(async () => {
+    if (!state.importResult || state.importResult.errors.length === 0) return;
 
     try {
       const response = await fetch('/api/import/error-report', {
@@ -279,7 +315,7 @@ export default function ImportPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ errors: importResult.errors }),
+        body: JSON.stringify({ errors: state.importResult.errors }),
       });
 
       if (response.ok) {
@@ -307,23 +343,24 @@ export default function ImportPage() {
         variant: "destructive",
       });
     }
-  };
+  }, [state.importResult, toast]);
 
-  const resetProcess = () => {
+  const resetProcess = useCallback(() => {
     console.log('=== Resetando processo de importação ===');
-    setCurrentStep('upload');
-    setSelectedFile(null);
-    setFileAnalysis(null);
-    setColumnMapping({});
-    setImportResult(null);
+    updateState({
+      currentStep: 'upload',
+      selectedFile: null,
+      fileAnalysis: null,
+      columnMapping: {},
+      importResult: null
+    });
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
-  };
+  }, [updateState]);
 
-  const goBackToMapping = () => {
-    setCurrentStep('mapping');
-    setImportResult(null);
-  };
+  const goBackToMapping = useCallback(() => {
+    updateState({ currentStep: 'mapping', importResult: null });
+  }, [updateState]);
 
   // Indicador de progresso
   const StepIndicator = () => {
@@ -337,7 +374,7 @@ export default function ImportPage() {
       }
     };
 
-    const currentStepNumber = getStepNumber(currentStep);
+    const currentStepNumber = getStepNumber(state.currentStep);
 
     return (
       <div className="flex items-center justify-center mb-8">
@@ -384,15 +421,15 @@ export default function ImportPage() {
       <Card className="border-yellow-200 bg-yellow-50">
         <CardContent className="p-4">
           <div className="text-sm">
-            <strong>Debug:</strong> Step={currentStep}, File={selectedFile?.name || 'null'}, 
-            Analysis={fileAnalysis ? 'present' : 'null'}, 
-            Headers={fileAnalysis?.headers?.length || 0}
+            <strong>Debug:</strong> Step={state.currentStep}, File={state.selectedFile?.name || 'null'}, 
+            Analysis={state.fileAnalysis ? 'present' : 'null'}, 
+            Headers={state.fileAnalysis?.headers?.length || 0}
           </div>
         </CardContent>
       </Card>
 
       {/* Etapa 1: Upload de Arquivo */}
-      {currentStep === 'upload' && (
+      {state.currentStep === 'upload' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -412,21 +449,21 @@ export default function ImportPage() {
                   type="file"
                   accept=".xlsx,.xls,.csv"
                   onChange={handleFileSelect}
-                  disabled={isAnalyzing}
+                  disabled={state.isAnalyzing}
                 />
-                {selectedFile && (
+                {state.selectedFile && (
                   <p className="text-sm text-muted-foreground mt-2">
-                    Arquivo: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+                    Arquivo: {state.selectedFile.name} ({Math.round(state.selectedFile.size / 1024)} KB)
                   </p>
                 )}
               </div>
 
               <Button 
                 onClick={analyzeFile} 
-                disabled={!selectedFile || isAnalyzing}
+                disabled={!state.selectedFile || state.isAnalyzing}
                 className="w-full"
               >
-                {isAnalyzing ? (
+                {state.isAnalyzing ? (
                   <>
                     <div className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
                     Analisando arquivo...
@@ -444,7 +481,7 @@ export default function ImportPage() {
       )}
 
       {/* Etapa 2: Mapeamento de Colunas */}
-      {currentStep === 'mapping' && fileAnalysis && (
+      {state.currentStep === 'mapping' && state.fileAnalysis && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -460,7 +497,7 @@ export default function ImportPage() {
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>{fileAnalysis.filename}</strong> - {fileAnalysis.total_rows} linhas detectadas.
+                  <strong>{state.fileAnalysis.filename}</strong> - {state.fileAnalysis.total_rows} linhas detectadas.
                   Campos marcados com <Badge variant="destructive" className="mx-1">*</Badge> são obrigatórios.
                 </AlertDescription>
               </Alert>
@@ -475,12 +512,12 @@ export default function ImportPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {fileAnalysis.headers.map((header) => (
+                    {state.fileAnalysis.headers.map((header) => (
                       <TableRow key={header}>
                         <TableCell className="font-medium">{header}</TableCell>
                         <TableCell>
                           <Select
-                            value={columnMapping[header] || ''}
+                            value={state.columnMapping[header] || ''}
                             onValueChange={(value) => updateColumnMapping(header, value)}
                           >
                             <SelectTrigger>
@@ -488,12 +525,12 @@ export default function ImportPage() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="">-- Não mapear --</SelectItem>
-                              {Object.entries(fileAnalysis.available_fields).map(([field, config]) => (
+                              {Object.entries(state.fileAnalysis.available_fields).map(([field, config]) => (
                                 <SelectItem key={field} value={field}>
                                   <div className="flex items-center gap-2">
                                     {config.label}
                                     {config.required && (
-                                      <Badge variant="destructive" className="text-xs">*</Badge>
+                                      <Badge variant="destructive" className="h-4 text-xs">*</Badge>
                                     )}
                                   </div>
                                 </SelectItem>
@@ -501,12 +538,10 @@ export default function ImportPage() {
                             </SelectContent>
                           </Select>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {fileAnalysis.preview[0]?.[header] && (
-                            <div className="max-w-48 truncate">
-                              {String(fileAnalysis.preview[0][header])}
-                            </div>
-                          )}
+                        <TableCell className="max-w-xs">
+                          <div className="text-sm text-muted-foreground truncate">
+                            {state.fileAnalysis.preview[0]?.[header] || '-'}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -515,12 +550,13 @@ export default function ImportPage() {
               </ScrollArea>
 
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setCurrentStep('upload')}>
-                  Voltar
+                <Button variant="outline" onClick={resetProcess}>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Recomeçar
                 </Button>
                 <Button onClick={processImport}>
                   <ArrowRight className="h-4 w-4 mr-2" />
-                  Iniciar Importação
+                  Importar Dados
                 </Button>
               </div>
             </div>
@@ -529,19 +565,24 @@ export default function ImportPage() {
       )}
 
       {/* Etapa 3: Processamento */}
-      {currentStep === 'processing' && (
+      {state.currentStep === 'processing' && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
-              Processando Importação
+              Importando Dados
             </CardTitle>
+            <CardDescription>
+              Processando e validando os dados das startups...
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <div className="text-lg font-medium">Importando dados...</div>
-              <div className="text-sm text-muted-foreground mt-2">
-                Por favor, aguarde enquanto processamos seu arquivo.
+            <div className="flex justify-center p-8">
+              <div className="text-center">
+                <div className="animate-spin mx-auto mb-4 h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full" />
+                <p className="text-muted-foreground">
+                  Importando dados, por favor aguarde...
+                </p>
               </div>
             </div>
           </CardContent>
@@ -549,106 +590,97 @@ export default function ImportPage() {
       )}
 
       {/* Etapa 4: Resultados */}
-      {currentStep === 'results' && importResult && (
+      {state.currentStep === 'results' && state.importResult && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {importResult.success ? (
+              {state.importResult.success ? (
                 <CheckCircle className="h-5 w-5 text-green-500" />
               ) : (
                 <AlertCircle className="h-5 w-5 text-red-500" />
               )}
               Resultado da Importação
             </CardTitle>
+            <CardDescription>
+              {state.importResult.message}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              <Alert variant={importResult.success ? "default" : "destructive"}>
-                <AlertDescription>{importResult.message}</AlertDescription>
-              </Alert>
-
-              {/* Estatísticas */}
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Total Processadas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{importResult.total_rows}</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-green-600">Importadas com Sucesso</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-green-600">{importResult.imported_count}</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm text-red-600">Com Erro</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-red-600">{importResult.errors.length}</div>
-                  </CardContent>
-                </Card>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {state.importResult.imported_count}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Importadas</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold">
+                    {state.importResult.total_rows}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Total de Linhas</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {state.importResult.errors.length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Erros</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {state.importResult.warnings.length}
+                  </div>
+                  <div className="text-sm text-muted-foreground">Avisos</div>
+                </div>
               </div>
 
-              {/* Erros */}
-              {importResult.errors.length > 0 && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-red-500" />
-                      Erros Encontrados ({importResult.errors.length})
-                    </h3>
-                    <Button onClick={downloadErrorReport} variant="outline" size="sm">
-                      <FileDown className="h-4 w-4 mr-2" />
-                      Baixar Relatório CSV
-                    </Button>
-                  </div>
-                  
-                  <ScrollArea className="h-48 border rounded">
-                    <div className="p-4 space-y-2">
-                      {importResult.errors.slice(0, 20).map((error, index) => (
-                        <div key={index} className="text-sm p-2 bg-red-50 border border-red-200 rounded">
-                          <span className="font-medium">Linha {error.row}:</span> {error.error}
-                        </div>
-                      ))}
-                      {importResult.errors.length > 20 && (
-                        <div className="text-sm text-muted-foreground text-center py-2">
-                          ... e mais {importResult.errors.length - 20} erros. Baixe o relatório completo.
-                        </div>
-                      )}
-                    </div>
+              {state.importResult.errors.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                    Erros Encontrados
+                  </h4>
+                  <ScrollArea className="h-32 border rounded p-2">
+                    {state.importResult.errors.slice(0, 10).map((error, index) => (
+                      <div key={index} className="text-sm mb-1">
+                        <span className="font-medium">Linha {error.row}:</span> {error.error}
+                      </div>
+                    ))}
+                    {state.importResult.errors.length > 10 && (
+                      <div className="text-sm text-muted-foreground">
+                        ... e mais {state.importResult.errors.length - 10} erros
+                      </div>
+                    )}
                   </ScrollArea>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={downloadErrorReport}
+                  >
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Baixar Relatório de Erros
+                  </Button>
                 </div>
               )}
 
-              {/* Warnings */}
-              {importResult.warnings && importResult.warnings.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-medium flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                    Avisos ({importResult.warnings.length})
-                  </h3>
-                  
-                  <ScrollArea className="h-32 border rounded">
-                    <div className="p-4 space-y-2">
-                      {importResult.warnings.slice(0, 10).map((warning, index) => (
-                        <div key={index} className="text-sm p-2 bg-yellow-50 border border-yellow-200 rounded">
-                          <span className="font-medium">Linha {warning.row}:</span> {warning.warning}
-                        </div>
-                      ))}
-                      {importResult.warnings.length > 10 && (
-                        <div className="text-sm text-muted-foreground text-center py-2">
-                          ... e mais {importResult.warnings.length - 10} avisos.
-                        </div>
-                      )}
-                    </div>
+              {state.importResult.warnings.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    Avisos
+                  </h4>
+                  <ScrollArea className="h-32 border rounded p-2">
+                    {state.importResult.warnings.slice(0, 10).map((warning, index) => (
+                      <div key={index} className="text-sm mb-1">
+                        <span className="font-medium">Linha {warning.row}:</span> {warning.warning}
+                      </div>
+                    ))}
+                    {state.importResult.warnings.length > 10 && (
+                      <div className="text-sm text-muted-foreground">
+                        ... e mais {state.importResult.warnings.length - 10} avisos
+                      </div>
+                    )}
                   </ScrollArea>
                 </div>
               )}
@@ -688,15 +720,15 @@ export default function ImportPage() {
               <h4 className="font-semibold mb-2">2. Mapeamento de Colunas</h4>
               <p className="text-muted-foreground">
                 Associe cada coluna do seu arquivo aos campos correspondentes no sistema.
-                Campos obrigatórios devem ser mapeados obrigatoriamente.
+                Campos obrigatórios devem ser mapeados.
               </p>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-2">3. Validação e Importação</h4>
+              <h4 className="font-semibold mb-2">3. Importação</h4>
               <p className="text-muted-foreground">
-                O sistema valida os dados e importa apenas registros válidos.
-                Erros são relatados detalhadamente para correção.
+                Revise o mapeamento e confirme a importação. 
+                O sistema validará os dados e criará as startups.
               </p>
             </div>
           </div>
