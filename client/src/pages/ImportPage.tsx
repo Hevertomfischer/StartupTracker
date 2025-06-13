@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { usePersistentImportState } from "@/hooks/use-persistent-import-state";
 import { 
   Upload, 
   FileSpreadsheet, 
@@ -23,94 +24,9 @@ import {
   FileDown
 } from "lucide-react";
 
-interface FileAnalysis {
-  success: boolean;
-  headers: string[];
-  preview: any[];
-  total_rows: number;
-  filename: string;
-  available_fields: Record<string, { label: string; required: boolean; type: string }>;
-  message?: string;
-}
-
-interface ImportError {
-  row: number;
-  field: string;
-  value: any;
-  error: string;
-}
-
-interface ImportWarning {
-  row: number;
-  field: string;
-  value: any;
-  warning: string;
-}
-
-interface ImportResult {
-  success: boolean;
-  message: string;
-  imported_count: number;
-  total_rows: number;
-  errors: ImportError[];
-  warnings: ImportWarning[];
-}
-
-type ImportStep = 'upload' | 'mapping' | 'processing' | 'results';
-
-interface ImportState {
-  currentStep: ImportStep;
-  selectedFile: File | null;
-  isAnalyzing: boolean;
-  isImporting: boolean;
-  fileAnalysis: FileAnalysis | null;
-  columnMapping: Record<string, string>;
-  importResult: ImportResult | null;
-}
-
 export default function ImportPage() {
-  const componentId = useRef(Math.random().toString(36).substr(2, 9));
-  const [state, setState] = useState<ImportState>({
-    currentStep: 'upload',
-    selectedFile: null,
-    isAnalyzing: false,
-    isImporting: false,
-    fileAnalysis: null,
-    columnMapping: {},
-    importResult: null,
-  });
-
+  const { state, updateState, resetState, componentId } = usePersistentImportState();
   const { toast } = useToast();
-
-  // Comprehensive debugging
-  useEffect(() => {
-    console.log(`=== ImportPage ${componentId.current} - Component Mounted ===`);
-    return () => {
-      console.log(`=== ImportPage ${componentId.current} - Component Unmounted ===`);
-    };
-  }, []);
-
-  useEffect(() => {
-    console.log(`=== ImportPage ${componentId.current} - State Change ===`, {
-      currentStep: state.currentStep,
-      hasFile: !!state.selectedFile,
-      fileName: state.selectedFile?.name,
-      hasAnalysis: !!state.fileAnalysis,
-      analysisSuccess: state.fileAnalysis?.success,
-      analysisHeaders: state.fileAnalysis?.headers?.length || 0,
-      mappingCount: Object.keys(state.columnMapping).length,
-      timestamp: new Date().toISOString()
-    });
-  }, [state]);
-
-  const updateState = useCallback((updates: Partial<ImportState>) => {
-    console.log(`=== ImportPage ${componentId.current} - State Update ===`, updates);
-    setState(prev => {
-      const newState = { ...prev, ...updates };
-      console.log(`=== ImportPage ${componentId.current} - New State ===`, newState);
-      return newState;
-    });
-  }, []);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -165,7 +81,7 @@ export default function ImportPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result: FileAnalysis = await response.json();
+      const result: any = await response.json();
       console.log('Análise recebida do servidor:', result);
 
       if (result.success && result.headers && result.headers.length > 0) {
@@ -173,7 +89,7 @@ export default function ImportPage() {
         
         // Preparar mapeamento inicial
         const initialMapping: Record<string, string> = {};
-        result.headers.forEach(header => {
+        result.headers.forEach((header: string) => {
           initialMapping[header] = '';
         });
 
@@ -218,7 +134,7 @@ export default function ImportPage() {
     
     const mappedFields = Object.values(state.columnMapping).filter(field => field !== '');
     const requiredFields = Object.entries(state.fileAnalysis.available_fields)
-      .filter(([_, config]) => config.required)
+      .filter(([_, config]: [string, any]) => config.required)
       .map(([field, _]) => field);
     
     const missingRequired = requiredFields.filter(field => !mappedFields.includes(field));
@@ -261,7 +177,7 @@ export default function ImportPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result: ImportResult = await response.json();
+      const result = await response.json();
       
       updateState({
         importResult: result,
@@ -283,7 +199,7 @@ export default function ImportPage() {
       }
     } catch (error) {
       console.error('Erro na importação:', error);
-      const errorResult: ImportResult = {
+      const errorResult = {
         success: false,
         message: "Erro interno do servidor. Tente novamente.",
         imported_count: 0,
@@ -347,16 +263,10 @@ export default function ImportPage() {
 
   const resetProcess = useCallback(() => {
     console.log('=== Resetando processo de importação ===');
-    updateState({
-      currentStep: 'upload',
-      selectedFile: null,
-      fileAnalysis: null,
-      columnMapping: {},
-      importResult: null
-    });
+    resetState();
     const fileInput = document.getElementById('file-input') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
-  }, [updateState]);
+  }, [resetState]);
 
   const goBackToMapping = useCallback(() => {
     updateState({ currentStep: 'mapping', importResult: null });
@@ -364,7 +274,7 @@ export default function ImportPage() {
 
   // Indicador de progresso
   const StepIndicator = () => {
-    const getStepNumber = (step: ImportStep): number => {
+    const getStepNumber = (step: string): number => {
       switch (step) {
         case 'upload': return 1;
         case 'mapping': return 2;
@@ -421,7 +331,7 @@ export default function ImportPage() {
       <Card className="border-yellow-200 bg-yellow-50">
         <CardContent className="p-4">
           <div className="text-sm">
-            <strong>Debug:</strong> Step={state.currentStep}, File={state.selectedFile?.name || 'null'}, 
+            <strong>Debug ({componentId}):</strong> Step={state.currentStep}, File={state.selectedFile?.name || 'null'}, 
             Analysis={state.fileAnalysis ? 'present' : 'null'}, 
             Headers={state.fileAnalysis?.headers?.length || 0}
           </div>
@@ -512,7 +422,7 @@ export default function ImportPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {state.fileAnalysis.headers.map((header) => (
+                    {state.fileAnalysis.headers.map((header: string) => (
                       <TableRow key={header}>
                         <TableCell className="font-medium">{header}</TableCell>
                         <TableCell>
@@ -525,7 +435,7 @@ export default function ImportPage() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="">-- Não mapear --</SelectItem>
-                              {Object.entries(state.fileAnalysis.available_fields).map(([field, config]) => (
+                              {Object.entries(state.fileAnalysis.available_fields).map(([field, config]: [string, any]) => (
                                 <SelectItem key={field} value={field}>
                                   <div className="flex items-center gap-2">
                                     {config.label}
@@ -641,7 +551,7 @@ export default function ImportPage() {
                     Erros Encontrados
                   </h4>
                   <ScrollArea className="h-32 border rounded p-2">
-                    {state.importResult.errors.slice(0, 10).map((error, index) => (
+                    {state.importResult.errors.slice(0, 10).map((error: any, index: number) => (
                       <div key={index} className="text-sm mb-1">
                         <span className="font-medium">Linha {error.row}:</span> {error.error}
                       </div>
@@ -671,7 +581,7 @@ export default function ImportPage() {
                     Avisos
                   </h4>
                   <ScrollArea className="h-32 border rounded p-2">
-                    {state.importResult.warnings.slice(0, 10).map((warning, index) => (
+                    {state.importResult.warnings.slice(0, 10).map((warning: any, index: number) => (
                       <div key={index} className="text-sm mb-1">
                         <span className="font-medium">Linha {warning.row}:</span> {warning.warning}
                       </div>
