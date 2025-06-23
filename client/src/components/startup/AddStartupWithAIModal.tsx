@@ -100,20 +100,32 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   // PDF Processing mutation
   const processPDFMutation = useMutation({
     mutationFn: async (data: z.infer<typeof basicSchema>) => {
+      console.log('=== MUTATION START ===');
+      console.log('Creating FormData with:', { name: data.name, fileName: data.pitchDeck.name });
+      
       const formData = new FormData();
       formData.append('name', data.name);
       formData.append('file', data.pitchDeck);
 
+      console.log('Sending request to /api/startup/process-pitch-deck');
       const response = await fetch('/api/startup/process-pitch-deck', {
         method: 'POST',
         body: formData,
+        credentials: 'include', // Include cookies for authentication
       });
 
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Falha no processamento');
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`Falha no processamento: ${response.status}`);
       }
 
-      return response.json();
+      const result = await response.json();
+      console.log('=== MUTATION SUCCESS ===');
+      console.log('Response data:', result);
+      return result;
     },
     onSuccess: (result) => {
       console.log('=== PDF MUTATION SUCCESS START ===');
@@ -164,13 +176,26 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       console.log('=== PDF MUTATION SUCCESS END ===');
     },
     onError: (error) => {
-      console.error('PDF processing error:', error);
+      console.error('=== PDF MUTATION ERROR ===');
+      console.error('Error details:', error);
+      console.error('Error message:', error.message);
+      
       setCurrentView("upload");
-      toast({
-        title: "Erro ao processar PDF",
-        description: "Falha no processamento. Tente novamente.",
-        variant: "destructive",
-      });
+      
+      // Check if it's an authentication error
+      if (error.message.includes('401')) {
+        toast({
+          title: "Erro de Autenticação",
+          description: "Você precisa estar logado para usar esta funcionalidade.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao processar PDF",
+          description: `Falha no processamento: ${error.message}`,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -196,11 +221,23 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     },
   });
 
-  const handleUploadSubmit = (data: z.infer<typeof basicSchema>) => {
+  const handleUploadSubmit = async (data: z.infer<typeof basicSchema>) => {
     console.log('=== UPLOAD SUBMIT START ===');
-    console.log('Form data:', data);
+    console.log('Form data validation:', {
+      name: data.name,
+      hasFile: !!data.pitchDeck,
+      fileName: data.pitchDeck?.name,
+      fileType: data.pitchDeck?.type
+    });
+    
+    if (!data.name || !data.pitchDeck) {
+      console.error('Missing required data:', { name: !!data.name, file: !!data.pitchDeck });
+      return;
+    }
+    
     console.log('Setting view to processing...');
     setCurrentView("processing");
+    
     console.log('Triggering PDF mutation...');
     processPDFMutation.mutate(data);
     console.log('=== UPLOAD SUBMIT END ===');
@@ -285,6 +322,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
                           accept=".pdf"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
+                            console.log('File selected:', file?.name, file?.type);
                             if (file) onChange(file);
                           }}
                           className="hidden"
@@ -315,6 +353,11 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
                 <Button 
                   type="submit" 
                   disabled={!uploadForm.watch("name") || !uploadForm.watch("pitchDeck")}
+                  onClick={() => {
+                    console.log('Submit button clicked');
+                    const formData = uploadForm.getValues();
+                    console.log('Form values:', { name: formData.name, hasFile: !!formData.pitchDeck });
+                  }}
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Processar com IA
