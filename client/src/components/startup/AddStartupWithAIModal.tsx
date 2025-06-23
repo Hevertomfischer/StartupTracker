@@ -58,9 +58,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Only reset state when modal is explicitly closed and we're not in confirmation phase
+  // Prevent state reset when we have extracted data or are confirming
   useEffect(() => {
-    if (!open && currentView === "upload" && !extractedData) {
+    if (!open && !extractedData && currentView === "upload") {
       closeTimeoutRef.current = setTimeout(() => {
         setCurrentView("upload");
         setExtractedData(null);
@@ -147,18 +147,14 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         confirmForm.setValue('status_id', statuses[0].id);
       }
 
-      // Critical: Force view switch
+      // Critical: Switch to confirm view immediately
       console.log('=== SWITCHING TO CONFIRM VIEW ===');
       setCurrentView("confirm");
       
-      // Multiple verification points
-      setTimeout(() => {
-        console.log('50ms check - currentView should be confirm:', currentView);
-      }, 50);
-      
-      setTimeout(() => {
-        console.log('100ms check - currentView:', currentView, 'extractedData exists:', !!extractedData);
-      }, 100);
+      // Force a microtask to ensure state is updated
+      Promise.resolve().then(() => {
+        console.log('State verification - currentView:', currentView, 'extractedData exists:', !!extractedData);
+      });
 
       toast({
         title: "Dados extraídos com sucesso",
@@ -231,9 +227,6 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   // Keep modal open if there's extracted data or we're in confirm/processing state
   const isModalOpen = open || currentView === "confirm" || currentView === "processing";
-  
-  // Force debug logging on every render
-  console.log('RENDER CHECK - currentView:', currentView, 'extractedData exists:', !!extractedData, 'isModalOpen:', isModalOpen);
 
 
 
@@ -241,14 +234,13 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     <Dialog 
       open={isModalOpen} 
       onOpenChange={(isOpen) => {
-        console.log('Dialog onOpenChange called:', isOpen, 'currentView:', currentView, 'hasExtractedData:', !!extractedData);
-        // Only allow closing if we're in upload view and have no extracted data
-        if (!isOpen && currentView === "upload" && !extractedData) {
-          handleClose();
-        } else if (!isOpen && (currentView === "confirm" || currentView === "processing")) {
-          console.log('Preventing close during confirmation/processing');
-          // Prevent closing during confirmation or processing
+        // Block closing if we have extracted data or are in processing/confirm state
+        if (!isOpen && (extractedData || currentView === "confirm" || currentView === "processing")) {
+          console.log('Preventing modal close - has data or in confirmation');
           return;
+        }
+        if (!isOpen) {
+          handleClose();
         }
       }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -345,16 +337,8 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
           </div>
         )}
 
-        {/* Confirmation View - Debug condition */}
-        {(() => {
-          console.log('CONFIRM VIEW CHECK:', {
-            currentView,
-            isConfirm: currentView === "confirm",
-            extractedData: !!extractedData,
-            shouldShow: currentView === "confirm" && extractedData
-          });
-          return currentView === "confirm" && extractedData;
-        })() && (
+        {/* Confirmation View */}
+        {currentView === "confirm" && extractedData && (
           <div>
             <div className="bg-yellow-100 p-2 mb-4 text-sm">
               DEBUG: currentView={currentView}, hasExtractedData={!!extractedData}, keys={extractedData ? Object.keys(extractedData).join(', ') : 'none'}
