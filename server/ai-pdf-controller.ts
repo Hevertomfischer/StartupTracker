@@ -19,7 +19,7 @@ const tempStorage = multer.diskStorage({
   },
 });
 
-export const uploadTempPDF = multer({
+const tempUpload = multer({
   storage: tempStorage,
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
@@ -32,6 +32,8 @@ export const uploadTempPDF = multer({
     fileSize: 10 * 1024 * 1024, // 10MB
   },
 });
+
+export const uploadTempPDF = tempUpload.single('pitch_deck');
 
 // Função para extrair texto do PDF
 async function extractTextFromPDF(filePath: string): Promise<string> {
