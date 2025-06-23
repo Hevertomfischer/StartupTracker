@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -56,15 +56,28 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   const [extractedData, setExtractedData] = useState<any>(null);
   const [fileName, setFileName] = useState<string>("");
 
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
-      setTimeout(() => {
+      closeTimeoutRef.current = setTimeout(() => {
         setCurrentView("upload");
         setExtractedData(null);
         setFileName("");
+        closeTimeoutRef.current = null;
       }, 200);
+    } else if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
     }
+
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
+    };
   }, [open]);
 
   // Forms
