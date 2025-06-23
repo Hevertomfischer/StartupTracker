@@ -93,6 +93,8 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   // Mutation para processar PDF
   const processPDFMutation = useMutation({
     mutationFn: async (data: { name: string; pitchDeck: File }) => {
+      console.log('Iniciando processamento PDF...', data);
+      
       const formData = new FormData();
       formData.append('startupName', data.name);
       formData.append('file', data.pitchDeck);
@@ -102,35 +104,51 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         body: formData,
       });
 
+      console.log('Resposta recebida:', response.status, response.statusText);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Erro na resposta:', errorText);
         throw new Error('Erro ao processar pitch deck');
       }
 
-      return response.json();
+      const result = await response.json();
+      console.log('Resultado do processamento:', result);
+      return result;
     },
     onSuccess: (result) => {
+      console.log('PDF processado com sucesso:', result);
+      
       setExtractedData(result.extractedData);
       setOriginalFileName(result.originalFileName);
       
       // Preencher formulário de confirmação com dados extraídos
+      console.log('Preenchendo formulário com dados:', result.extractedData);
       Object.entries(result.extractedData).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== "") {
+          console.log(`Definindo ${key}:`, value);
           confirmForm.setValue(key as any, value);
         }
       });
 
       // Set default status if available
       if (statuses.length > 0 && !result.extractedData.status_id) {
+        console.log('Definindo status padrão:', statuses[0].id);
         confirmForm.setValue('status_id', statuses[0].id);
       }
 
+      console.log('Mudando para tela de confirmação...');
       setStep("confirm");
+      
       toast({
         title: "Dados extraídos com sucesso",
         description: "Revise as informações antes de salvar a startup.",
       });
     },
     onError: (error) => {
+      console.error('Erro ao processar PDF:', error);
+      setStep("upload"); // Voltar para tela inicial em caso de erro
+      
       toast({
         title: "Erro ao processar PDF",
         description: error instanceof Error ? error.message : "Erro desconhecido",
