@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -73,6 +73,11 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     setOriginalFileName('test.pdf');
     setStep('confirm');
   };
+
+  // Effect to ensure modal state persists correctly
+  useEffect(() => {
+    console.log('Modal state effect triggered:', { step, extractedData: !!extractedData, open });
+  }, [step, extractedData, open]);
 
   // Fetch statuses for the dropdown
   const { data: statuses = [] } = useQuery<Status[]>({
@@ -153,6 +158,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
       console.log('Mudando para tela de confirmação...');
       setStep("confirm");
+      console.log('Step set to confirm immediately');
       
       toast({
         title: "Dados extraídos com sucesso",
@@ -327,10 +333,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         )}
 
         {/* Step 3: Confirmation */}
-        {(() => {
-          console.log('Checking confirmation conditions:', { step, extractedData: !!extractedData });
-          return step === "confirm" && extractedData;
-        })() && (
+        {step === "confirm" && extractedData && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
