@@ -66,9 +66,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Prevent state reset when we have extracted data or are confirming
+  // Only reset state when modal is explicitly closed by user
   useEffect(() => {
-    if (!open && currentView === "upload" && !extractedData && !isModalClosing) {
+    if (!open && !isModalClosing && currentView === "upload" && !extractedData) {
       closeTimeoutRef.current = setTimeout(() => {
         setCurrentView("upload");
         setExtractedData(null);
@@ -103,7 +103,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   // Fetch statuses
   const { data: statuses = [] } = useQuery<SelectStatus[]>({
     queryKey: ['/api/statuses'],
-    enabled: open
+    enabled: open || currentView === "confirm"
   });
 
   // PDF Processing mutation
@@ -120,7 +120,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       const response = await fetch('/api/startup/process-pitch-deck', {
         method: 'POST',
         body: formData,
-        credentials: 'include', // Include cookies for authentication
+        credentials: 'include',
       });
 
       console.log('Response status:', response.status);
@@ -140,42 +140,36 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       console.log('=== PDF MUTATION SUCCESS START ===');
       console.log('PDF processed successfully:', result);
       console.log('COMPLETE EXTRACTED DATA:', result.extractedData);
-      console.log('EXTRACTED DATA KEYS:', Object.keys(result.extractedData || {}));
-      console.log('Current view before switch:', currentView);
 
-      // Set all state in the correct order to prevent conflicts
-      console.log('Setting extracted data and switching to confirm view...');
+      // Set extracted data immediately
+      setExtractedData(result.extractedData);
+      setFileName(result.originalFileName || '');
       
-      // Use a single state update to prevent conflicts
-      setTimeout(() => {
-        setExtractedData(result.extractedData);
-        setFileName(result.originalFileName || '');
-        setCurrentView("confirm");
-        
-        // Fill confirmation form after state is set
-        if (result.extractedData) {
-          Object.entries(result.extractedData).forEach(([key, value]) => {
-            console.log(`Setting form field: ${key} = ${value} (type: ${typeof value})`);
-            try {
-              confirmForm.setValue(key as any, value);
-            } catch (error) {
-              console.warn(`Failed to set form field ${key}:`, error);
-            }
-          });
-        }
+      // Fill confirmation form
+      if (result.extractedData) {
+        Object.entries(result.extractedData).forEach(([key, value]) => {
+          console.log(`Setting form field: ${key} = ${value} (type: ${typeof value})`);
+          try {
+            confirmForm.setValue(key as any, value);
+          } catch (error) {
+            console.warn(`Failed to set form field ${key}:`, error);
+          }
+        });
+      }
 
-        // Set default status
-        if (statuses.length > 0 && !result.extractedData?.status_id) {
-          console.log('Setting default status:', statuses[0].id);
-          confirmForm.setValue('status_id', statuses[0].id);
-        }
+      // Set default status
+      if (statuses.length > 0 && !result.extractedData?.status_id) {
+        console.log('Setting default status:', statuses[0].id);
+        confirmForm.setValue('status_id', statuses[0].id);
+      }
 
-        console.log('=== STATE UPDATED TO CONFIRM VIEW ===');
-      }, 50);
+      // Switch to confirmation view
+      setCurrentView("confirm");
+      console.log('=== SWITCHED TO CONFIRM VIEW ===');
 
       toast({
         title: "Dados extraídos com sucesso",
-        description: "Revise as informações antes de salvar.",
+        description: "Revise e confirme as informações antes de salvar.",
       });
       
       console.log('=== PDF MUTATION SUCCESS END ===');
@@ -183,11 +177,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     onError: (error) => {
       console.error('=== PDF MUTATION ERROR ===');
       console.error('Error details:', error);
-      console.error('Error message:', error.message);
       
       setCurrentView("upload");
       
-      // Check if it's an authentication error
       if (error.message.includes('401')) {
         toast({
           title: "Erro de Autenticação",
@@ -270,18 +262,16 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   };
 
   // Keep modal open if there's extracted data or we're in confirm/processing state
-  const isModalOpen = open || (extractedData && currentView === "confirm") || currentView === "processing";
-
-
+  const isModalOpen = open || currentView === "confirm" || currentView === "processing" || !!extractedData;
 
   return (
     <SmartFormProvider>
       <Dialog 
         open={isModalOpen} 
         onOpenChange={(isOpen) => {
-          // Block closing if we have extracted data or are in processing/confirm state
-          if (!isOpen && (extractedData && currentView === "confirm" || currentView === "processing")) {
-            console.log('Preventing modal close - has data or in confirmation');
+          // Block closing if we're in processing or confirm state
+          if (!isOpen && (currentView === "confirm" || currentView === "processing")) {
+            console.log('Preventing modal close - in confirmation or processing state');
             return;
           }
           if (!isOpen) {
@@ -406,7 +396,8 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
                     Dados Extraídos - {fileName}
                   </CardTitle>
                   <CardDescription>
-                    Revise as informações extraídas do pitch deck. Os campos com ícone 💡 têm sugestões inteligentes baseadas nos dados do sistema.
+                    Revise e confirme as informações extraídas do pitch deck antes de salvar na base de dados. 
+                    Os campos com ícone 💡 têm sugestões inteligentes baseadas nos dados do sistema.
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -416,8 +407,8 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
                 confirmForm={confirmForm}
                 statuses={statuses}
                 onSubmit={handleConfirmSubmit}
+                onGoBack={goBack}
                 onEditField={(field: string) => {
-                  // Allow editing of the field by making it editable
                   console.log('Editing field:', field);
                 }}
                 isLoading={createStartupMutation.isPending}
@@ -438,6 +429,7 @@ function ConfirmationFormContent({
   confirmForm, 
   statuses, 
   onSubmit, 
+  onGoBack,
   onEditField, 
   isLoading 
 }: {
@@ -445,6 +437,7 @@ function ConfirmationFormContent({
   confirmForm: any;
   statuses: any[];
   onSubmit: (data: any) => void;
+  onGoBack: () => void;
   onEditField: (field: string) => void;
   isLoading: boolean;
 }) {
@@ -687,12 +680,12 @@ function ConfirmationFormContent({
         />
 
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => window.location.reload()}>
-            Cancelar
+          <Button type="button" variant="outline" onClick={onGoBack}>
+            Voltar
           </Button>
           <Button type="submit" disabled={isLoading}>
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-            Criar Startup
+            Confirmar e Salvar Startup
           </Button>
         </DialogFooter>
       </form>
