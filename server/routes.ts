@@ -1266,7 +1266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/external/startup", externalFormUploadPitchDeck, handleExternalForm);
 
   // Rota para processamento de PDF com IA
-  app.post("/api/startup/process-pitch-deck", isAdmin, uploadTempPDF, processPitchDeckAI);
+  app.post("/api/startup/process-pitch-deck", isAuthenticated, uploadTempPDF, processPitchDeckAI);
 
   // Rotas para importação de dados
 
