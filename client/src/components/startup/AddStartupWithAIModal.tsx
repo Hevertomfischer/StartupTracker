@@ -20,6 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SmartAutoCompleteField } from "./SmartAutoCompleteField";
+import { SmartFormProvider, useSmartForm } from "./SmartFormContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileText, CheckCircle, Loader2 } from "lucide-react";
@@ -268,21 +270,22 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
 
   return (
-    <Dialog 
-      open={isModalOpen} 
-      onOpenChange={(isOpen) => {
-        // Block closing if we have extracted data or are in processing/confirm state
-        if (!isOpen && (extractedData || currentView === "confirm" || currentView === "processing")) {
-          console.log('Preventing modal close - has data or in confirmation');
-          return;
-        }
-        if (!isOpen) {
-          handleClose();
-        }
-      }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Adicionar Startup com IA</DialogTitle>
+    <SmartFormProvider>
+      <Dialog 
+        open={isModalOpen} 
+        onOpenChange={(isOpen) => {
+          // Block closing if we have extracted data or are in processing/confirm state
+          if (!isOpen && (extractedData || currentView === "confirm" || currentView === "processing")) {
+            console.log('Preventing modal close - has data or in confirmation');
+            return;
+          }
+          if (!isOpen) {
+            handleClose();
+          }
+        }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Adicionar Startup com IA</DialogTitle>
           <DialogDescription>
             {currentView === "upload" && "Carregue o pitch deck para extrair informações automaticamente"}
             {currentView === "processing" && "Processando pitch deck com IA..."}

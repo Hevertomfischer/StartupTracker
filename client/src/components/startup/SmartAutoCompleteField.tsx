@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Lightbulb, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { SmartFieldIndicator } from "./SmartFieldIndicator";
 
 interface SmartAutoCompleteFieldProps {
   label: string;
@@ -235,7 +236,7 @@ export function SmartAutoCompleteField({
         
         {suggestions.length > 0 && !value && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-            <Lightbulb className="h-4 w-4 text-blue-500" />
+            <Lightbulb className="h-4 w-4 text-blue-500 animate-pulse" />
           </div>
         )}
       </div>
@@ -278,11 +279,20 @@ export function SmartAutoCompleteField({
           </div>
           
           <div className="mt-2 pt-2 border-t border-gray-100">
-            <p className="text-xs text-gray-500">
-              💡 Sugestões baseadas nos dados das {existingStartups.length} startups no sistema
+            <p className="text-xs text-gray-500 flex items-center gap-1">
+              <Lightbulb className="h-3 w-3" />
+              Baseado em {existingStartups.length} startups do sistema
             </p>
           </div>
         </Card>
+      )}
+      
+      {/* Smart field indicator - shows when field is empty but has suggestions */}
+      {!value && suggestions.length > 0 && (
+        <SmartFieldIndicator 
+          suggestionCount={suggestions.length}
+          bestConfidence={Math.max(...suggestions.map(s => s.confidence))}
+        />
       )}
     </div>
   );
