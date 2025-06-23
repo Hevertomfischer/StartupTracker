@@ -176,6 +176,12 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         title: "Dados extraídos com sucesso",
         description: "Revise as informações antes de salvar a startup.",
       });
+
+      // Force re-render to ensure confirmation screen appears
+      setTimeout(() => {
+        console.log('Forcing confirmation screen update');
+        setStep("confirm");
+      }, 100);
     },
     onError: (error) => {
       console.error('Erro ao processar PDF:', error);
@@ -213,11 +219,23 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   const handleClose = () => {
     console.log('Closing modal, resetting state...');
+    // Only allow close if not in confirmation step with data
+    if (step === "confirm" && extractedData) {
+      console.log('Preventing close during confirmation step with data');
+      return;
+    }
     basicForm.reset();
     confirmForm.reset();
+    onClose();
+  };
+
+  const forceClose = () => {
+    console.log('Force closing modal...');
     setStep("upload");
     setExtractedData(null);
     setOriginalFileName("");
+    basicForm.reset();
+    confirmForm.reset();
     onClose();
   };
 
