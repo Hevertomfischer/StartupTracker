@@ -58,9 +58,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset state when modal closes
+  // Only reset state when modal is explicitly closed and we're not in confirmation phase
   useEffect(() => {
-    if (!open) {
+    if (!open && currentView === "upload" && !extractedData) {
       closeTimeoutRef.current = setTimeout(() => {
         setCurrentView("upload");
         setExtractedData(null);
@@ -140,8 +140,14 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       }
 
       // Switch to confirmation view immediately
+      console.log('About to switch to confirm view...');
       setCurrentView("confirm");
       console.log('Current view after switch:', "confirm");
+      
+      // Force a state update check
+      setTimeout(() => {
+        console.log('Delayed check - currentView:', currentView, 'extractedData:', !!extractedData);
+      }, 50);
 
       toast({
         title: "Dados extraídos com sucesso",
@@ -206,18 +212,22 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   };
 
   // Keep modal open if there's extracted data or we're in confirm/processing state
-  const isModalOpen = open || !!extractedData || currentView === "confirm" || currentView === "processing";
+  const isModalOpen = open || currentView === "confirm" || currentView === "processing";
 
-  // Debug logging for view state
-  console.log('Modal render - currentView:', currentView, 'extractedData:', !!extractedData, 'isModalOpen:', isModalOpen);
+
 
   return (
     <Dialog 
       open={isModalOpen} 
       onOpenChange={(isOpen) => {
+        console.log('Dialog onOpenChange called:', isOpen, 'currentView:', currentView, 'hasExtractedData:', !!extractedData);
         // Only allow closing if we're in upload view and have no extracted data
         if (!isOpen && currentView === "upload" && !extractedData) {
           handleClose();
+        } else if (!isOpen && (currentView === "confirm" || currentView === "processing")) {
+          console.log('Preventing close during confirmation/processing');
+          // Prevent closing during confirmation or processing
+          return;
         }
       }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
