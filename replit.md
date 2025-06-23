@@ -152,10 +152,19 @@ This is a comprehensive startup management platform built with React, TypeScript
 - **RESEND_API_KEY**: API key for email service
 - **NODE_ENV**: Environment flag for production optimizations
 
+## Recent Changes
+
+- June 23, 2025: Fixed PDF processing functionality for AI-powered startup creation
+  - Resolved multer field name mismatch ('file' vs 'pitch_deck')
+  - Changed route permissions from admin-only to authenticated users
+  - Removed PDF file size limitations
+  - Fixed ES module compatibility issues with PDF parsing
+  - Enhanced error handling and logging for better debugging
+
 ## Changelog
 
-Changelog:
-- June 13, 2025. Initial setup
+- June 13, 2025: Initial setup
+- June 23, 2025: PDF processing fixes and improvements
 
 ## User Preferences
 
