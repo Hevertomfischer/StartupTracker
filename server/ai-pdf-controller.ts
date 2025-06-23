@@ -37,14 +37,23 @@ export const uploadTempPDF = tempUpload.single('file');
 
 // Função para extrair texto do PDF
 async function extractTextFromPDF(filePath: string): Promise<string> {
+  console.log(`Tentando extrair texto do PDF: ${filePath}`);
+  
   try {
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Arquivo não encontrado: ${filePath}`);
+    }
+    
     const pdfParse = require('pdf-parse');
     const dataBuffer = fs.readFileSync(filePath);
+    console.log(`Arquivo lido, tamanho: ${dataBuffer.length} bytes`);
+    
     const data = await pdfParse(dataBuffer);
+    console.log('PDF processado com sucesso');
     return data.text;
   } catch (error) {
     console.error('Erro ao extrair texto do PDF:', error);
-    // Fallback para texto simulado em caso de erro
+    console.log('Usando dados simulados como fallback');
     return `
       Startup: TechCorp
       CEO: João Silva
@@ -128,30 +137,44 @@ async function extractDataWithAI(text: string): Promise<any> {
 
 // Controlador para processar PDF e extrair dados
 export const processPitchDeckAI = async (req: Request, res: Response) => {
+  console.log("Iniciando processamento de PDF...");
+  
   try {
     if (!req.file) {
+      console.log("Erro: Nenhum arquivo foi enviado");
       return res.status(400).json({ message: "Nenhum arquivo PDF foi enviado" });
     }
 
     const { startupName } = req.body;
     
     if (!startupName) {
+      console.log("Erro: Nome da startup não fornecido");
       return res.status(400).json({ message: "Nome da startup é obrigatório" });
     }
 
     console.log(`Processando PDF: ${req.file.filename} para startup: ${startupName}`);
+    console.log(`Caminho do arquivo: ${req.file.path}`);
 
     // Extrair texto do PDF
+    console.log("Extraindo texto do PDF...");
     const extractedText = await extractTextFromPDF(req.file.path);
+    console.log(`Texto extraído: ${extractedText.substring(0, 200)}...`);
     
     // Usar IA para extrair dados estruturados
+    console.log("Processando dados com IA...");
     const extractedData = await extractDataWithAI(extractedText);
+    console.log("Dados extraídos:", extractedData);
     
     // Garantir que o nome da startup seja mantido
     extractedData.name = startupName;
     
     // Remover arquivo temporário
-    fs.unlinkSync(req.file.path);
+    console.log("Removendo arquivo temporário...");
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    
+    console.log("Processamento concluído com sucesso");
     
     // Retornar dados extraídos para confirmação
     return res.status(200).json({
@@ -166,7 +189,11 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     
     // Remover arquivo temporário em caso de erro
     if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (unlinkError) {
+        console.error("Erro ao remover arquivo temporário:", unlinkError);
+      }
     }
     
     return res.status(500).json({ 
