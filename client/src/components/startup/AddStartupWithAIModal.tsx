@@ -74,18 +74,19 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     console.log('Test data set:', testData);
   };
 
-  // Reset modal state when closed
+  // Reset modal state when closed - but only if we're not in confirmation step
   useEffect(() => {
-    if (!open) {
+    if (!open && step !== "confirm") {
       setStep("upload");
       setExtractedData(null);
       setOriginalFileName("");
     }
-  }, [open]);
+  }, [open, step]);
 
   // Debug logging
   useEffect(() => {
-    console.log('Modal state:', { step, extractedData: !!extractedData, open });
+    const shouldBeOpen = open || (step === "confirm" && extractedData);
+    console.log('Modal state:', { step, extractedData: !!extractedData, open, shouldBeOpen });
   }, [step, extractedData, open]);
 
   // Fetch statuses for the dropdown
@@ -258,7 +259,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   return (
     <Dialog 
-      open={open} 
+      open={open || (step === "confirm" && extractedData)} 
       onOpenChange={(isOpen) => {
         // Bloquear fechamento automático quando estiver na tela de confirmação
         if (!isOpen && step === "confirm" && extractedData) {
@@ -402,7 +403,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         )}
 
         {/* Step 3: Confirmation */}
-        {step === "confirm" && (
+        {step === "confirm" && extractedData && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
