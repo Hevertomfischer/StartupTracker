@@ -58,6 +58,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   const [step, setStep] = useState<"upload" | "confirm" | "processing">("upload");
   const [extractedData, setExtractedData] = useState<any>(null);
   const [originalFileName, setOriginalFileName] = useState<string>("");
+  const [forceOpen, setForceOpen] = useState(false);
 
   // Debug: Add test button to force confirmation screen
   const testConfirmation = () => {
@@ -70,24 +71,26 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     };
     setExtractedData(testData);
     setOriginalFileName('test.pdf');
+    setForceOpen(true);
     setStep('confirm');
     console.log('Test data set:', testData);
   };
 
   // Reset modal state when closed - but only if we're not in confirmation step
   useEffect(() => {
-    if (!open && step !== "confirm") {
+    if (!open && !forceOpen && step !== "confirm") {
       setStep("upload");
       setExtractedData(null);
       setOriginalFileName("");
+      setForceOpen(false);
     }
-  }, [open, step]);
+  }, [open, forceOpen, step]);
 
   // Debug logging
   useEffect(() => {
-    const shouldBeOpen = open || (step === "confirm" && extractedData);
-    console.log('Modal state:', { step, extractedData: !!extractedData, open, shouldBeOpen });
-  }, [step, extractedData, open]);
+    const shouldBeOpen = open || forceOpen || (step === "confirm" && extractedData);
+    console.log('Modal state:', { step, extractedData: !!extractedData, open, forceOpen, shouldBeOpen });
+  }, [step, extractedData, open, forceOpen]);
 
   // Fetch statuses for the dropdown
   const { data: statuses = [] } = useQuery<Status[]>({
@@ -169,6 +172,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
       console.log('Mudando para tela de confirmação...');
       
+      // Force the modal to stay open
+      setForceOpen(true);
+      
       // Mudar para o step de confirmação imediatamente
       setStep("confirm");
       console.log('Step alterado para confirm');
@@ -182,6 +188,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       setTimeout(() => {
         console.log('Forcing confirmation screen update');
         setStep("confirm");
+        setForceOpen(true);
       }, 100);
     },
     onError: (error) => {
@@ -235,6 +242,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     setStep("upload");
     setExtractedData(null);
     setOriginalFileName("");
+    setForceOpen(false);
     basicForm.reset();
     confirmForm.reset();
     onClose();
@@ -259,10 +267,10 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   return (
     <Dialog 
-      open={open || (step === "confirm" && extractedData)} 
+      open={open || forceOpen || (step === "confirm" && extractedData)} 
       onOpenChange={(isOpen) => {
         // Bloquear fechamento automático quando estiver na tela de confirmação
-        if (!isOpen && step === "confirm" && extractedData) {
+        if (!isOpen && (step === "confirm" && extractedData || forceOpen)) {
           console.log('Bloqueando fechamento automático na tela de confirmação');
           return;
         }
@@ -277,7 +285,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
           className="max-w-2xl max-h-[90vh] overflow-y-auto"
           onPointerDownOutside={(e) => {
             // Prevenir fechamento ao clicar fora quando estiver na tela de confirmação
-            if (step === "confirm" && extractedData) {
+            if (step === "confirm" && extractedData || forceOpen) {
               e.preventDefault();
             }
           }}
