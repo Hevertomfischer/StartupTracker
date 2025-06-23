@@ -24,7 +24,7 @@ import { SmartAutoCompleteField } from "./SmartAutoCompleteField";
 import { SmartFormProvider, useSmartForm } from "./SmartFormContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, FileText, CheckCircle, Loader2 } from "lucide-react";
+import { Upload, FileText, CheckCircle, Loader2, Edit3 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -57,6 +57,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   const [currentView, setCurrentView] = useState<"upload" | "confirm" | "processing">("upload");
   const [extractedData, setExtractedData] = useState<any>(null);
   const [fileName, setFileName] = useState<string>("");
+  const [isModalClosing, setIsModalClosing] = useState(false);
 
   // Debug state changes
   useEffect(() => {
@@ -67,11 +68,12 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   // Prevent state reset when we have extracted data or are confirming
   useEffect(() => {
-    if (!open && !extractedData && currentView === "upload") {
+    if (!open && currentView === "upload" && !extractedData && !isModalClosing) {
       closeTimeoutRef.current = setTimeout(() => {
         setCurrentView("upload");
         setExtractedData(null);
         setFileName("");
+        setIsModalClosing(false);
         closeTimeoutRef.current = null;
       }, 200);
     } else if (closeTimeoutRef.current) {
@@ -85,7 +87,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         closeTimeoutRef.current = null;
       }
     };
-  }, [open]);
+  }, [open, currentView, extractedData, isModalClosing]);
 
   // Forms
   const uploadForm = useForm<z.infer<typeof basicSchema>>({
@@ -141,40 +143,35 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       console.log('EXTRACTED DATA KEYS:', Object.keys(result.extractedData || {}));
       console.log('Current view before switch:', currentView);
 
-      // Immediate state updates
-      console.log('Setting extracted data...');
-      setExtractedData(result.extractedData);
-      console.log('Setting file name...');
-      setFileName(result.originalFileName || '');
-
-      console.log('Filling confirmation form...');
-      // Fill confirmation form
-      if (result.extractedData) {
-        Object.entries(result.extractedData).forEach(([key, value]) => {
-          console.log(`Setting form field: ${key} = ${value} (type: ${typeof value})`);
-          try {
-            confirmForm.setValue(key as any, value);
-          } catch (error) {
-            console.warn(`Failed to set form field ${key}:`, error);
-          }
-        });
-      }
-
-      // Set default status
-      if (statuses.length > 0 && !result.extractedData?.status_id) {
-        console.log('Setting default status:', statuses[0].id);
-        confirmForm.setValue('status_id', statuses[0].id);
-      }
-
-      // Critical: Switch to confirm view immediately
-      console.log('=== SWITCHING TO CONFIRM VIEW ===');
-      setCurrentView("confirm");
+      // Set all state in the correct order to prevent conflicts
+      console.log('Setting extracted data and switching to confirm view...');
       
-      // Force a microtask to ensure state is updated
+      // Use a single state update to prevent conflicts
       setTimeout(() => {
-        console.log('State verification after timeout - currentView:', currentView, 'extractedData exists:', !!extractedData);
-        console.log('Extracted data content:', result.extractedData);
-      }, 100);
+        setExtractedData(result.extractedData);
+        setFileName(result.originalFileName || '');
+        setCurrentView("confirm");
+        
+        // Fill confirmation form after state is set
+        if (result.extractedData) {
+          Object.entries(result.extractedData).forEach(([key, value]) => {
+            console.log(`Setting form field: ${key} = ${value} (type: ${typeof value})`);
+            try {
+              confirmForm.setValue(key as any, value);
+            } catch (error) {
+              console.warn(`Failed to set form field ${key}:`, error);
+            }
+          });
+        }
+
+        // Set default status
+        if (statuses.length > 0 && !result.extractedData?.status_id) {
+          console.log('Setting default status:', statuses[0].id);
+          confirmForm.setValue('status_id', statuses[0].id);
+        }
+
+        console.log('=== STATE UPDATED TO CONFIRM VIEW ===');
+      }, 50);
 
       toast({
         title: "Dados extraídos com sucesso",
@@ -256,6 +253,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   };
 
   const handleClose = () => {
+    setIsModalClosing(true);
     uploadForm.reset();
     confirmForm.reset();
     setExtractedData(null);
@@ -268,10 +266,11 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     setCurrentView("upload");
     setExtractedData(null);
     setFileName("");
+    uploadForm.reset();
   };
 
   // Keep modal open if there's extracted data or we're in confirm/processing state
-  const isModalOpen = open || currentView === "confirm" || currentView === "processing";
+  const isModalOpen = open || (extractedData && currentView === "confirm") || currentView === "processing";
 
 
 
@@ -281,7 +280,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         open={isModalOpen} 
         onOpenChange={(isOpen) => {
           // Block closing if we have extracted data or are in processing/confirm state
-          if (!isOpen && (extractedData || currentView === "confirm" || currentView === "processing")) {
+          if (!isOpen && (extractedData && currentView === "confirm" || currentView === "processing")) {
             console.log('Preventing modal close - has data or in confirmation');
             return;
           }
@@ -417,7 +416,10 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
                 confirmForm={confirmForm}
                 statuses={statuses}
                 onSubmit={handleConfirmSubmit}
-                onEditField={handleEditField}
+                onEditField={(field: string) => {
+                  // Allow editing of the field by making it editable
+                  console.log('Editing field:', field);
+                }}
                 isLoading={createStartupMutation.isPending}
               />
             </div>
@@ -462,7 +464,7 @@ function ConfirmationFormContent({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={confirmForm.control}
-            name="nome"
+            name="name"
             render={({ field }) => (
               <FormItem>
                 <div className="flex items-center justify-between">
@@ -471,13 +473,13 @@ function ConfirmationFormContent({
                     type="button" 
                     variant="ghost" 
                     size="sm"
-                    onClick={() => onEditField('nome')}
+                    onClick={() => onEditField('name')}
                   >
                     <Edit3 className="h-3 w-3" />
                   </Button>
                 </div>
                 <FormControl>
-                  <Input {...field} disabled />
+                  <Input {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
