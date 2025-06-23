@@ -58,6 +58,11 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   const [extractedData, setExtractedData] = useState<any>(null);
   const [fileName, setFileName] = useState<string>("");
 
+  // Debug state changes
+  useEffect(() => {
+    console.log('STATE CHANGE:', { currentView, hasExtractedData: !!extractedData, fileName });
+  }, [currentView, extractedData, fileName]);
+
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Prevent state reset when we have extracted data or are confirming
@@ -166,9 +171,10 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       setCurrentView("confirm");
       
       // Force a microtask to ensure state is updated
-      Promise.resolve().then(() => {
-        console.log('State verification - currentView:', currentView, 'extractedData exists:', !!extractedData);
-      });
+      setTimeout(() => {
+        console.log('State verification after timeout - currentView:', currentView, 'extractedData exists:', !!extractedData);
+        console.log('Extracted data content:', result.extractedData);
+      }, 100);
 
       toast({
         title: "Dados extraídos com sucesso",
@@ -383,8 +389,15 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
           </div>
         )}
 
+        {/* Debug Info */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
+            Debug: currentView={currentView}, hasExtractedData={!!extractedData}
+          </div>
+        )}
+
         {/* Confirmation View */}
-        {currentView === "confirm" && extractedData && (
+        {currentView === "confirm" && (
           <div>
             <div className="space-y-6">
               <Card>
