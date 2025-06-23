@@ -25,6 +25,10 @@ import {
   deletePitchDeck
 } from "./file-controller";
 import { 
+  uploadTempPDF, 
+  processPitchDeckAI 
+} from "./ai-pdf-controller";
+import { 
   handleExternalForm, 
   uploadPitchDeck as externalFormUploadPitchDeck 
 } from "./external-form";
@@ -1260,6 +1264,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rota para o formulário externo de cadastro de startups
   app.post("/api/external/startup", externalFormUploadPitchDeck, handleExternalForm);
+
+  // Rota para processamento de PDF com IA
+  app.post("/api/startup/process-pitch-deck", isAdmin, uploadTempPDF, processPitchDeckAI);
 
   // Rotas para importação de dados
 

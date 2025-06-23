@@ -9,6 +9,7 @@ import { useStartups } from "@/hooks/use-startup";
 import { type Startup } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Plus, Columns } from "lucide-react";
+import { AddStartupWithAIModal } from "@/components/startup/AddStartupWithAIModal";
 
 export default function Dashboard() {
   const { data: startups = [], isLoading } = useStartups();
@@ -17,12 +18,13 @@ export default function Dashboard() {
   const [showStartupModal, setShowStartupModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
   const [filterOptions, setFilterOptions] = useState({
     search: "",
     sector: "",
     priority: ""
   });
-  
+
   const openStartupDetails = async (startup: Startup) => {
     setSelectedStartup(startup);
     setShowStartupModal(true);
@@ -44,7 +46,7 @@ export default function Dashboard() {
   const toggleSidebar = () => {
     setShowSidebar(!showSidebar);
   };
-  
+
   const openStatusManagement = () => {
     setShowStatusModal(true);
   };
@@ -114,13 +116,22 @@ export default function Dashboard() {
                     <Columns className="-ml-1 mr-2 h-5 w-5" />
                     Manage Columns
                   </Button>
-                  <Button 
-                    onClick={openAddStartup} 
-                    className="inline-flex items-center"
-                  >
-                    <Plus className="-ml-1 mr-2 h-5 w-5" />
-                    Add Startup
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={() => setShowAIModal(true)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add com IA
+                    </Button>
+                    <Button 
+                      onClick={openAddStartup} 
+                      className="inline-flex items-center"
+                    >
+                      <Plus className="-ml-1 mr-2 h-5 w-5" />
+                      Add Startup
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -163,6 +174,10 @@ export default function Dashboard() {
       <StatusManagementModal
         open={showStatusModal}
         onClose={closeStatusManagement}
+      />
+      <AddStartupWithAIModal 
+        open={showAIModal} 
+        onClose={() => setShowAIModal(false)} 
       />
     </div>
   );
