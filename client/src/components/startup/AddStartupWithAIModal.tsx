@@ -50,12 +50,12 @@ const confirmationSchema = insertStartupSchema.extend({
 export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // Simplified state management
   const [currentView, setCurrentView] = useState<"upload" | "confirm" | "processing">("upload");
   const [extractedData, setExtractedData] = useState<any>(null);
   const [fileName, setFileName] = useState<string>("");
-  
+
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
@@ -90,52 +90,52 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       const formData = new FormData();
       formData.append('name', data.name);
       formData.append('file', data.pitchDeck);
-      
+
       const response = await fetch('/api/startup/process-pitch-deck', {
         method: 'POST',
         body: formData,
       });
-      
+
       if (!response.ok) {
         throw new Error('Falha no processamento');
       }
-      
+
       return response.json();
     },
     onSuccess: (result) => {
       console.log('PDF processed successfully:', result);
       console.log('Extracted data:', result.extractedData);
       console.log('Current view before switch:', currentView);
-      
+
       // Store extracted data
       setExtractedData(result.extractedData);
       setFileName(result.originalFileName);
-      
+
       console.log('Setting extracted data and switching to confirm view...');
-      
+
       // Fill confirmation form
       Object.entries(result.extractedData).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== "") {
           confirmForm.setValue(key as any, value);
         }
       });
-      
+
       // Set default status
       if (statuses.length > 0 && !result.extractedData.status_id) {
         confirmForm.setValue('status_id', statuses[0].id);
         console.log('Set default status:', statuses[0].id);
       }
-      
+
       // Switch to confirmation view
       setCurrentView("confirm");
       console.log('Current view after switch:', "confirm");
-      
+
       // Force re-render
       setTimeout(() => {
         console.log('Force checking view state:', currentView);
         console.log('Extracted data state:', extractedData);
       }, 100);
-      
+
       toast({
         title: "Dados extraídos com sucesso",
         description: "Revise as informações antes de salvar.",
@@ -197,7 +197,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   // Force modal to stay open when in confirm view
   const isModalOpen = open || currentView === "confirm";
-  
+
   // Debug logging for view state
   console.log('Modal render - currentView:', currentView, 'extractedData:', !!extractedData, 'isModalOpen:', isModalOpen);
 
@@ -205,15 +205,10 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     <Dialog 
       open={isModalOpen} 
       onOpenChange={(isOpen) => {
-        if (!isOpen && currentView === "confirm") {
-          // Prevent closing during confirmation
-          return;
-        }
-        if (!isOpen) {
-          handleClose();
-        }
-      }}
-    >
+      if (!isOpen && currentView !== "confirm" && currentView !== "processing") {
+        handleClose();
+      }
+    }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar Startup com IA</DialogTitle>
