@@ -1,0 +1,90 @@
+AddStartupWithAIModal.tsx:94 
+            
+            
+            POST https://e70d6842-08b2-40d5-a556-2c97bd62ee04-00-38wqvnfrxd2or.kirk.replit.dev/api/startup/process-pitch-deck 400 (Bad Request)
+mutationFn @ AddStartupWithAIModal.tsx:94
+fn @ mutation.ts:170
+run @ retryer.ts:153
+start @ retryer.ts:218
+execute @ mutation.ts:208
+await in execute
+mutate @ mutationObserver.ts:125
+(anônimo) @ useMutation.ts:52
+handleUploadSubmit @ AddStartupWithAIModal.tsx:167
+(anônimo) @ createFormControl.ts:1183
+await in (anônimo)
+callCallback2 @ react-dom.development.js:4164
+invokeGuardedCallbackDev @ react-dom.development.js:4213
+invokeGuardedCallback @ react-dom.development.js:4277
+invokeGuardedCallbackAndCatchFirstError @ react-dom.development.js:4291
+executeDispatch @ react-dom.development.js:9041
+processDispatchQueueItemsInOrder @ react-dom.development.js:9073
+processDispatchQueue @ react-dom.development.js:9086
+dispatchEventsForPlugins @ react-dom.development.js:9097
+(anônimo) @ react-dom.development.js:9288
+batchedUpdates$1 @ react-dom.development.js:26179
+batchedUpdates @ react-dom.development.js:3991
+dispatchEventForPluginEventSystem @ react-dom.development.js:9287
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ react-dom.development.js:6465
+dispatchEvent @ react-dom.development.js:6457
+dispatchDiscreteEvent @ react-dom.development.js:6430
+[NOVO] Explique os erros do Console usando o Copilot no Edge: clique em
+         
+         para explicar um erro.
+        Saiba mais
+        Não mostrar novamente
+AddStartupWithAIModal.tsx:133  PDF processing error: Error: Falha no processamento
+    at Object.mutationFn (AddStartupWithAIModal.tsx:100:15)
+overrideMethod @ hook.js:608
+onError @ AddStartupWithAIModal.tsx:133
+execute @ mutation.ts:243
+await in execute
+mutate @ mutationObserver.ts:125
+(anônimo) @ useMutation.ts:52
+handleUploadSubmit @ AddStartupWithAIModal.tsx:167
+(anônimo) @ createFormControl.ts:1183
+await in (anônimo)
+callCallback2 @ react-dom.development.js:4164
+invokeGuardedCallbackDev @ react-dom.development.js:4213
+invokeGuardedCallback @ react-dom.development.js:4277
+invokeGuardedCallbackAndCatchFirstError @ react-dom.development.js:4291
+executeDispatch @ react-dom.development.js:9041
+processDispatchQueueItemsInOrder @ react-dom.development.js:9073
+processDispatchQueue @ react-dom.development.js:9086
+dispatchEventsForPlugins @ react-dom.development.js:9097
+(anônimo) @ react-dom.development.js:9288
+batchedUpdates$1 @ react-dom.development.js:26179
+batchedUpdates @ react-dom.development.js:3991
+dispatchEventForPluginEventSystem @ react-dom.development.js:9287
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ react-dom.development.js:6465
+dispatchEvent @ react-dom.development.js:6457
+dispatchDiscreteEvent @ react-dom.development.js:6430
+DragDropKanban.tsx:72 Colunas disponíveis: (12) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e', 'b9eea266-4649-43b4-b2a7-ff41152b7c87', '4c0628cd-75a2-42c0-a636-8298d54c203b', '80c7dc43-4e53-4120-8ad1-a63c1894870b', 'a5782807-ae3d-463f-8192-2bfff6277f8a', '259af02f-9654-46c5-99e7-b5e5173b9447']
+DragDropKanban.tsx:73 Startups status_ids: (93) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', '47886a06-abe9-4010-a992-12b30f7b4909', '11af8601-5cbb-466c-9de7-265867be0967', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(90)}
+DragDropKanban.tsx:272 Coluna Qualificação (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Comitê Temático (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Comitê de Avaliação (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Diligência (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Acompanhamento (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Negociação (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Assinatura do Contrato (b9eea266-4649-43b4-b2a7-ff41152b7c87): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Chamada de Capital (4c0628cd-75a2-42c0-a636-8298d54c203b): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Projeto 100 Dias (80c7dc43-4e53-4120-8ad1-a63c1894870b): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Investida (a5782807-ae3d-463f-8192-2bfff6277f8a): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Declinada (259af02f-9654-46c5-99e7-b5e5173b9447): {startups: Array(0)}
+DragDropKanban.tsx:72 Colunas disponíveis: (12) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', '11af8601-5cbb-466c-9de7-265867be0967', '47886a06-abe9-4010-a992-12b30f7b4909', '82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f', 'e6f73c35-bb06-4b05-8e05-8d08fcc14b95', '74580144-25da-4b12-9094-5da3bcd7a71e', 'b9eea266-4649-43b4-b2a7-ff41152b7c87', '4c0628cd-75a2-42c0-a636-8298d54c203b', '80c7dc43-4e53-4120-8ad1-a63c1894870b', 'a5782807-ae3d-463f-8192-2bfff6277f8a', '259af02f-9654-46c5-99e7-b5e5173b9447']
+DragDropKanban.tsx:73 Startups status_ids: (93) ['e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', 'e74a05a6-6612-49af-95a1-f42b035d5c4d', '47886a06-abe9-4010-a992-12b30f7b4909', '11af8601-5cbb-466c-9de7-265867be0967', '221ea8b9-1da3-449a-aa5b-8ea9f70ffd05', 'e74a05a6-6612-49af-95a1-f42b035d5c4d']
+DragDropKanban.tsx:272 Coluna Cadastrada (e74a05a6-6612-49af-95a1-f42b035d5c4d): {startups: Array(90)}
+DragDropKanban.tsx:272 Coluna Qualificação (221ea8b9-1da3-449a-aa5b-8ea9f70ffd05): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Comitê Temático (11af8601-5cbb-466c-9de7-265867be0967): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Comitê de Avaliação (47886a06-abe9-4010-a992-12b30f7b4909): {startups: Array(1)}
+DragDropKanban.tsx:272 Coluna Diligência (82dc449f-0b95-43e0-ba8e-3b6f1aa8d68f): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Acompanhamento (e6f73c35-bb06-4b05-8e05-8d08fcc14b95): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Negociação (74580144-25da-4b12-9094-5da3bcd7a71e): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Assinatura do Contrato (b9eea266-4649-43b4-b2a7-ff41152b7c87): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Chamada de Capital (4c0628cd-75a2-42c0-a636-8298d54c203b): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Projeto 100 Dias (80c7dc43-4e53-4120-8ad1-a63c1894870b): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Investida (a5782807-ae3d-463f-8192-2bfff6277f8a): {startups: Array(0)}
+DragDropKanban.tsx:272 Coluna Declinada (259af02f-9654-46c5-99e7-b5e5173b9447): {startups: Array(0)}
+scheduler.development.js:517 [Violation]'message' handler took 182ms

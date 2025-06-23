@@ -161,14 +161,14 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Nenhum arquivo PDF foi enviado" });
     }
 
-    const { startupName } = req.body;
+    const { name } = req.body;
     
-    if (!startupName) {
+    if (!name) {
       console.log("Erro: Nome da startup não fornecido");
       return res.status(400).json({ message: "Nome da startup é obrigatório" });
     }
 
-    console.log(`Processando PDF: ${req.file.filename} para startup: ${startupName}`);
+    console.log(`Processando PDF: ${req.file.filename} para startup: ${name}`);
     console.log(`Caminho do arquivo: ${req.file.path}`);
 
     // Extrair texto do PDF
@@ -182,7 +182,7 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     console.log("Dados extraídos:", extractedData);
     
     // Garantir que o nome da startup seja mantido
-    extractedData.name = startupName;
+    extractedData.name = name;
     
     // Remover arquivo temporário
     console.log("Removendo arquivo temporário...");
