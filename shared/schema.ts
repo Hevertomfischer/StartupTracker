@@ -67,9 +67,13 @@ export const startups = pgTable("startups", {
   founding_date: timestamp("founding_date"),
   due_date: timestamp("due_date"),
   
-  // Campos de análise
+  // Campos de análise  
   problem_solution: text("problem_solution"),
   problem_solved: text("problem_solved"),
+  
+  // AI generation tracking
+  created_by_ai: boolean("created_by_ai").default(false),
+  ai_extraction_data: text("ai_extraction_data"), // Store original AI extracted data as JSON
   differentials: text("differentials"),
   competitors: text("competitors"),
   positive_points: text("positive_points"),

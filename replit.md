@@ -154,6 +154,17 @@ This is a comprehensive startup management platform built with React, TypeScript
 
 ## Recent Changes
 
+- June 23, 2025: Fixed PDF extraction review screen and implemented AI startup review system
+  - Fixed state management issue preventing confirmation screen from appearing after PDF processing
+  - Removed dependency on extractedData state for confirmation view rendering
+  - Implemented immediate state updates for better user experience
+  - Created comprehensive AI startup review modal for manual verification
+  - Added AI generation tracking fields to database schema (created_by_ai, ai_extraction_data)
+  - Added "Revisar IA" button to dashboard for accessing AI-generated startup review
+  - Implemented filtering system to identify AI-generated startups vs manual entries
+  - Added editing capabilities for AI-generated startup data
+  - Enhanced startup creation flow to mark AI-generated entries properly
+
 - June 23, 2025: Complete refactor of AI modal component for startup creation
   - Completely rewrote AddStartupWithAIModal with simplified state management
   - Eliminated complex state conflicts causing confirmation screen issues
@@ -164,7 +175,6 @@ This is a comprehensive startup management platform built with React, TypeScript
   - Removed PDF file size limitations
   - Fixed ES module compatibility issues with PDF parsing
   - Enhanced error handling and logging for better debugging
-  - **PDF Processing Successfully Working**: Confirmation screen now appears correctly after PDF upload and processing
   
 - June 23, 2025: Smart Startup Data Auto-completion Wizard Implementation (Completed)
   - Implemented intelligent form auto-completion based on partial data inputs

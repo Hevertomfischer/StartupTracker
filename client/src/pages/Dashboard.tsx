@@ -8,7 +8,7 @@ import { StatusManagementModal } from "@/components/status/StatusManagementModal
 import { useStartups } from "@/hooks/use-startup";
 import { type Startup } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Plus, Columns } from "lucide-react";
+import { Plus, Columns, Bot, Eye } from "lucide-react";
 import { AddStartupWithAIModal } from "@/components/startup/AddStartupWithAIModal";
 import { AIStartupReviewModal } from "@/components/startup/AIStartupReviewModal";
 
@@ -120,10 +120,18 @@ export default function Dashboard() {
                   </Button>
                   <div className="flex gap-2">
                     <Button 
+                      onClick={() => setShowAIReviewModal(true)}
+                      variant="outline"
+                      className="inline-flex items-center"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Revisar IA
+                    </Button>
+                    <Button 
                       onClick={() => setShowAIModal(true)}
                       className="bg-green-600 hover:bg-green-700"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Bot className="h-4 w-4 mr-2" />
                       Add com IA
                     </Button>
                     <Button 
@@ -180,6 +188,10 @@ export default function Dashboard() {
       <AddStartupWithAIModal 
         open={showAIModal} 
         onClose={() => setShowAIModal(false)} 
+      />
+      <AIStartupReviewModal 
+        open={showAIReviewModal} 
+        onClose={() => setShowAIReviewModal(false)} 
       />
     </div>
   );

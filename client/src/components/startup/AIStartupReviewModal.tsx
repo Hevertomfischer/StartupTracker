@@ -64,27 +64,31 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
     enabled: open
   });
 
-  // Filter AI-generated startups (those created recently with typical AI patterns)
+  // Filter AI-generated startups
   const aiStartups = allStartups.filter(startup => {
-    // Filter by recent creation (last 30 days) and typical AI-generated patterns
-    const recentDate = new Date();
-    recentDate.setDate(recentDate.getDate() - 30);
+    // Primary filter: Check if marked as AI-generated
+    if ((startup as any).created_by_ai === true) {
+      return true;
+    }
     
-    const createdAt = new Date(startup.created_at);
-    const isRecent = createdAt > recentDate;
-    
-    // Check for typical AI-generated patterns
+    // Fallback: Check for typical AI-generated patterns for existing data
     const hasAIPatterns = (
       startup.ceo_name?.includes('João') ||
       startup.ceo_name?.includes('Silva') ||
       startup.name?.includes('TechCorp') ||
       startup.website?.includes('techcorp') ||
-      startup.description?.includes('SaaS') ||
+      startup.description?.includes('SaaS para empresas') ||
       startup.sector === 'tech' ||
       startup.business_model === 'SaaS'
     );
 
-    return isRecent || hasAIPatterns;
+    // Also include recent entries (last 7 days) that might be AI-generated
+    const recentDate = new Date();
+    recentDate.setDate(recentDate.getDate() - 7);
+    const createdAt = new Date(startup.created_at);
+    const isRecent = createdAt > recentDate;
+
+    return hasAIPatterns || isRecent;
   });
 
   // Edit form
@@ -167,6 +171,8 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
   };
 
   const getAIIndicator = (startup: Startup) => {
+    const isAIGenerated = (startup as any).created_by_ai === true;
+    
     const hasAIPatterns = (
       startup.ceo_name?.includes('João') ||
       startup.ceo_name?.includes('Silva') ||
@@ -174,7 +180,7 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
       startup.website?.includes('techcorp')
     );
 
-    return hasAIPatterns ? (
+    return (isAIGenerated || hasAIPatterns) ? (
       <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
         <Bot className="h-3 w-3 mr-1" />
         IA

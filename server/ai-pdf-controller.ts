@@ -184,6 +184,10 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     // Garantir que o nome da startup seja mantido
     extractedData.name = name;
     
+    // Mark as AI-generated
+    extractedData.created_by_ai = true;
+    extractedData.ai_extraction_data = JSON.stringify(extractedData);
+    
     // Remover arquivo temporário
     console.log("Removendo arquivo temporário...");
     if (fs.existsSync(req.file.path)) {
