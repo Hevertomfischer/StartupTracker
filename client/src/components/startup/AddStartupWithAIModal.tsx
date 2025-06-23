@@ -383,21 +383,304 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         {/* Confirmation View */}
         {currentView === "confirm" && extractedData && (
           <div>
-
             <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  Dados Extraídos
-                </CardTitle>
-                <CardDescription>
-                  Arquivo: {fileName}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {Object.entries(extractedData).map(([key, value]) => {
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    Dados Extraídos - {fileName}
+                  </CardTitle>
+                  <CardDescription>
+                    Revise as informações extraídas do pitch deck. Os campos com ícone 💡 têm sugestões inteligentes baseadas nos dados do sistema.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+
+              <ConfirmationFormContent
+                extractedData={extractedData}
+                confirmForm={confirmForm}
+                statuses={statuses}
+                onSubmit={handleConfirmSubmit}
+                onEditField={handleEditField}
+                isLoading={createStartupMutation.isPending}
+              />
+            </div>
+          </div>
+        )}
+
+        </DialogContent>
+      </Dialog>
+    </SmartFormProvider>
+  );
+}
+
+// Component wrapper to use SmartForm context
+function ConfirmationFormContent({ 
+  extractedData, 
+  confirmForm, 
+  statuses, 
+  onSubmit, 
+  onEditField, 
+  isLoading 
+}: {
+  extractedData: any;
+  confirmForm: any;
+  statuses: any[];
+  onSubmit: (data: any) => void;
+  onEditField: (field: string) => void;
+  isLoading: boolean;
+}) {
+  const { updateField, getContext } = useSmartForm();
+  
+  // Update context when form values change
+  React.useEffect(() => {
+    const formValues = confirmForm.getValues();
+    Object.keys(formValues).forEach(key => {
+      updateField(key, formValues[key]);
+    });
+  }, [confirmForm.watch(), updateField]);
+
+  return (
+    <Form {...confirmForm}>
+      <form onSubmit={confirmForm.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={confirmForm.control}
+            name="nome"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Nome da Startup</FormLabel>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => onEditField('nome')}
+                  >
+                    <Edit3 className="h-3 w-3" />
+                  </Button>
+                </div>
+                <FormControl>
+                  <Input {...field} disabled />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="sector"
+            render={({ field }) => (
+              <FormItem>
+                <SmartAutoCompleteField
+                  label="Setor"
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    updateField('sector', value);
+                  }}
+                  fieldType="sector"
+                  context={getContext()}
+                  placeholder="Ex: tecnologia, saúde, educação"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="business_model"
+            render={({ field }) => (
+              <FormItem>
+                <SmartAutoCompleteField
+                  label="Modelo de Negócio"
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    updateField('business_model', value);
+                  }}
+                  fieldType="business_model"
+                  context={getContext()}
+                  placeholder="Ex: SaaS, Marketplace, E-commerce"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="ceo_name"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Nome do CEO</FormLabel>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => onEditField('ceo_name')}
+                  >
+                    <Edit3 className="h-3 w-3" />
+                  </Button>
+                </div>
+                <FormControl>
+                  <Input {...field} placeholder="Nome do fundador/CEO" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="ceo_email"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Email do CEO</FormLabel>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => onEditField('ceo_email')}
+                  >
+                    <Edit3 className="h-3 w-3" />
+                  </Button>
+                </div>
+                <FormControl>
+                  <Input {...field} type="email" placeholder="email@startup.com" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="state"
+            render={({ field }) => (
+              <FormItem>
+                <SmartAutoCompleteField
+                  label="Estado"
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    updateField('state', value);
+                  }}
+                  fieldType="state"
+                  context={getContext()}
+                  placeholder="Ex: SP, RJ, MG"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="city"
+            render={({ field }) => (
+              <FormItem>
+                <SmartAutoCompleteField
+                  label="Cidade"
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    updateField('city', value);
+                  }}
+                  fieldType="city"
+                  context={getContext()}
+                  placeholder="Ex: São Paulo, Rio de Janeiro"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="website"
+            render={({ field }) => (
+              <FormItem>
+                <SmartAutoCompleteField
+                  label="Website"
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    updateField('website', value);
+                  }}
+                  fieldType="website"
+                  context={getContext()}
+                  placeholder="https://exemplo.com"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={confirmForm.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <SmartAutoCompleteField
+                label="Descrição"
+                value={field.value || ''}
+                onChange={(value) => {
+                  field.onChange(value);
+                  updateField('description', value);
+                }}
+                fieldType="description"
+                context={getContext()}
+                placeholder="Descreva a startup..."
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={confirmForm.control}
+          name="status_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status Inicial</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {statuses.map((status) => (
+                    <SelectItem key={status.id} value={status.id}>
+                      {status.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => window.location.reload()}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+            Criar Startup
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  );
+}
                     // Temporarily show all fields to debug
                     console.log(`Rendering field: ${key} = ${value} (show: ${!(value === null || value === undefined || value === "")})`);
                     return (
@@ -494,7 +777,228 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
             </div>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </SmartFormProvider>
+  );
+}
+
+// Component wrapper to use SmartForm context
+function ConfirmationFormContent({ 
+  extractedData, 
+  confirmForm, 
+  statuses, 
+  onSubmit, 
+  onEditField, 
+  isLoading 
+}: {
+  extractedData: any;
+  confirmForm: any;
+  statuses: any[];
+  onSubmit: (data: any) => void;
+  onEditField: (field: string) => void;
+  isLoading: boolean;
+}) {
+  const { updateField, getContext } = useSmartForm();
+  
+  // Update context when form values change
+  React.useEffect(() => {
+    const formValues = confirmForm.getValues();
+    Object.keys(formValues).forEach(key => {
+      updateField(key, formValues[key]);
+    });
+  }, [confirmForm.watch(), updateField]);
+
+  return (
+    <Form {...confirmForm}>
+      <form onSubmit={confirmForm.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={confirmForm.control}
+            name="nome"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center justify-between">
+                  <FormLabel>Nome da Startup</FormLabel>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => onEditField('nome')}
+                  >
+                    <Edit3 className="h-3 w-3" />
+                  </Button>
+                </div>
+                <FormControl>
+                  <Input {...field} disabled />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="sector"
+            render={({ field }) => (
+              <FormItem>
+                <SmartAutoCompleteField
+                  label="Setor"
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    updateField('sector', value);
+                  }}
+                  fieldType="sector"
+                  context={getContext()}
+                  placeholder="Ex: tecnologia, saúde, educação"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="business_model"
+            render={({ field }) => (
+              <FormItem>
+                <SmartAutoCompleteField
+                  label="Modelo de Negócio"
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    updateField('business_model', value);
+                  }}
+                  fieldType="business_model"
+                  context={getContext()}
+                  placeholder="Ex: SaaS, Marketplace, E-commerce"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="state"
+            render={({ field }) => (
+              <FormItem>
+                <SmartAutoCompleteField
+                  label="Estado"
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    updateField('state', value);
+                  }}
+                  fieldType="state"
+                  context={getContext()}
+                  placeholder="Ex: SP, RJ, MG"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="city"
+            render={({ field }) => (
+              <FormItem>
+                <SmartAutoCompleteField
+                  label="Cidade"
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    updateField('city', value);
+                  }}
+                  fieldType="city"
+                  context={getContext()}
+                  placeholder="Ex: São Paulo, Rio de Janeiro"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={confirmForm.control}
+            name="website"
+            render={({ field }) => (
+              <FormItem>
+                <SmartAutoCompleteField
+                  label="Website"
+                  value={field.value || ''}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    updateField('website', value);
+                  }}
+                  fieldType="website"
+                  context={getContext()}
+                  placeholder="https://exemplo.com"
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={confirmForm.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <SmartAutoCompleteField
+                label="Descrição"
+                value={field.value || ''}
+                onChange={(value) => {
+                  field.onChange(value);
+                  updateField('description', value);
+                }}
+                fieldType="description"
+                context={getContext()}
+                placeholder="Descreva a startup..."
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={confirmForm.control}
+          name="status_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Status Inicial</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {statuses.map((status) => (
+                    <SelectItem key={status.id} value={status.id}>
+                      {status.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => window.location.reload()}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+            Criar Startup
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
   );
 }
