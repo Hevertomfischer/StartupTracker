@@ -57,8 +57,22 @@ const confirmationSchema = insertStartupSchema.extend({
 export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalProps) {
   const { toast } = useToast();
   const [step, setStep] = useState<"upload" | "confirm" | "processing">("upload");
+  console.log('Current modal step:', step);
   const [extractedData, setExtractedData] = useState<any>(null);
   const [originalFileName, setOriginalFileName] = useState<string>("");
+
+  // Debug: Add test button to force confirmation screen
+  const testConfirmation = () => {
+    console.log('Testing confirmation screen...');
+    setExtractedData({
+      name: 'Test Company',
+      ceo_name: 'Test CEO',
+      ceo_email: 'test@example.com',
+      description: 'Test description'
+    });
+    setOriginalFileName('test.pdf');
+    setStep('confirm');
+  };
 
   // Fetch statuses for the dropdown
   const { data: statuses = [] } = useQuery<Status[]>({
@@ -180,6 +194,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   });
 
   const handleClose = () => {
+    console.log('Closing modal, resetting state...');
     setStep("upload");
     setExtractedData(null);
     setOriginalFileName("");
@@ -189,7 +204,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   };
 
   const onBasicSubmit = (data: z.infer<typeof basicSchema>) => {
+    console.log('Form submitted, setting processing step...', data);
     setStep("processing");
+    console.log('Current step after setting processing:', step);
     processPDFMutation.mutate(data);
   };
 
@@ -286,6 +303,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
                 <Button type="button" variant="outline" onClick={handleClose}>
                   Cancelar
                 </Button>
+                <Button type="button" variant="secondary" onClick={testConfirmation}>
+                  Testar Tela
+                </Button>
                 <Button type="submit" disabled={!basicForm.watch("name") || !basicForm.watch("pitchDeck")}>
                   <FileText className="h-4 w-4 mr-2" />
                   Processar com IA
@@ -307,7 +327,10 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         )}
 
         {/* Step 3: Confirmation */}
-        {step === "confirm" && extractedData && (
+        {(() => {
+          console.log('Checking confirmation conditions:', { step, extractedData: !!extractedData });
+          return step === "confirm" && extractedData;
+        })() && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
