@@ -126,17 +126,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         console.log('Set default status:', statuses[0].id);
       }
 
-      // Switch to confirmation view with slight delay to ensure state updates
-      setTimeout(() => {
-        setCurrentView("confirm");
-        console.log('Current view after switch:', "confirm");
-      }, 50);
-
-      // Force re-render
-      setTimeout(() => {
-        console.log('Force checking view state:', currentView);
-        console.log('Extracted data state:', extractedData);
-      }, 200);
+      // Switch to confirmation view immediately
+      setCurrentView("confirm");
+      console.log('Current view after switch:', "confirm");
 
       toast({
         title: "Dados extraídos com sucesso",
@@ -188,6 +180,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   const handleClose = () => {
     uploadForm.reset();
     confirmForm.reset();
+    setExtractedData(null);
+    setCurrentView("upload");
+    setFileName("");
     onClose();
   };
 
@@ -197,8 +192,8 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     setFileName("");
   };
 
-  // Force modal to stay open when in confirm view or processing
-  const isModalOpen = open || currentView === "confirm" || currentView === "processing";
+  // Keep modal open if there's extracted data or we're in confirm/processing state
+  const isModalOpen = open || !!extractedData || currentView === "confirm" || currentView === "processing";
 
   // Debug logging for view state
   console.log('Modal render - currentView:', currentView, 'extractedData:', !!extractedData, 'isModalOpen:', isModalOpen);
@@ -207,8 +202,8 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     <Dialog 
       open={isModalOpen} 
       onOpenChange={(isOpen) => {
-        // Only allow closing if we're in upload view and not processing
-        if (!isOpen && currentView === "upload") {
+        // Only allow closing if we're in upload view and have no extracted data
+        if (!isOpen && currentView === "upload" && !extractedData) {
           handleClose();
         }
       }}>
