@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -123,7 +122,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   const processPDFMutation = useMutation({
     mutationFn: async (data: { name: string; pitchDeck: File }) => {
       console.log('Iniciando processamento PDF...', data);
-      
+
       const formData = new FormData();
       formData.append('startupName', data.name);
       formData.append('file', data.pitchDeck);
@@ -147,10 +146,10 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     },
     onSuccess: (result) => {
       console.log('PDF processado com sucesso:', result);
-      
+
       setExtractedData(result.extractedData);
       setOriginalFileName(result.originalFileName);
-      
+
       // Preencher formulário de confirmação com dados extraídos
       console.log('Preenchendo formulário com dados:', result.extractedData);
       Object.entries(result.extractedData).forEach(([key, value]) => {
@@ -167,9 +166,13 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       }
 
       console.log('Mudando para tela de confirmação...');
-      setStep("confirm");
-      console.log('Step set to confirm immediately');
-      
+
+      // Forçar re-render antes de mudar o step
+      setTimeout(() => {
+        setStep("confirm");
+        console.log('Step alterado para confirm');
+      }, 100);
+
       toast({
         title: "Dados extraídos com sucesso",
         description: "Revise as informações antes de salvar a startup.",
@@ -178,7 +181,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     onError: (error) => {
       console.error('Erro ao processar PDF:', error);
       setStep("upload"); // Voltar para tela inicial em caso de erro
-      
+
       toast({
         title: "Erro ao processar PDF",
         description: error instanceof Error ? error.message : "Erro desconhecido",
@@ -245,7 +248,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
             <X className="h-4 w-4" />
           </Button>
         </div>
-        
+
         <DialogHeader>
           <DialogTitle className="text-lg font-medium text-gray-700">
             Adicionar Startup com IA
