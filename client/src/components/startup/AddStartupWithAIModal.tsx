@@ -206,7 +206,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         title: "Startup criada com sucesso",
         description: "A startup foi adicionada ao sistema.",
       });
-      handleClose();
+      forceClose();
     },
     onError: (error) => {
       toast({
