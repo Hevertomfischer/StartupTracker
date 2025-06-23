@@ -340,9 +340,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         {/* Confirmation View */}
         {currentView === "confirm" && extractedData && (
           <div>
-            <div className="bg-yellow-100 p-2 mb-4 text-sm">
-              DEBUG: currentView={currentView}, hasExtractedData={!!extractedData}, keys={extractedData ? Object.keys(extractedData).join(', ') : 'none'}
-            </div>
+
             <div className="space-y-6">
             <Card>
               <CardHeader>
