@@ -10,6 +10,7 @@ import { type Startup } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Plus, Columns } from "lucide-react";
 import { AddStartupWithAIModal } from "@/components/startup/AddStartupWithAIModal";
+import { AIStartupReviewModal } from "@/components/startup/AIStartupReviewModal";
 
 export default function Dashboard() {
   const { data: startups = [], isLoading } = useStartups();
@@ -19,6 +20,7 @@ export default function Dashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showAIReviewModal, setShowAIReviewModal] = useState(false);
   const [filterOptions, setFilterOptions] = useState({
     search: "",
     sector: "",

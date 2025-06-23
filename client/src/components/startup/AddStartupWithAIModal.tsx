@@ -166,15 +166,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         confirmForm.setValue('status_id', statuses[0].id);
       }
 
-      // Switch to confirmation view with a slight delay to ensure state is set
-      setTimeout(() => {
-        setCurrentView("confirm");
-        console.log('=== SWITCHED TO CONFIRM VIEW ===');
-        console.log('Current state after switch:', { 
-          currentView: "confirm", 
-          hasExtractedData: !!result.extractedData 
-        });
-      }, 100);
+      // Switch to confirmation view immediately - state updates are synchronous
+      console.log('=== SWITCHING TO CONFIRM VIEW ===');
+      setCurrentView("confirm");
 
       toast({
         title: "Dados extraídos com sucesso",
