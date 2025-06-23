@@ -89,6 +89,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     };
   }, [open, currentView, extractedData, isModalClosing]);
 
+  // Prevent modal from closing when we have extracted data or are in confirm/processing state
+  const shouldKeepModalOpen = currentView === "confirm" || currentView === "processing" || !!extractedData;
+
   // Forms
   const uploadForm = useForm<z.infer<typeof basicSchema>>({
     resolver: zodResolver(basicSchema),
@@ -163,9 +166,15 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         confirmForm.setValue('status_id', statuses[0].id);
       }
 
-      // Switch to confirmation view
-      setCurrentView("confirm");
-      console.log('=== SWITCHED TO CONFIRM VIEW ===');
+      // Switch to confirmation view with a slight delay to ensure state is set
+      setTimeout(() => {
+        setCurrentView("confirm");
+        console.log('=== SWITCHED TO CONFIRM VIEW ===');
+        console.log('Current state after switch:', { 
+          currentView: "confirm", 
+          hasExtractedData: !!result.extractedData 
+        });
+      }, 100);
 
       toast({
         title: "Dados extraídos com sucesso",
@@ -262,16 +271,17 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   };
 
   // Keep modal open if there's extracted data or we're in confirm/processing state
-  const isModalOpen = open || currentView === "confirm" || currentView === "processing" || !!extractedData;
+  const isModalOpen = open || shouldKeepModalOpen;
 
   return (
     <SmartFormProvider>
       <Dialog 
         open={isModalOpen} 
         onOpenChange={(isOpen) => {
-          // Block closing if we're in processing or confirm state
-          if (!isOpen && (currentView === "confirm" || currentView === "processing")) {
-            console.log('Preventing modal close - in confirmation or processing state');
+          console.log('onOpenChange called:', { isOpen, currentView, hasExtractedData: !!extractedData });
+          // Block closing if we're in processing or confirm state or have extracted data
+          if (!isOpen && shouldKeepModalOpen) {
+            console.log('Preventing modal close - in confirmation, processing state, or has extracted data');
             return;
           }
           if (!isOpen) {
