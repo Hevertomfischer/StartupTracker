@@ -57,26 +57,36 @@ const confirmationSchema = insertStartupSchema.extend({
 export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalProps) {
   const { toast } = useToast();
   const [step, setStep] = useState<"upload" | "confirm" | "processing">("upload");
-  console.log('Current modal step:', step);
   const [extractedData, setExtractedData] = useState<any>(null);
   const [originalFileName, setOriginalFileName] = useState<string>("");
 
   // Debug: Add test button to force confirmation screen
   const testConfirmation = () => {
     console.log('Testing confirmation screen...');
-    setExtractedData({
+    const testData = {
       name: 'Test Company',
       ceo_name: 'Test CEO',
       ceo_email: 'test@example.com',
       description: 'Test description'
-    });
+    };
+    setExtractedData(testData);
     setOriginalFileName('test.pdf');
     setStep('confirm');
+    console.log('Test data set:', testData);
   };
 
-  // Effect to ensure modal state persists correctly
+  // Reset modal state when closed
   useEffect(() => {
-    console.log('Modal state effect triggered:', { step, extractedData: !!extractedData, open });
+    if (!open) {
+      setStep("upload");
+      setExtractedData(null);
+      setOriginalFileName("");
+    }
+  }, [open]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Modal state:', { step, extractedData: !!extractedData, open });
   }, [step, extractedData, open]);
 
   // Fetch statuses for the dropdown
@@ -201,9 +211,6 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   const handleClose = () => {
     console.log('Closing modal, resetting state...');
-    setStep("upload");
-    setExtractedData(null);
-    setOriginalFileName("");
     basicForm.reset();
     confirmForm.reset();
     onClose();
