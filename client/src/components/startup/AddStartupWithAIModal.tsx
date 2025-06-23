@@ -117,7 +117,8 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     },
     onSuccess: (result) => {
       console.log('PDF processed successfully:', result);
-      console.log('Extracted data:', result.extractedData);
+      console.log('COMPLETE EXTRACTED DATA:', result.extractedData);
+      console.log('EXTRACTED DATA KEYS:', Object.keys(result.extractedData));
       console.log('Current view before switch:', currentView);
 
       // Store extracted data
@@ -126,11 +127,10 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
       console.log('Setting extracted data and switching to confirm view...');
 
-      // Fill confirmation form
+      // Fill confirmation form - temporarily remove filters to debug
       Object.entries(result.extractedData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== "") {
-          confirmForm.setValue(key as any, value);
-        }
+        console.log(`Setting form field: ${key} = ${value} (type: ${typeof value})`);
+        confirmForm.setValue(key as any, value);
       });
 
       // Set default status
@@ -326,7 +326,11 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
         {/* Confirmation View */}
         {currentView === "confirm" && extractedData && (
-          <div className="space-y-6">
+          <div>
+            <div className="bg-yellow-100 p-2 mb-4 text-sm">
+              DEBUG: currentView={currentView}, hasExtractedData={!!extractedData}, keys={extractedData ? Object.keys(extractedData).join(', ') : 'none'}
+            </div>
+            <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -340,9 +344,10 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   {Object.entries(extractedData).map(([key, value]) => {
-                    if (value === null || value === undefined || value === "") return null;
+                    // Temporarily show all fields to debug
+                    console.log(`Rendering field: ${key} = ${value} (show: ${!(value === null || value === undefined || value === "")})`);
                     return (
-                      <div key={key}>
+                      <div key={key} className="border p-2">
                         <span className="font-medium">{key}:</span>
                         <span className="ml-2 text-gray-600">{String(value)}</span>
                       </div>
@@ -432,6 +437,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
                 </DialogFooter>
               </form>
             </Form>
+            </div>
           </div>
         )}
       </DialogContent>
