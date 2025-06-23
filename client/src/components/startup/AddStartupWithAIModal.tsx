@@ -104,10 +104,14 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     },
     onSuccess: (result) => {
       console.log('PDF processed successfully:', result);
+      console.log('Extracted data:', result.extractedData);
+      console.log('Current view before switch:', currentView);
       
       // Store extracted data
       setExtractedData(result.extractedData);
       setFileName(result.originalFileName);
+      
+      console.log('Setting extracted data and switching to confirm view...');
       
       // Fill confirmation form
       Object.entries(result.extractedData).forEach(([key, value]) => {
@@ -119,10 +123,18 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       // Set default status
       if (statuses.length > 0 && !result.extractedData.status_id) {
         confirmForm.setValue('status_id', statuses[0].id);
+        console.log('Set default status:', statuses[0].id);
       }
       
       // Switch to confirmation view
       setCurrentView("confirm");
+      console.log('Current view after switch:', "confirm");
+      
+      // Force re-render
+      setTimeout(() => {
+        console.log('Force checking view state:', currentView);
+        console.log('Extracted data state:', extractedData);
+      }, 100);
       
       toast({
         title: "Dados extraídos com sucesso",
@@ -185,6 +197,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   // Force modal to stay open when in confirm view
   const isModalOpen = open || currentView === "confirm";
+  
+  // Debug logging for view state
+  console.log('Modal render - currentView:', currentView, 'extractedData:', !!extractedData, 'isModalOpen:', isModalOpen);
 
   return (
     <Dialog 
