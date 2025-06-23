@@ -33,7 +33,7 @@ const tempUpload = multer({
   },
 });
 
-export const uploadTempPDF = tempUpload.single('pitch_deck');
+export const uploadTempPDF = tempUpload.single('file');
 
 // Função para extrair texto do PDF
 async function extractTextFromPDF(filePath: string): Promise<string> {
