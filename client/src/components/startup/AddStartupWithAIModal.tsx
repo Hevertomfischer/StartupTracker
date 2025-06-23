@@ -126,15 +126,17 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         console.log('Set default status:', statuses[0].id);
       }
 
-      // Switch to confirmation view
-      setCurrentView("confirm");
-      console.log('Current view after switch:', "confirm");
+      // Switch to confirmation view with slight delay to ensure state updates
+      setTimeout(() => {
+        setCurrentView("confirm");
+        console.log('Current view after switch:', "confirm");
+      }, 50);
 
       // Force re-render
       setTimeout(() => {
         console.log('Force checking view state:', currentView);
         console.log('Extracted data state:', extractedData);
-      }, 100);
+      }, 200);
 
       toast({
         title: "Dados extraídos com sucesso",
@@ -195,8 +197,8 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     setFileName("");
   };
 
-  // Force modal to stay open when in confirm view
-  const isModalOpen = open || currentView === "confirm";
+  // Force modal to stay open when in confirm view or processing
+  const isModalOpen = open || currentView === "confirm" || currentView === "processing";
 
   // Debug logging for view state
   console.log('Modal render - currentView:', currentView, 'extractedData:', !!extractedData, 'isModalOpen:', isModalOpen);
@@ -205,10 +207,11 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     <Dialog 
       open={isModalOpen} 
       onOpenChange={(isOpen) => {
-      if (!isOpen && currentView !== "confirm" && currentView !== "processing") {
-        handleClose();
-      }
-    }}>
+        // Only allow closing if we're in upload view and not processing
+        if (!isOpen && currentView === "upload") {
+          handleClose();
+        }
+      }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar Startup com IA</DialogTitle>
