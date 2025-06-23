@@ -79,11 +79,13 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
 
 // Função para extrair informações usando IA (simulação - você pode integrar com OpenAI, Claude, etc.)
 async function extractDataWithAI(text: string): Promise<any> {
-  // Aqui você integraria com uma API de IA como OpenAI GPT
-  // Por enquanto, fazemos parsing simples do texto simulado
+  console.log("Iniciando processamento de IA...");
+  console.log(`Texto recebido: ${text.substring(0, 200)}...`);
   
   const lines = text.split('\n').map(line => line.trim()).filter(line => line);
   const data: any = {};
+  
+  console.log(`Processando ${lines.length} linhas`);
   
   for (const line of lines) {
     if (line.includes('Startup:')) {
@@ -132,6 +134,7 @@ async function extractDataWithAI(text: string): Promise<any> {
     }
   }
   
+  console.log("Processamento de IA concluído, dados extraídos:", data);
   return data;
 }
 
