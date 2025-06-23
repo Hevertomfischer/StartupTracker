@@ -146,8 +146,8 @@ export function SmartAutoCompleteField({
       }
       
       case 'website': {
-        if (context.nome) {
-          const name = context.nome.toLowerCase().replace(/\s+/g, '');
+        if (context.nome || context.name) {
+          const name = (context.nome || context.name || '').toLowerCase().replace(/\s+/g, '');
           suggestions.push(
             {
               value: `https://${name}.com`,

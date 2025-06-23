@@ -684,22 +684,6 @@ function ConfirmationFormContent({
     </Form>
   );
 }
-                    // Temporarily show all fields to debug
-                    console.log(`Rendering field: ${key} = ${value} (show: ${!(value === null || value === undefined || value === "")})`);
-                    return (
-                      <div key={key} className="border p-2">
-                        <span className="font-medium">{key}:</span>
-                        <span className="ml-2 text-gray-600">{String(value)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Form {...confirmForm}>
-              <form onSubmit={confirmForm.handleSubmit(handleConfirmSubmit)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={confirmForm.control}
                     name="name"
