@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 
 interface FileAnalysis {
   success: boolean;
@@ -64,15 +64,15 @@ function notifyListeners() {
 }
 
 export function usePersistentImportState() {
-  const [, forceUpdate] = useState({});
+  const [state, setState] = useState<ImportState>(globalImportState);
   const componentId = useRef(Math.random().toString(36).substr(2, 9));
 
   useEffect(() => {
-    console.log(`=== ImportPage ${componentId.current} - Component Mounted with Global State ===`, globalImportState);
-    
-    const listener = () => forceUpdate({});
+    console.log(`=== ImportPage ${componentId.current} - Component Mounted with Global State ===`, state);
+
+    const listener = () => setState(globalImportState);
     listeners.add(listener);
-    
+
     return () => {
       console.log(`=== ImportPage ${componentId.current} - Component Unmounted ===`);
       listeners.delete(listener);
@@ -80,15 +80,18 @@ export function usePersistentImportState() {
   }, []);
 
   const updateState = useCallback((updates: Partial<ImportState>) => {
-    console.log(`=== ImportPage ${componentId.current} - Global State Update ===`, updates);
-    globalImportState = { ...globalImportState, ...updates };
-    console.log(`=== ImportPage ${componentId.current} - New Global State ===`, globalImportState);
-    notifyListeners();
-  }, []);
+    console.log(`=== Atualizando estado (${componentId.current}) ===`, updates);
+    setState(prev => {
+      const newState = { ...prev, ...updates };
+      console.log('Estado anterior:', prev);
+      console.log('Novo estado:', newState);
+      return newState;
+    });
+  }, [componentId]);
 
   const resetState = useCallback(() => {
     console.log(`=== ImportPage ${componentId.current} - Resetting Global State ===`);
-    globalImportState = {
+    setState({
       currentStep: 'upload',
       selectedFile: null,
       isAnalyzing: false,
@@ -96,14 +99,13 @@ export function usePersistentImportState() {
       fileAnalysis: null,
       columnMapping: {},
       importResult: null,
-    };
-    notifyListeners();
+    });
   }, []);
 
-  return {
-    state: globalImportState,
+  return useMemo(() => ({
+    state,
     updateState,
     resetState,
     componentId: componentId.current
-  };
+  }), [state, updateState, resetState]);
 }

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,15 @@ import {
 export default function ImportPage() {
   const { state, updateState, resetState, componentId } = usePersistentImportState();
   const { toast } = useToast();
+
+  // Prevent infinite re-renders by stabilizing the component
+  useEffect(() => {
+    // Only log on mount/unmount, not on every render
+    console.log('ImportPage mounted with componentId:', componentId);
+    return () => {
+      console.log('ImportPage unmounting');
+    };
+  }, []);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
