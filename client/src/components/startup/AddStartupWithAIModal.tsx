@@ -4,10 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
-  DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogDescription,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -19,22 +19,16 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { insertStartupSchema, SectorEnum, PriorityEnum, type Status } from "@shared/schema";
-import { Loader2, X, Upload, FileText, CheckCircle, AlertCircle } from "lucide-react";
-import { z } from "zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Upload, FileText, CheckCircle, Loader2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { insertStartupSchema, type SelectStatus } from "@shared/schema";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 type AddStartupWithAIModalProps = {
   open: boolean;
@@ -55,155 +49,98 @@ const confirmationSchema = insertStartupSchema.extend({
 
 export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalProps) {
   const { toast } = useToast();
-  const [step, setStep] = useState<"upload" | "confirm" | "processing">("upload");
+  const queryClient = useQueryClient();
+  
+  // Simplified state management
+  const [currentView, setCurrentView] = useState<"upload" | "confirm" | "processing">("upload");
   const [extractedData, setExtractedData] = useState<any>(null);
-  const [originalFileName, setOriginalFileName] = useState<string>("");
-  const [forceOpen, setForceOpen] = useState(false);
-
-  // Debug: Add test button to force confirmation screen
-  const testConfirmation = () => {
-    console.log('Testing confirmation screen...');
-    const testData = {
-      name: 'Test Company',
-      ceo_name: 'Test CEO',
-      ceo_email: 'test@example.com',
-      description: 'Test description'
-    };
-    setExtractedData(testData);
-    setOriginalFileName('test.pdf');
-    setForceOpen(true);
-    setStep('confirm');
-    console.log('Test data set:', testData);
-  };
-
-  // Reset modal state when closed - but only if we're not in confirmation step
+  const [fileName, setFileName] = useState<string>("");
+  
+  // Reset state when modal closes
   useEffect(() => {
-    if (!open && !forceOpen && step !== "confirm") {
-      setStep("upload");
-      setExtractedData(null);
-      setOriginalFileName("");
-      setForceOpen(false);
+    if (!open) {
+      setTimeout(() => {
+        setCurrentView("upload");
+        setExtractedData(null);
+        setFileName("");
+      }, 200);
     }
-  }, [open, forceOpen, step]);
+  }, [open]);
 
-  // Debug logging
-  useEffect(() => {
-    const shouldBeOpen = open || forceOpen || (step === "confirm" && extractedData);
-    console.log('Modal state:', { step, extractedData: !!extractedData, open, forceOpen, shouldBeOpen });
-  }, [step, extractedData, open, forceOpen]);
-
-  // Fetch statuses for the dropdown
-  const { data: statuses = [] } = useQuery<Status[]>({
-    queryKey: ['/api/statuses'],
-    queryFn: async () => {
-      const response = await fetch('/api/statuses');
-      if (!response.ok) {
-        throw new Error('Failed to fetch statuses');
-      }
-      return response.json();
-    }
-  });
-
-  const basicForm = useForm<z.infer<typeof basicSchema>>({
+  // Forms
+  const uploadForm = useForm<z.infer<typeof basicSchema>>({
     resolver: zodResolver(basicSchema),
-    defaultValues: {
-      name: "",
-    },
+    defaultValues: { name: "", pitchDeck: undefined }
   });
 
   const confirmForm = useForm<z.infer<typeof confirmationSchema>>({
     resolver: zodResolver(confirmationSchema),
-    defaultValues: {
-      name: "",
-      description: "",
-      sector: "tech",
-      status_id: "",
-      priority: "medium",
-    },
+    defaultValues: {}
   });
 
-  // Mutation para processar PDF
+  // Fetch statuses
+  const { data: statuses = [] } = useQuery<SelectStatus[]>({
+    queryKey: ['/api/statuses'],
+    enabled: open
+  });
+
+  // PDF Processing mutation
   const processPDFMutation = useMutation({
-    mutationFn: async (data: { name: string; pitchDeck: File }) => {
-      console.log('Iniciando processamento PDF...', data);
-
+    mutationFn: async (data: z.infer<typeof basicSchema>) => {
       const formData = new FormData();
-      formData.append('startupName', data.name);
+      formData.append('name', data.name);
       formData.append('file', data.pitchDeck);
-
+      
       const response = await fetch('/api/startup/process-pitch-deck', {
         method: 'POST',
         body: formData,
       });
-
-      console.log('Resposta recebida:', response.status, response.statusText);
-
+      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Erro na resposta:', errorText);
-        throw new Error('Erro ao processar pitch deck');
+        throw new Error('Falha no processamento');
       }
-
-      const result = await response.json();
-      console.log('Resultado do processamento:', result);
-      return result;
+      
+      return response.json();
     },
     onSuccess: (result) => {
-      console.log('PDF processado com sucesso:', result);
-
-      // Primeiro definir os dados extraídos
+      console.log('PDF processed successfully:', result);
+      
+      // Store extracted data
       setExtractedData(result.extractedData);
-      setOriginalFileName(result.originalFileName);
-
-      // Preencher formulário de confirmação com dados extraídos
-      console.log('Preenchendo formulário com dados:', result.extractedData);
+      setFileName(result.originalFileName);
+      
+      // Fill confirmation form
       Object.entries(result.extractedData).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== "") {
-          console.log(`Definindo ${key}:`, value);
           confirmForm.setValue(key as any, value);
         }
       });
-
-      // Set default status if available
+      
+      // Set default status
       if (statuses.length > 0 && !result.extractedData.status_id) {
-        console.log('Definindo status padrão:', statuses[0].id);
         confirmForm.setValue('status_id', statuses[0].id);
       }
-
-      console.log('Mudando para tela de confirmação...');
       
-      // Force the modal to stay open
-      setForceOpen(true);
+      // Switch to confirmation view
+      setCurrentView("confirm");
       
-      // Mudar para o step de confirmação imediatamente
-      setStep("confirm");
-      console.log('Step alterado para confirm');
-
       toast({
         title: "Dados extraídos com sucesso",
-        description: "Revise as informações antes de salvar a startup.",
+        description: "Revise as informações antes de salvar.",
       });
-
-      // Force re-render to ensure confirmation screen appears
-      setTimeout(() => {
-        console.log('Forcing confirmation screen update');
-        setStep("confirm");
-        setForceOpen(true);
-      }, 100);
     },
     onError: (error) => {
-      console.error('Erro ao processar PDF:', error);
-      setStep("upload"); // Voltar para tela inicial em caso de erro
-
+      console.error('PDF processing error:', error);
+      setCurrentView("upload");
       toast({
         title: "Erro ao processar PDF",
-        description: error instanceof Error ? error.message : "Erro desconhecido",
+        description: "Falha no processamento. Tente novamente.",
         variant: "destructive",
       });
     },
   });
 
-  // Mutation para criar startup
+  // Create startup mutation
   const createStartupMutation = useMutation({
     mutationFn: async (data: z.infer<typeof confirmationSchema>) => {
       return await apiRequest("POST", "/api/startups", data);
@@ -214,7 +151,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         title: "Startup criada com sucesso",
         description: "A startup foi adicionada ao sistema.",
       });
-      forceClose();
+      handleClose();
     },
     onError: (error) => {
       toast({
@@ -225,119 +162,63 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     },
   });
 
-  const handleClose = () => {
-    console.log('Closing modal, resetting state...');
-    // Only allow close if not in confirmation step with data
-    if (step === "confirm" && extractedData) {
-      console.log('Preventing close during confirmation step with data');
-      return;
-    }
-    basicForm.reset();
-    confirmForm.reset();
-    onClose();
-  };
-
-  const forceClose = () => {
-    console.log('Force closing modal...');
-    setStep("upload");
-    setExtractedData(null);
-    setOriginalFileName("");
-    setForceOpen(false);
-    basicForm.reset();
-    confirmForm.reset();
-    onClose();
-  };
-
-  const onBasicSubmit = (data: z.infer<typeof basicSchema>) => {
-    console.log('Form submitted, setting processing step...', data);
-    setStep("processing");
-    console.log('Current step after setting processing:', step);
+  const handleUploadSubmit = (data: z.infer<typeof basicSchema>) => {
+    setCurrentView("processing");
     processPDFMutation.mutate(data);
   };
 
-  const onConfirmSubmit = (data: z.infer<typeof confirmationSchema>) => {
+  const handleConfirmSubmit = (data: z.infer<typeof confirmationSchema>) => {
     createStartupMutation.mutate(data);
   };
 
-  const goBack = () => {
-    setStep("upload");
-    setExtractedData(null);
-    setOriginalFileName("");
+  const handleClose = () => {
+    uploadForm.reset();
+    confirmForm.reset();
+    onClose();
   };
+
+  const goBack = () => {
+    setCurrentView("upload");
+    setExtractedData(null);
+    setFileName("");
+  };
+
+  // Force modal to stay open when in confirm view
+  const isModalOpen = open || currentView === "confirm";
 
   return (
     <Dialog 
-      open={open || forceOpen || (step === "confirm" && extractedData)} 
+      open={isModalOpen} 
       onOpenChange={(isOpen) => {
-        // Bloquear fechamento automático quando estiver na tela de confirmação
-        if (!isOpen && (step === "confirm" && extractedData || forceOpen)) {
-          console.log('Bloqueando fechamento automático na tela de confirmação');
+        if (!isOpen && currentView === "confirm") {
+          // Prevent closing during confirmation
           return;
         }
-        
-        // Só fechar se realmente for para fechar
         if (!isOpen) {
           handleClose();
         }
       }}
     >
-      <DialogContent 
-          className="max-w-2xl max-h-[90vh] overflow-y-auto"
-          onPointerDownOutside={(e) => {
-            // Prevenir fechamento ao clicar fora quando estiver na tela de confirmação
-            if (step === "confirm" && extractedData || forceOpen) {
-              e.preventDefault();
-            }
-          }}
-          onEscapeKeyDown={(e) => {
-            // Prevenir fechamento com ESC quando estiver na tela de confirmação
-            if (step === "confirm" && extractedData) {
-              e.preventDefault();
-            }
-          }}
-        >
-        <div className="absolute top-0 right-0 pt-4 pr-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => {
-              // Só permitir fechamento manual se não estiver na confirmação ou se for explícito
-              if (step === "confirm" && extractedData) {
-                const shouldClose = confirm("Tem certeza que deseja fechar? Os dados extraídos serão perdidos.");
-                if (shouldClose) {
-                  handleClose();
-                }
-              } else {
-                handleClose();
-              }
-            }}
-            className="h-6 w-6 rounded-full"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg font-medium text-gray-700">
-            Adicionar Startup com IA
-          </DialogTitle>
-          <DialogDescription className="text-sm text-gray-500">
-            {step === "upload" && "Carregue o pitch deck para extrair informações automaticamente"}
-            {step === "processing" && "Processando pitch deck com IA..."}
-            {step === "confirm" && "Revise e confirme as informações extraídas"}
+          <DialogTitle>Adicionar Startup com IA</DialogTitle>
+          <DialogDescription>
+            {currentView === "upload" && "Carregue o pitch deck para extrair informações automaticamente"}
+            {currentView === "processing" && "Processando pitch deck com IA..."}
+            {currentView === "confirm" && "Revise e confirme as informações extraídas"}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Step 1: Upload */}
-        {step === "upload" && (
-          <Form {...basicForm}>
-            <form onSubmit={basicForm.handleSubmit(onBasicSubmit)} className="space-y-6">
+        {/* Upload View */}
+        {currentView === "upload" && (
+          <Form {...uploadForm}>
+            <form onSubmit={uploadForm.handleSubmit(handleUploadSubmit)} className="space-y-6">
               <FormField
-                control={basicForm.control}
+                control={uploadForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome da Startup *</FormLabel>
+                    <FormLabel>Nome da Startup</FormLabel>
                     <FormControl>
                       <Input placeholder="Digite o nome da startup" {...field} />
                     </FormControl>
@@ -347,13 +228,13 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
               />
 
               <FormField
-                control={basicForm.control}
+                control={uploadForm.control}
                 name="pitchDeck"
                 render={({ field: { onChange, ...field } }) => (
                   <FormItem>
-                    <FormLabel>Pitch Deck (PDF) *</FormLabel>
+                    <FormLabel>Pitch Deck (PDF)</FormLabel>
                     <FormControl>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                         <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                         <Input
                           type="file"
@@ -371,9 +252,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
                         >
                           Clique para selecionar o arquivo PDF do pitch deck
                         </label>
-                        {basicForm.watch("pitchDeck") && (
+                        {uploadForm.watch("pitchDeck") && (
                           <p className="mt-2 text-sm text-green-600">
-                            ✓ {basicForm.watch("pitchDeck")?.name}
+                            ✓ {uploadForm.watch("pitchDeck")?.name}
                           </p>
                         )}
                       </div>
@@ -387,10 +268,10 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
                 <Button type="button" variant="outline" onClick={handleClose}>
                   Cancelar
                 </Button>
-                <Button type="button" variant="secondary" onClick={testConfirmation}>
-                  Testar Tela
-                </Button>
-                <Button type="submit" disabled={!basicForm.watch("name") || !basicForm.watch("pitchDeck")}>
+                <Button 
+                  type="submit" 
+                  disabled={!uploadForm.watch("name") || !uploadForm.watch("pitchDeck")}
+                >
                   <FileText className="h-4 w-4 mr-2" />
                   Processar com IA
                 </Button>
@@ -399,19 +280,21 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
           </Form>
         )}
 
-        {/* Step 2: Processing */}
-        {step === "processing" && (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-12 w-12 animate-spin text-blue-500 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Processando Pitch Deck</h3>
-            <p className="text-gray-600 text-center">
+        {/* Processing View */}
+        {currentView === "processing" && (
+          <div className="flex flex-col items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Processando Pitch Deck
+            </h3>
+            <p className="text-sm text-gray-600 text-center">
               Nossa IA está analisando o documento e extraindo as informações...
             </p>
           </div>
         )}
 
-        {/* Step 3: Confirmation */}
-        {step === "confirm" && extractedData && (
+        {/* Confirmation View */}
+        {currentView === "confirm" && extractedData && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
@@ -420,35 +303,33 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
                   Dados Extraídos
                 </CardTitle>
                 <CardDescription>
-                  Arquivo: {originalFileName}
+                  Arquivo: {fileName}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   {Object.entries(extractedData).map(([key, value]) => {
-                    if (value && key !== 'name') {
-                      return (
-                        <div key={key} className="flex justify-between">
-                          <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span>
-                          <span className="text-gray-600 truncate ml-2">{String(value)}</span>
-                        </div>
-                      );
-                    }
-                    return null;
+                    if (value === null || value === undefined || value === "") return null;
+                    return (
+                      <div key={key}>
+                        <span className="font-medium">{key}:</span>
+                        <span className="ml-2 text-gray-600">{String(value)}</span>
+                      </div>
+                    );
                   })}
                 </div>
               </CardContent>
             </Card>
 
             <Form {...confirmForm}>
-              <form onSubmit={confirmForm.handleSubmit(onConfirmSubmit)} className="space-y-4">
+              <form onSubmit={confirmForm.handleSubmit(handleConfirmSubmit)} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={confirmForm.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome da Startup</FormLabel>
+                        <FormLabel>Nome</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
@@ -459,25 +340,22 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
                   <FormField
                     control={confirmForm.control}
-                    name="sector"
+                    name="status_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Setor</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue />
+                              <SelectValue placeholder="Selecione um status" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value={SectorEnum.TECH}>Tecnologia</SelectItem>
-                            <SelectItem value={SectorEnum.HEALTH}>Saúde</SelectItem>
-                            <SelectItem value={SectorEnum.FINANCE}>Financeiro</SelectItem>
-                            <SelectItem value={SectorEnum.ECOMMERCE}>E-commerce</SelectItem>
-                            <SelectItem value={SectorEnum.EDUCATION}>Educação</SelectItem>
-                            <SelectItem value={SectorEnum.AGRITECH}>AgriTech</SelectItem>
-                            <SelectItem value={SectorEnum.CLEANTECH}>CleanTech</SelectItem>
-                            <SelectItem value={SectorEnum.OTHER}>Outro</SelectItem>
+                            {statuses.map((status) => (
+                              <SelectItem key={status.id} value={status.id}>
+                                {status.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -500,51 +378,24 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={confirmForm.control}
-                    name="ceo_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nome do CEO</FormLabel>
-                        <FormControl>
-                          <Input {...field} value={field.value || ""} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={confirmForm.control}
-                    name="ceo_email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email do CEO</FormLabel>
-                        <FormControl>
-                          <Input {...field} value={field.value || ""} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={goBack}>
                     Voltar
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button type="button" variant="outline" onClick={handleClose}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
                     disabled={createStartupMutation.isPending}
                   >
                     {createStartupMutation.isPending ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Salvando...
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Criando...
                       </>
                     ) : (
-                      "Salvar Startup"
+                      "Criar Startup"
                     )}
                   </Button>
                 </DialogFooter>
