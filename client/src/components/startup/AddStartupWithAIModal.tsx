@@ -116,43 +116,56 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       return response.json();
     },
     onSuccess: (result) => {
+      console.log('=== PDF MUTATION SUCCESS START ===');
       console.log('PDF processed successfully:', result);
       console.log('COMPLETE EXTRACTED DATA:', result.extractedData);
-      console.log('EXTRACTED DATA KEYS:', Object.keys(result.extractedData));
+      console.log('EXTRACTED DATA KEYS:', Object.keys(result.extractedData || {}));
       console.log('Current view before switch:', currentView);
 
-      // Store extracted data
+      // Immediate state updates
+      console.log('Setting extracted data...');
       setExtractedData(result.extractedData);
-      setFileName(result.originalFileName);
+      console.log('Setting file name...');
+      setFileName(result.originalFileName || '');
 
-      console.log('Setting extracted data and switching to confirm view...');
-
-      // Fill confirmation form - temporarily remove filters to debug
-      Object.entries(result.extractedData).forEach(([key, value]) => {
-        console.log(`Setting form field: ${key} = ${value} (type: ${typeof value})`);
-        confirmForm.setValue(key as any, value);
-      });
-
-      // Set default status
-      if (statuses.length > 0 && !result.extractedData.status_id) {
-        confirmForm.setValue('status_id', statuses[0].id);
-        console.log('Set default status:', statuses[0].id);
+      console.log('Filling confirmation form...');
+      // Fill confirmation form
+      if (result.extractedData) {
+        Object.entries(result.extractedData).forEach(([key, value]) => {
+          console.log(`Setting form field: ${key} = ${value} (type: ${typeof value})`);
+          try {
+            confirmForm.setValue(key as any, value);
+          } catch (error) {
+            console.warn(`Failed to set form field ${key}:`, error);
+          }
+        });
       }
 
-      // Switch to confirmation view immediately
-      console.log('About to switch to confirm view...');
+      // Set default status
+      if (statuses.length > 0 && !result.extractedData?.status_id) {
+        console.log('Setting default status:', statuses[0].id);
+        confirmForm.setValue('status_id', statuses[0].id);
+      }
+
+      // Critical: Force view switch
+      console.log('=== SWITCHING TO CONFIRM VIEW ===');
       setCurrentView("confirm");
-      console.log('Current view after switch:', "confirm");
       
-      // Force a state update check
+      // Multiple verification points
       setTimeout(() => {
-        console.log('Delayed check - currentView:', currentView, 'extractedData:', !!extractedData);
+        console.log('50ms check - currentView should be confirm:', currentView);
       }, 50);
+      
+      setTimeout(() => {
+        console.log('100ms check - currentView:', currentView, 'extractedData exists:', !!extractedData);
+      }, 100);
 
       toast({
         title: "Dados extraídos com sucesso",
         description: "Revise as informações antes de salvar.",
       });
+      
+      console.log('=== PDF MUTATION SUCCESS END ===');
     },
     onError: (error) => {
       console.error('PDF processing error:', error);
@@ -188,8 +201,13 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   });
 
   const handleUploadSubmit = (data: z.infer<typeof basicSchema>) => {
+    console.log('=== UPLOAD SUBMIT START ===');
+    console.log('Form data:', data);
+    console.log('Setting view to processing...');
     setCurrentView("processing");
+    console.log('Triggering PDF mutation...');
     processPDFMutation.mutate(data);
+    console.log('=== UPLOAD SUBMIT END ===');
   };
 
   const handleConfirmSubmit = (data: z.infer<typeof confirmationSchema>) => {
@@ -213,6 +231,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   // Keep modal open if there's extracted data or we're in confirm/processing state
   const isModalOpen = open || currentView === "confirm" || currentView === "processing";
+  
+  // Force debug logging on every render
+  console.log('RENDER CHECK - currentView:', currentView, 'extractedData exists:', !!extractedData, 'isModalOpen:', isModalOpen);
 
 
 
@@ -324,8 +345,16 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
           </div>
         )}
 
-        {/* Confirmation View */}
-        {currentView === "confirm" && extractedData && (
+        {/* Confirmation View - Debug condition */}
+        {(() => {
+          console.log('CONFIRM VIEW CHECK:', {
+            currentView,
+            isConfirm: currentView === "confirm",
+            extractedData: !!extractedData,
+            shouldShow: currentView === "confirm" && extractedData
+          });
+          return currentView === "confirm" && extractedData;
+        })() && (
           <div>
             <div className="bg-yellow-100 p-2 mb-4 text-sm">
               DEBUG: currentView={currentView}, hasExtractedData={!!extractedData}, keys={extractedData ? Object.keys(extractedData).join(', ') : 'none'}
