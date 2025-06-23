@@ -213,16 +213,11 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   const handleClose = () => {
     console.log('Closing modal, resetting state...');
-    
-    // Só resetar se não estiver na tela de confirmação com dados
-    if (step !== "confirm" || !extractedData) {
-      basicForm.reset();
-      confirmForm.reset();
-      setStep("upload");
-      setExtractedData(null);
-      setOriginalFileName("");
-    }
-    
+    basicForm.reset();
+    confirmForm.reset();
+    setStep("upload");
+    setExtractedData(null);
+    setOriginalFileName("");
     onClose();
   };
 
@@ -240,26 +235,55 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   const goBack = () => {
     setStep("upload");
     setExtractedData(null);
+    setOriginalFileName("");
   };
 
   return (
     <Dialog 
       open={open} 
       onOpenChange={(isOpen) => {
-        // Só permitir fechamento se não estiver na tela de confirmação ou se estiver fechando explicitamente
+        // Bloquear fechamento automático quando estiver na tela de confirmação
         if (!isOpen && step === "confirm" && extractedData) {
           console.log('Bloqueando fechamento automático na tela de confirmação');
           return;
         }
-        handleClose();
+        
+        // Só fechar se realmente for para fechar
+        if (!isOpen) {
+          handleClose();
+        }
       }}
     >
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          onPointerDownOutside={(e) => {
+            // Prevenir fechamento ao clicar fora quando estiver na tela de confirmação
+            if (step === "confirm" && extractedData) {
+              e.preventDefault();
+            }
+          }}
+          onEscapeKeyDown={(e) => {
+            // Prevenir fechamento com ESC quando estiver na tela de confirmação
+            if (step === "confirm" && extractedData) {
+              e.preventDefault();
+            }
+          }}
+        >
         <div className="absolute top-0 right-0 pt-4 pr-4">
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={handleClose}
+            onClick={() => {
+              // Só permitir fechamento manual se não estiver na confirmação ou se for explícito
+              if (step === "confirm" && extractedData) {
+                const shouldClose = confirm("Tem certeza que deseja fechar? Os dados extraídos serão perdidos.");
+                if (shouldClose) {
+                  handleClose();
+                }
+              } else {
+                handleClose();
+              }
+            }}
             className="h-6 w-6 rounded-full"
           >
             <X className="h-4 w-4" />
