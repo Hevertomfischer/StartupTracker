@@ -147,6 +147,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     onSuccess: (result) => {
       console.log('PDF processado com sucesso:', result);
 
+      // Primeiro definir os dados extraídos
       setExtractedData(result.extractedData);
       setOriginalFileName(result.originalFileName);
 
@@ -166,12 +167,10 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       }
 
       console.log('Mudando para tela de confirmação...');
-
-      // Forçar re-render antes de mudar o step
-      setTimeout(() => {
-        setStep("confirm");
-        console.log('Step alterado para confirm');
-      }, 100);
+      
+      // Mudar para o step de confirmação imediatamente
+      setStep("confirm");
+      console.log('Step alterado para confirm');
 
       toast({
         title: "Dados extraídos com sucesso",
@@ -214,8 +213,16 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
   const handleClose = () => {
     console.log('Closing modal, resetting state...');
-    basicForm.reset();
-    confirmForm.reset();
+    
+    // Só resetar se não estiver na tela de confirmação com dados
+    if (step !== "confirm" || !extractedData) {
+      basicForm.reset();
+      confirmForm.reset();
+      setStep("upload");
+      setExtractedData(null);
+      setOriginalFileName("");
+    }
+    
     onClose();
   };
 
@@ -236,7 +243,17 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(isOpen) => {
+        // Só permitir fechamento se não estiver na tela de confirmação ou se estiver fechando explicitamente
+        if (!isOpen && step === "confirm" && extractedData) {
+          console.log('Bloqueando fechamento automático na tela de confirmação');
+          return;
+        }
+        handleClose();
+      }}
+    >
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="absolute top-0 right-0 pt-4 pr-4">
           <Button 
@@ -343,7 +360,7 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         )}
 
         {/* Step 3: Confirmation */}
-        {step === "confirm" && extractedData && (
+        {step === "confirm" && (
           <div className="space-y-6">
             <Card>
               <CardHeader>
