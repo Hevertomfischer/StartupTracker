@@ -1110,7 +1110,7 @@ export function AddStartupModalNew({
                   <div className="overflow-hidden">
                     <TeamMembersTabNew 
                       startup={startupToEdit} 
-                      isEditing={isEditing}
+                      isEditing={actualIsEditing}
                       members={members}
                       isLoadingMembers={isLoadingMembers}
                       parentIsOpen={open}
