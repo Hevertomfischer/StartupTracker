@@ -170,9 +170,12 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       console.log('=== SWITCHING TO CONFIRM VIEW ===');
       setCurrentView("confirm");
 
+      // Invalidate startup cache to ensure new startup appears immediately
+      queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
+      
       toast({
-        title: "Dados extraídos com sucesso",
-        description: "Revise e confirme as informações antes de salvar.",
+        title: "Startup criada com sucesso",
+        description: "A startup foi criada e está disponível para revisão em 'Revisar IA'.",
       });
       
       console.log('=== PDF MUTATION SUCCESS END ===');

@@ -58,7 +58,9 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
   const { data: allStartups = [], isLoading } = useQuery<Startup[]>({
     queryKey: ['/api/startups'],
     enabled: open,
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000, // Refresh every 5 seconds when modal is open
+    staleTime: 0 // Always consider data stale to force fresh fetches
   });
 
   // Fetch statuses for editing
