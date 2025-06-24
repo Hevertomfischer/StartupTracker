@@ -92,14 +92,17 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
   
   console.log('Filtered AI startups for review:', aiStartups.length, aiStartups.map(s => ({name: s.name, id: s.id})));
   
-  // Remove console logs after debugging
+  // Debug logging for AI startup data
   React.useEffect(() => {
     if (aiStartups.length > 0) {
       console.log('AI startups data for review:', aiStartups.map(s => ({
         name: s.name,
         ceo_name: s.ceo_name,
+        ceo_email: s.ceo_email,
         sector: s.sector,
-        description: s.description
+        website: s.website,
+        business_model: s.business_model,
+        description: s.description?.substring(0, 100) + '...'
       })));
     }
   }, [aiStartups]);
