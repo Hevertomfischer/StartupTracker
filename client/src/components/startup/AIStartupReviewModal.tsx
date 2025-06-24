@@ -52,10 +52,11 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
   const [editingStartup, setEditingStartup] = useState<Startup | null>(null);
 
-  // Fetch AI-generated startups (simulated - we'll filter by creation date and specific patterns)
+  // Fetch all startups for AI review filtering
   const { data: allStartups = [], isLoading } = useQuery<Startup[]>({
     queryKey: ['/api/startups'],
-    enabled: open
+    enabled: open,
+    refetchOnWindowFocus: true
   });
 
   // Fetch statuses for editing
