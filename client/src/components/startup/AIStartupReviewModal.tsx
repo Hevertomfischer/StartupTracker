@@ -35,7 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertStartupSchema, type SelectStatus, type Startup } from "@shared/schema";
-import { Bot, CheckCircle, AlertTriangle, Edit, Eye, Trash2 } from "lucide-react";
+import { Bot, CheckCircle, AlertTriangle, Edit, Eye, Trash2, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -64,8 +64,13 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
     enabled: open
   });
 
-  // Filter AI-generated startups
+  // Filter AI-generated startups that haven't been reviewed yet
   const aiStartups = allStartups.filter(startup => {
+    // Skip if already reviewed
+    if ((startup as any).ai_reviewed === true) {
+      return false;
+    }
+    
     // Primary filter: Check if marked as AI-generated
     if ((startup as any).created_by_ai === true) {
       return true;
@@ -151,8 +156,36 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
     if (!editingStartup) return;
     updateStartupMutation.mutate({
       id: editingStartup.id,
-      updates: data
+      updates: {
+        ...data,
+        ai_reviewed: true // Mark as reviewed when saving edits
+      }
     });
+  };
+
+  // Mark startup as reviewed without editing
+  const markAsReviewedMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("PATCH", `/api/startups/${id}`, { ai_reviewed: true });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
+      toast({
+        title: "Startup marcada como revisada",
+        description: "A startup foi removida da lista de revisão.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao marcar como revisada",
+        description: "Falha ao atualizar o status.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleMarkAsReviewed = (startup: Startup) => {
+    markAsReviewedMutation.mutate(startup.id);
   };
 
   const handleDelete = (startup: Startup) => {
@@ -276,6 +309,7 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
                               variant="ghost"
                               size="sm"
                               onClick={() => setSelectedStartup(startup)}
+                              title="Ver detalhes"
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -283,13 +317,24 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
                               variant="ghost"
                               size="sm"
                               onClick={() => handleEdit(startup)}
+                              title="Editar"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => handleMarkAsReviewed(startup)}
+                              title="Marcar como revisada"
+                              disabled={markAsReviewedMutation.isPending}
+                            >
+                              <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => handleDelete(startup)}
+                              title="Excluir"
                             >
                               <Trash2 className="h-4 w-4 text-red-500" />
                             </Button>

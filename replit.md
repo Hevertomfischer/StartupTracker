@@ -159,11 +159,13 @@ This is a comprehensive startup management platform built with React, TypeScript
   - Removed dependency on extractedData state for confirmation view rendering
   - Implemented immediate state updates for better user experience
   - Created comprehensive AI startup review modal for manual verification
-  - Added AI generation tracking fields to database schema (created_by_ai, ai_extraction_data)
+  - Added AI generation tracking fields to database schema (created_by_ai, ai_extraction_data, ai_reviewed)
   - Added "Revisar IA" button to dashboard for accessing AI-generated startup review
   - Implemented filtering system to identify AI-generated startups vs manual entries
   - Added editing capabilities for AI-generated startup data
   - Enhanced startup creation flow to mark AI-generated entries properly
+  - Fixed review workflow: startups now disappear from review list after being processed
+  - Added multiple review completion methods: edit/save, mark as reviewed, or delete
 
 - June 23, 2025: Complete refactor of AI modal component for startup creation
   - Completely rewrote AddStartupWithAIModal with simplified state management
