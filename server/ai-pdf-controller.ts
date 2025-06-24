@@ -164,6 +164,7 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     const fileRecord = await db.insert(files).values({
       startup_id: newStartup[0].id,
       filename: originalFileName,
+      original_name: originalFileName,
       file_path: newFileName,
       file_type: 'pitch_deck',
       mime_type: req.file.mimetype,
