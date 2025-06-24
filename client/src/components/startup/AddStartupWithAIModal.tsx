@@ -244,11 +244,13 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   };
 
   const handleConfirmSubmit = (data: z.infer<typeof confirmationSchema>) => {
-    // Ensure AI-generated startups are marked properly
+    // Ensure AI-generated startups are marked properly and get "Cadastrada" status
     const startupData = {
       ...data,
       created_by_ai: true,
-      ai_reviewed: false
+      ai_reviewed: false,
+      // status_id should already be set from the AI processing, but ensure it's there
+      status_id: data.status_id || extractedData?.status_id
     };
     createStartupMutation.mutate(startupData);
   };

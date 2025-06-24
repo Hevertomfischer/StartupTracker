@@ -166,6 +166,8 @@ This is a comprehensive startup management platform built with React, TypeScript
   - Enhanced startup creation flow to mark AI-generated entries properly
   - Fixed review workflow: startups now disappear from review list after being processed
   - Added multiple review completion methods: edit/save, mark as reviewed, or delete
+  - Integrated full AddStartupModalNew component for comprehensive editing in AI review
+  - Set default status "Cadastrada" for AI-generated startups
 
 - June 23, 2025: Complete refactor of AI modal component for startup creation
   - Completely rewrote AddStartupWithAIModal with simplified state management
@@ -195,3 +197,4 @@ This is a comprehensive startup management platform built with React, TypeScript
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+AI-generated startups default status: "Cadastrada"

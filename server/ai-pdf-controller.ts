@@ -181,12 +181,18 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     const extractedData = await extractDataWithAI(extractedText);
     console.log("Dados extraídos:", extractedData);
     
+    // Get the "Cadastrada" status ID for AI-generated startups
+    const cadastradaStatus = await db.query.statuses.findFirst({
+      where: (statuses, { ilike }) => ilike(statuses.name, '%cadastr%')
+    });
+
     // Garantir que o nome da startup seja mantido
     extractedData.name = name;
     
-    // Mark as AI-generated
+    // Mark as AI-generated and set default status
     extractedData.created_by_ai = true;
     extractedData.ai_extraction_data = JSON.stringify(extractedData);
+    extractedData.status_id = cadastradaStatus?.id || null;
     
     // Remover arquivo temporário
     console.log("Removendo arquivo temporário...");
