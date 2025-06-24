@@ -174,6 +174,9 @@ This is a comprehensive startup management platform built with React, TypeScript
   - Fixed startup creation workflow so AI-generated startups now appear in review system
   - Resolved issue where PDF processing returned data but didn't create database records
   - AI-generated startups now properly appear in "Revisar IA" for manual review
+  - Removed problematic pdf-parse library causing ENOENT errors
+  - Simplified PDF processing to focus on correct startup name preservation
+  - Fixed startup naming issue where all PDFs created "TechCorp" instead of user-provided names
 
 - June 23, 2025: Complete refactor of AI modal component for startup creation
   - Completely rewrote AddStartupWithAIModal with simplified state management
