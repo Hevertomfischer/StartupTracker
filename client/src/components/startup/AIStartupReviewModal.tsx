@@ -52,6 +52,7 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
   const queryClient = useQueryClient();
   const [selectedStartup, setSelectedStartup] = useState<Startup | null>(null);
   const [editingStartup, setEditingStartup] = useState<Startup | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   // Fetch all startups for AI review filtering
   const { data: allStartups = [], isLoading } = useQuery<Startup[]>({
@@ -242,17 +243,7 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
           <DialogDescription>
             Revise e confirme as informações das startups criadas automaticamente pela IA.
             Encontradas {aiStartups.length} startups para revisão.
-            {process.env.NODE_ENV === 'development' && (
-              <div className="text-xs text-gray-500 mt-1">
-                Debug: Total startups: {allStartups.length}, AI startups: {aiStartups.length}
-                <br />
-                AI flags found: {allStartups.filter(s => (s as any).created_by_ai === true).length}
-                <br />
-                Pattern matches: {allStartups.filter(s => 
-                  s.ceo_name?.includes('João') || s.name?.includes('TechCorp') || s.sector === 'tech'
-                ).length}
-              </div>
-            )}
+
           </DialogDescription>
         </DialogHeader>
 
@@ -554,6 +545,14 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Edit Modal using AddStartupModalNew */}
+        <AddStartupModalNew
+          open={editModalOpen}
+          onOpenChange={setEditModalOpen}
+          editingStartup={editingStartup}
+          onSuccess={handleEditSuccess}
+        />
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
