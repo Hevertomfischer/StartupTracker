@@ -200,31 +200,31 @@ export function AddStartupModalNew({
   
   // Initialize form with startup data if editing
   useEffect(() => {
-    if (isEditing && startup && open) {
+    if ((actualIsEditing && startupToEdit && open)) {
       // Reset the form with startup data
       const defaultValues = {
-        name: startup.name || "",
-        description: startup.description || "",
-        sector: startup.sector || "tech",
-        status_id: startup.status_id || "",
-        priority: startup.priority || "medium",
-        business_model: startup.business_model || "",
-        website: startup.website || "",
-        ceo_name: startup.ceo_name || "",
-        ceo_email: startup.ceo_email || "",
-        ceo_whatsapp: startup.ceo_whatsapp || "",
-        ceo_linkedin: startup.ceo_linkedin || "",
-        city: startup.city || "",
-        state: startup.state || "",
-        mrr: startup.mrr,
-        client_count: startup.client_count,
-        total_revenue_last_year: startup.total_revenue_last_year,
-        partner_count: startup.partner_count,
-        tam: startup.tam,
-        sam: startup.sam,
-        som: startup.som,
-        founding_date: startup.founding_date || "",
-        observations: startup.observations || "",
+        name: startupToEdit.name || "",
+        description: startupToEdit.description || "",
+        sector: startupToEdit.sector || "tech",
+        status_id: startupToEdit.status_id || "",
+        priority: startupToEdit.priority || "medium",
+        business_model: startupToEdit.business_model || "",
+        website: startupToEdit.website || "",
+        ceo_name: startupToEdit.ceo_name || "",
+        ceo_email: startupToEdit.ceo_email || "",
+        ceo_whatsapp: startupToEdit.ceo_whatsapp || "",
+        ceo_linkedin: startupToEdit.ceo_linkedin || "",
+        city: startupToEdit.city || "",
+        state: startupToEdit.state || "",
+        mrr: startupToEdit.mrr,
+        client_count: startupToEdit.client_count,
+        total_revenue_last_year: startupToEdit.total_revenue_last_year,
+        partner_count: startupToEdit.partner_count,
+        tam: startupToEdit.tam,
+        sam: startupToEdit.sam,
+        som: startupToEdit.som,
+        founding_date: startupToEdit.founding_date || "",
+        observations: startupToEdit.observations || "",
       };
       
       // Update the form with the startup data
@@ -234,15 +234,15 @@ export function AddStartupModalNew({
         }
       });
     }
-  }, [form, startup, isEditing, open]);
+  }, [form, startupToEdit, actualIsEditing, open]);
   
   // Set the default status when statuses are loaded
   useEffect(() => {
-    if (statuses.length > 0 && !form.getValues().status_id && !isEditing && open) {
+    if (statuses.length > 0 && !form.getValues().status_id && !actualIsEditing && open) {
       // Use the first status as default for new startups
       form.setValue('status_id', statuses[0].id);
     }
-  }, [statuses, form, isEditing, open]);
+  }, [statuses, form, actualIsEditing, open]);
   
   const createStartupMutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
@@ -269,6 +269,11 @@ export function AddStartupModalNew({
       // Continuamos sinalizando que o toast estaria sendo exibido
       // para evitar problemas com a lógica de fechamento
       
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+      
       // Para criação de startup, sempre fechamos o modal pois é preciso salvar primeiro 
       // antes de poder adicionar membros da equipe
       console.log("Fechando modal após adição bem-sucedida de nova startup");
@@ -290,7 +295,7 @@ export function AddStartupModalNew({
             isClosingRef.current = true;
             
             // Finalmente fechamos o modal
-            onClose();
+            handleClose();
           }
         }, 700);
       }, 1000);
@@ -309,7 +314,11 @@ export function AddStartupModalNew({
   const updateStartupMutation = useMutation({
     mutationFn: async (data: any) => {
       try {
-        return await apiRequest("PATCH", `/api/startups/${startup?.id}`, data);
+        const startupId = startupToEdit?.id;
+        if (!startupId) {
+          throw new Error("No startup ID available for update");
+        }
+        return await apiRequest("PATCH", `/api/startups/${startupId}`, data);
       } catch (error) {
         console.error("Error in update mutation:", error);
         throw error;
@@ -333,6 +342,11 @@ export function AddStartupModalNew({
       // Mensagem de sucesso removida
       // Continuamos sinalizando que o toast estaria sendo exibido
       // para evitar problemas com a lógica de fechamento
+      
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
       
       if (shouldKeepOpen) {
         // NUNCA fecha o modal quando está nas abas team ou history
@@ -1095,7 +1109,7 @@ export function AddStartupModalNew({
                 {isEditing && startup?.id ? (
                   <div className="overflow-hidden">
                     <TeamMembersTabNew 
-                      startup={startup} 
+                      startup={startupToEdit} 
                       isEditing={isEditing}
                       members={members}
                       isLoadingMembers={isLoadingMembers}
