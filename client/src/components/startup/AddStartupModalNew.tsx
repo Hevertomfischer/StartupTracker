@@ -51,9 +51,12 @@ import { useToast } from "@/hooks/use-toast";
 
 type AddStartupModalProps = {
   open: boolean;
-  onClose: () => void;
+  onClose?: () => void;
+  onOpenChange?: (open: boolean) => void;
   startup?: any; // Startup to edit (optional)
+  editingStartup?: any; // Alternative prop name for consistency
   isEditing?: boolean;
+  onSuccess?: () => void;
 };
 
 // Extended schema with required fields
@@ -94,7 +97,15 @@ const formSchema = insertStartupSchema.extend({
   observations: z.string().optional(),
 });
 
-export function AddStartupModalNew({ open, onClose, startup, isEditing = false }: AddStartupModalProps) {
+export function AddStartupModalNew({ 
+  open, 
+  onClose, 
+  onOpenChange, 
+  startup, 
+  editingStartup, 
+  isEditing = false,
+  onSuccess 
+}: AddStartupModalProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
@@ -108,6 +119,20 @@ export function AddStartupModalNew({ open, onClose, startup, isEditing = false }
   // Usando uma ref para garantir que o modal não será fechado durante operações
   const isClosingRef = useRef(false);
   
+  // Use either startup or editingStartup prop
+  const startupToEdit = startup || editingStartup;
+  const actualIsEditing = isEditing || !!startupToEdit;
+  
+  // Handle close event
+  const handleClose = () => {
+    if (onOpenChange) {
+      onOpenChange(false);
+    }
+    if (onClose) {
+      onClose();
+    }
+  };
+
   // Fetch statuses for the dropdown
   const { data: statuses = [] } = useQuery<Status[]>({
     queryKey: ['/api/statuses'],

@@ -38,6 +38,7 @@ import { insertStartupSchema, type SelectStatus, type Startup } from "@shared/sc
 import { Bot, CheckCircle, AlertTriangle, Edit, Eye, Trash2, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { AddStartupModalNew } from "./AddStartupModalNew";
 
 type AIStartupReviewModalProps = {
   open: boolean;
@@ -152,18 +153,20 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
 
   const handleEdit = (startup: Startup) => {
     setEditingStartup(startup);
-    editForm.reset(startup);
+    setEditModalOpen(true);
   };
 
-  const handleSaveEdit = (data: any) => {
-    if (!editingStartup) return;
-    updateStartupMutation.mutate({
-      id: editingStartup.id,
-      updates: {
-        ...data,
-        ai_reviewed: true // Mark as reviewed when saving edits
-      }
-    });
+  const handleEditClose = () => {
+    setEditModalOpen(false);
+    setEditingStartup(null);
+  };
+
+  const handleEditSuccess = () => {
+    // Mark as reviewed when editing is successful
+    if (editingStartup) {
+      markAsReviewedMutation.mutate(editingStartup.id);
+    }
+    handleEditClose();
   };
 
   // Mark startup as reviewed without editing
