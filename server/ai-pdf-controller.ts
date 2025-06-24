@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { db } from "./db.js";
 
 // Configuração do multer para PDFs temporários
 const tempStorage = multer.diskStorage({
