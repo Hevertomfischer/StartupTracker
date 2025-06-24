@@ -91,6 +91,18 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
   });
   
   console.log('Filtered AI startups for review:', aiStartups.length, aiStartups.map(s => ({name: s.name, id: s.id})));
+  
+  // Remove console logs after debugging
+  React.useEffect(() => {
+    if (aiStartups.length > 0) {
+      console.log('AI startups data for review:', aiStartups.map(s => ({
+        name: s.name,
+        ceo_name: s.ceo_name,
+        sector: s.sector,
+        description: s.description
+      })));
+    }
+  }, [aiStartups]);
 
   // Delete startup mutation
   const deleteStartupMutation = useMutation({
