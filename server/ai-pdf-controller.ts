@@ -3,7 +3,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { db } from "./db.js";
-import { startups } from "../shared/schema.js";
+import { startups, files } from "../shared/schema.js";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 
 // Configuração do multer para PDFs temporários
 const tempStorage = multer.diskStorage({
@@ -144,11 +145,32 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
 
     console.log("Startup criada com sucesso:", newStartup[0].id);
     
-    // Remover arquivo temporário
-    console.log("Removendo arquivo temporário...");
-    if (fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    // Move PDF to uploads directory and save as pitch deck
+    console.log("Salvando PDF como pitch deck da startup...");
+    const uploadsDir = path.join(process.cwd(), "uploads");
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
     }
+    
+    const originalFileName = req.file.originalname;
+    const fileExtension = path.extname(originalFileName);
+    const newFileName = `${newStartup[0].id}-pitch-deck${fileExtension}`;
+    const finalPath = path.join(uploadsDir, newFileName);
+    
+    // Move file from temp to uploads
+    fs.renameSync(req.file.path, finalPath);
+    
+    // Save file record in database
+    const fileRecord = await db.insert(files).values({
+      startup_id: newStartup[0].id,
+      filename: originalFileName,
+      file_path: newFileName,
+      file_type: 'pitch_deck',
+      mime_type: req.file.mimetype,
+      file_size: req.file.size
+    }).returning();
+    
+    console.log("PDF salvo como pitch deck:", fileRecord[0].id);
     
     console.log("Processamento concluído com sucesso");
     
