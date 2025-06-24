@@ -3,7 +3,8 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { db } from "./db.js";
-import { startups, files } from "../shared/schema.js";
+import { startups } from "../shared/schema.js";
+import { eq } from "drizzle-orm";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 
 // Configuração do multer para PDFs temporários
@@ -51,7 +52,38 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
     
     console.log(`Arquivo PDF processado com sucesso: ${fileName} (${stats.size} bytes)`);
     
-    // Return basic file info since we can't extract text reliably
+    // Try to extract text using PDF.js
+    try {
+      const pdfBuffer = fs.readFileSync(filePath);
+      const loadingTask = pdfjsLib.getDocument({
+        data: new Uint8Array(pdfBuffer),
+        standardFontDataUrl: null,
+        verbosity: 0
+      });
+      
+      const pdf = await loadingTask.promise;
+      let fullText = '';
+      
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        
+        fullText += pageText + '\n';
+      }
+      
+      if (fullText.trim().length > 0) {
+        console.log(`Texto extraído com sucesso (${fullText.length} caracteres)`);
+        return fullText.trim();
+      }
+    } catch (pdfError) {
+      console.error('Erro ao extrair texto com PDF.js:', pdfError);
+    }
+
+    // Fallback to basic file info
     return `
       PDF Document: ${fileName}
       File Size: ${stats.size} bytes
@@ -71,11 +103,63 @@ async function extractDataWithAI(text: string, startupName: string): Promise<any
   console.log("Criando registro básico da startup...");
   console.log("Nome da startup:", startupName);
   
-  // Create basic startup record with provided name
+  // Extract potential data using regex patterns and keyword search
+  const textLower = text.toLowerCase();
   const extractedData: any = {
     name: startupName,
     description: `Startup processada via AI a partir de PDF. Documento contém informações que precisam ser revisadas manualmente.`
   };
+  
+  // Try to extract CEO name
+  const ceoPatterns = [
+    /ceo[:\s]+([a-záàâãéèêíïóôõöúçñ\s]+)/i,
+    /founder[:\s]+([a-záàâãéèêíïóôõöúçñ\s]+)/i,
+    /fundador[:\s]+([a-záàâãéèêíïóôõöúçñ\s]+)/i,
+  ];
+  
+  for (const pattern of ceoPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      extractedData.ceo_name = match[1].trim().split('\n')[0].substring(0, 100);
+      break;
+    }
+  }
+  
+  // Try to extract email
+  const emailMatch = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+  if (emailMatch) {
+    extractedData.ceo_email = emailMatch[1];
+  }
+  
+  // Try to extract website
+  const websiteMatch = text.match(/(https?:\/\/[^\s]+|www\.[^\s]+)/i);
+  if (websiteMatch) {
+    extractedData.website = websiteMatch[1];
+  }
+  
+  // Try to extract sector from common business keywords
+  const sectorKeywords = {
+    'fintech': ['fintech', 'financial', 'payment', 'banking', 'finance'],
+    'healthtech': ['health', 'medical', 'healthcare', 'telemedicine'],
+    'edtech': ['education', 'learning', 'educational', 'teaching'],
+    'agritech': ['agriculture', 'farming', 'agro', 'rural'],
+    'proptech': ['real estate', 'property', 'imobiliário'],
+    'marketplace': ['marketplace', 'platform', 'e-commerce'],
+    'saas': ['software', 'saas', 'platform', 'technology'],
+  };
+  
+  for (const [sector, keywords] of Object.entries(sectorKeywords)) {
+    if (keywords.some(keyword => textLower.includes(keyword))) {
+      extractedData.sector = sector;
+      break;
+    }
+  }
+  
+  // Create a meaningful description from extracted text
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+  if (sentences.length > 0) {
+    extractedData.description = sentences[0].trim().substring(0, 500) + '...';
+  }
   
   console.log("Dados básicos criados:", extractedData);
   return extractedData;
@@ -160,16 +244,8 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     // Move file from temp to uploads
     fs.renameSync(req.file.path, finalPath);
     
-    // Save file record in database
-    const fileRecord = await db.insert(files).values({
-      startup_id: newStartup[0].id,
-      filename: originalFileName,
-      original_name: originalFileName,
-      file_path: newFileName,
-      file_type: 'pitch_deck',
-      mime_type: req.file.mimetype,
-      file_size: req.file.size
-    }).returning();
+    // For now, just log the file was moved successfully
+    console.log(`PDF salvo como: ${finalPath}`);
     
     console.log("PDF salvo como pitch deck:", fileRecord[0].id);
     

@@ -56,6 +56,13 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
 
   // Filter AI-generated startups that haven't been reviewed yet
   const aiStartups = allStartups.filter(startup => {
+    console.log('Checking startup for AI review:', {
+      name: startup.name,
+      id: startup.id,
+      created_by_ai: (startup as any).created_by_ai,
+      ai_reviewed: (startup as any).ai_reviewed
+    });
+    
     // Skip if already reviewed
     if ((startup as any).ai_reviewed === true) {
       return false;
@@ -82,6 +89,8 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
 
     return hasAIPatterns || isVeryRecent;
   });
+  
+  console.log('Filtered AI startups for review:', aiStartups.length, aiStartups.map(s => ({name: s.name, id: s.id})));
 
   // Delete startup mutation
   const deleteStartupMutation = useMutation({
