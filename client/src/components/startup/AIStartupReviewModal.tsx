@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog,
   DialogContent,
@@ -18,23 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { insertStartupSchema, type SelectStatus, type Startup } from "@shared/schema";
+import { type SelectStatus, type Startup } from "@shared/schema";
 import { Bot, CheckCircle, AlertTriangle, Edit, Eye, Trash2, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -44,8 +31,6 @@ type AIStartupReviewModalProps = {
   open: boolean;
   onClose: () => void;
 };
-
-const editStartupSchema = insertStartupSchema.partial();
 
 export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProps) {
   const { toast } = useToast();
@@ -86,50 +71,16 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
       startup.ceo_name?.includes('João') ||
       startup.ceo_name?.includes('Silva') ||
       startup.name?.includes('TechCorp') ||
-      startup.website?.includes('techcorp.com') ||
-      startup.description?.includes('SaaS para empresas') ||
-      startup.description?.includes('startup de tecnologia') ||
-      (startup.sector === 'tech' && startup.business_model === 'SaaS') ||
-      (startup.ceo_email?.includes('techcorp.com')) ||
-      (startup.ceo_linkedin?.includes('joaosilva'))
+      startup.sector === 'tech'
     );
-
-    // Include very recent entries (last 24 hours) that might be AI-generated
+    
+    // Additional check: Recent entries that might be AI-generated
     const recentDate = new Date();
-    recentDate.setHours(recentDate.getHours() - 24);
+    recentDate.setHours(recentDate.getHours() - 2); // Last 2 hours
     const createdAt = new Date(startup.created_at);
     const isVeryRecent = createdAt > recentDate;
 
     return hasAIPatterns || isVeryRecent;
-  });
-
-  // Edit form
-  const editForm = useForm({
-    resolver: zodResolver(editStartupSchema),
-    defaultValues: {}
-  });
-
-  // Update startup mutation
-  const updateStartupMutation = useMutation({
-    mutationFn: async (data: { id: string; updates: any }) => {
-      return await apiRequest("PATCH", `/api/startups/${data.id}`, data.updates);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
-      toast({
-        title: "Startup atualizada",
-        description: "As informações foram salvas com sucesso.",
-      });
-      setEditingStartup(null);
-      editForm.reset();
-    },
-    onError: () => {
-      toast({
-        title: "Erro ao atualizar",
-        description: "Falha ao salvar as alterações.",
-        variant: "destructive",
-      });
-    },
   });
 
   // Delete startup mutation
@@ -141,9 +92,8 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
       queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
       toast({
         title: "Startup removida",
-        description: "A startup foi removida do sistema.",
+        description: "A startup foi removida com sucesso.",
       });
-      setSelectedStartup(null);
     },
     onError: () => {
       toast({
@@ -206,41 +156,42 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
   const getStatusBadge = (startup: Startup) => {
     const status = statuses.find(s => s.id === startup.status_id);
     return (
-      <Badge variant="outline" className="text-xs">
-        {status?.nome || 'Sem status'}
+      <Badge variant="outline">
+        {status?.name || 'Sem status'}
       </Badge>
     );
   };
 
   const getAIIndicator = (startup: Startup) => {
     const isAIGenerated = (startup as any).created_by_ai === true;
+    const hasAIPatterns = startup.ceo_name?.includes('João') || startup.name?.includes('TechCorp');
     
-    const hasAIPatterns = (
-      startup.ceo_name?.includes('João') ||
-      startup.ceo_name?.includes('Silva') ||
-      startup.name?.includes('TechCorp') ||
-      startup.website?.includes('techcorp')
-    );
-
-    return (isAIGenerated || hasAIPatterns) ? (
-      <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-        <Bot className="h-3 w-3 mr-1" />
-        IA
-      </Badge>
-    ) : (
-      <Badge variant="outline" className="text-xs">
-        Manual
-      </Badge>
+    if (isAIGenerated || hasAIPatterns) {
+      return (
+        <div className="flex items-center gap-1">
+          <Bot className="h-4 w-4 text-blue-600" />
+          <span className="text-xs text-blue-600">IA</span>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="flex items-center gap-1">
+        <AlertTriangle className="h-4 w-4 text-yellow-600" />
+        <span className="text-xs text-yellow-600">Manual</span>
+      </div>
     );
   };
 
+  if (!open) return null;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-blue-500" />
-            Revisão de Startups Geradas por IA
+            <Bot className="h-5 w-5 text-blue-600" />
+            Revisar Startups Criadas pela IA
           </DialogTitle>
           <DialogDescription>
             Revise e confirme as informações das startups criadas automaticamente pela IA.
@@ -251,41 +202,24 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-              <p className="text-sm text-gray-600">Carregando startups...</p>
-            </div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         ) : aiStartups.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8">
-                <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Nenhuma startup pendente
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Todas as startups geradas por IA já foram revisadas.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="text-center py-8">
+            <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">Nenhuma startup para revisão</h3>
+            <p className="text-gray-600">
+              Todas as startups criadas pela IA já foram revisadas ou não há startups pendentes.
+            </p>
+          </div>
         ) : (
-          <div className="space-y-4">
-            {/* Summary Card */}
+          <div className="overflow-auto max-h-[60vh]">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Resumo da Revisão</CardTitle>
+                <CardTitle>Startups Pendentes de Revisão</CardTitle>
                 <CardDescription>
-                  {aiStartups.length} startups encontradas para revisão
+                  {aiStartups.length} startup{aiStartups.length !== 1 ? 's' : ''} aguardando revisão manual
                 </CardDescription>
-              </CardHeader>
-            </Card>
-
-            {/* Startups Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Startups para Revisão</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -296,7 +230,7 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
                       <TableHead>Setor</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Origem</TableHead>
-                      <TableHead>Data</TableHead>
+                      <TableHead>Criada em</TableHead>
                       <TableHead>Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -359,148 +293,6 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
           </div>
         )}
 
-        {/* Edit Modal */}
-        {editingStartup && (
-          <Dialog open={!!editingStartup} onOpenChange={() => setEditingStartup(null)}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Editar Startup - {editingStartup.name}</DialogTitle>
-              </DialogHeader>
-              
-              <Form {...editForm}>
-                <form onSubmit={editForm.handleSubmit(handleSaveEdit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={editForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={editForm.control}
-                      name="ceo_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CEO</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={editForm.control}
-                      name="ceo_email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email do CEO</FormLabel>
-                          <FormControl>
-                            <Input {...field} type="email" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={editForm.control}
-                      name="sector"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Setor</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={editForm.control}
-                      name="business_model"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Modelo de Negócio</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={editForm.control}
-                      name="status_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione o status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {statuses.map((status) => (
-                                <SelectItem key={status.id} value={status.id}>
-                                  {status.nome}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={editForm.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Descrição</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} rows={3} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <DialogFooter>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setEditingStartup(null)}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={updateStartupMutation.isPending}
-                    >
-                      {updateStartupMutation.isPending ? 'Salvando...' : 'Salvar'}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        )}
-
         {/* View Details Modal */}
         {selectedStartup && (
           <Dialog open={!!selectedStartup} onOpenChange={() => setSelectedStartup(null)}>
@@ -525,10 +317,6 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
                 <div>
                   <h4 className="font-medium text-sm text-gray-500">Modelo de Negócio</h4>
                   <p className="text-sm">{selectedStartup.business_model || '-'}</p>
-                </div>
-                <div>
-                  <h4 className="font-medium text-sm text-gray-500">Website</h4>
-                  <p className="text-sm">{selectedStartup.website || '-'}</p>
                 </div>
                 <div>
                   <h4 className="font-medium text-sm text-gray-500">Localização</h4>
