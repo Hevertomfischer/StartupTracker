@@ -169,6 +169,12 @@ This is a comprehensive startup management platform built with React, TypeScript
   - Integrated full AddStartupModalNew component for comprehensive editing in AI review
   - Set default status "Cadastrada" for AI-generated startups
 
+- June 24, 2025: Fixed AI PDF processing to properly save startups to database
+  - Added missing database insertion code in AI PDF controller
+  - Fixed startup creation workflow so AI-generated startups now appear in review system
+  - Resolved issue where PDF processing returned data but didn't create database records
+  - AI-generated startups now properly appear in "Revisar IA" for manual review
+
 - June 23, 2025: Complete refactor of AI modal component for startup creation
   - Completely rewrote AddStartupWithAIModal with simplified state management
   - Eliminated complex state conflicts causing confirmation screen issues

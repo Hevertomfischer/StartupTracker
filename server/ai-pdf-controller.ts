@@ -4,6 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { db } from "./db.js";
+import { startups } from "../shared/schema.js";
 
 // Configuração do multer para PDFs temporários
 const tempStorage = multer.diskStorage({
@@ -190,10 +191,34 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     // Garantir que o nome da startup seja mantido
     extractedData.name = name;
     
-    // Mark as AI-generated and set default status
-    extractedData.created_by_ai = true;
-    extractedData.ai_extraction_data = JSON.stringify(extractedData);
-    extractedData.status_id = cadastradaStatus?.id || null;
+    // Create startup record in database
+    console.log("Criando startup no banco de dados...");
+    const newStartup = await db.insert(startups).values({
+      name: extractedData.name,
+      ceo_name: extractedData.ceo_name,
+      ceo_email: extractedData.ceo_email,
+      ceo_whatsapp: extractedData.ceo_whatsapp,
+      ceo_linkedin: extractedData.ceo_linkedin,
+      business_model: extractedData.business_model,
+      sector: extractedData.sector,
+      city: extractedData.city,
+      state: extractedData.state,
+      website: extractedData.website,
+      founding_date: extractedData.founding_date,
+      mrr: extractedData.mrr,
+      client_count: extractedData.client_count,
+      employee_count: extractedData.employee_count,
+      tam: extractedData.tam,
+      sam: extractedData.sam,
+      som: extractedData.som,
+      description: extractedData.description,
+      status_id: cadastradaStatus?.id || null,
+      created_by_ai: true,
+      ai_reviewed: false,
+      ai_extraction_data: JSON.stringify(extractedData)
+    }).returning();
+
+    console.log("Startup criada com sucesso:", newStartup[0].id);
     
     // Remover arquivo temporário
     console.log("Removendo arquivo temporário...");
@@ -203,11 +228,11 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     
     console.log("Processamento concluído com sucesso");
     
-    // Retornar dados extraídos para confirmação
+    // Retornar dados da startup criada
     return res.status(200).json({
       success: true,
-      message: "Dados extraídos com sucesso do pitch deck",
-      extractedData,
+      message: "Startup criada com sucesso a partir do pitch deck",
+      startup: newStartup[0],
       originalFileName: req.file.originalname
     });
     
