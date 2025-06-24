@@ -81,19 +81,21 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
       startup.ceo_name?.includes('João') ||
       startup.ceo_name?.includes('Silva') ||
       startup.name?.includes('TechCorp') ||
-      startup.website?.includes('techcorp') ||
+      startup.website?.includes('techcorp.com') ||
       startup.description?.includes('SaaS para empresas') ||
-      startup.sector === 'tech' ||
-      startup.business_model === 'SaaS'
+      startup.description?.includes('startup de tecnologia') ||
+      (startup.sector === 'tech' && startup.business_model === 'SaaS') ||
+      (startup.ceo_email?.includes('techcorp.com')) ||
+      (startup.ceo_linkedin?.includes('joaosilva'))
     );
 
-    // Also include recent entries (last 7 days) that might be AI-generated
+    // Include very recent entries (last 24 hours) that might be AI-generated
     const recentDate = new Date();
-    recentDate.setDate(recentDate.getDate() - 7);
+    recentDate.setHours(recentDate.getHours() - 24);
     const createdAt = new Date(startup.created_at);
-    const isRecent = createdAt > recentDate;
+    const isVeryRecent = createdAt > recentDate;
 
-    return hasAIPatterns || isRecent;
+    return hasAIPatterns || isVeryRecent;
   });
 
   // Edit form
@@ -236,6 +238,17 @@ export function AIStartupReviewModal({ open, onClose }: AIStartupReviewModalProp
           <DialogDescription>
             Revise e confirme as informações das startups criadas automaticamente pela IA.
             Encontradas {aiStartups.length} startups para revisão.
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-500 mt-1">
+                Debug: Total startups: {allStartups.length}, AI startups: {aiStartups.length}
+                <br />
+                AI flags found: {allStartups.filter(s => (s as any).created_by_ai === true).length}
+                <br />
+                Pattern matches: {allStartups.filter(s => 
+                  s.ceo_name?.includes('João') || s.name?.includes('TechCorp') || s.sector === 'tech'
+                ).length}
+              </div>
+            )}
           </DialogDescription>
         </DialogHeader>
 

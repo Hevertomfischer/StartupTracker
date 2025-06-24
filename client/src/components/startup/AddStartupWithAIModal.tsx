@@ -244,7 +244,13 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   };
 
   const handleConfirmSubmit = (data: z.infer<typeof confirmationSchema>) => {
-    createStartupMutation.mutate(data);
+    // Ensure AI-generated startups are marked properly
+    const startupData = {
+      ...data,
+      created_by_ai: true,
+      ai_reviewed: false
+    };
+    createStartupMutation.mutate(startupData);
   };
 
   const handleClose = () => {
