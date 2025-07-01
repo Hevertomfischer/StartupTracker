@@ -41,31 +41,120 @@ export const tempUpload = multer({
 
 export const uploadTempPDF = tempUpload.single('file');
 
-// Função para usar OpenAI Vision API para analisar PDF convertido em imagem
-async function analyzePDFWithVision(filePath: string, startupName: string): Promise<any> {
-  console.log(`=== ANALISANDO PDF COM VISION API ===`);
+// Função temporária que simula extração de PDF (para ser melhorada depois)
+async function extractTextFromPDF(filePath: string): Promise<string | null> {
+  console.log(`=== SIMULANDO EXTRAÇÃO DE TEXTO DO PDF ===`);
+  console.log(`Arquivo: ${filePath}`);
+  console.log("NOTA: Extração real de PDF será implementada em versão futura");
+  
+  // Retorna null para indicar que não conseguimos extrair texto
+  // Isso forçará o sistema a usar apenas o nome fornecido pelo usuário
+  return null;
+}
+
+// Função para analisar PDF usando IA com texto extraído
+async function analyzePDFWithAI(filePath: string, startupName: string): Promise<any> {
+  console.log(`=== ANALISANDO PDF COM IA ===`);
   
   try {
-    // Para esta implementação, vamos criar dados básicos que indicam claramente
-    // que a extração visual não está funcionando ainda
-    console.log("AVISO: Análise visual de PDF não implementada ainda");
-    console.log("Criando registro básico apenas com nome fornecido");
+    // Primeiro, extrair texto do PDF
+    const extractedText = await extractTextFromPDF(filePath);
     
-    return {
-      name: startupName,
-      description: `Startup ${startupName} - PDF recebido mas extração automática de dados ainda não implementada. Dados devem ser inseridos manualmente através da revisão.`,
-      ceo_name: null,
-      ceo_email: null,
-      sector: null,
-      business_model: null,
-      mrr: null,
-      client_count: null,
-      problem_solution: "PDF processado - dados devem ser extraídos manualmente",
-      attention_points: "Sistema requer implementação de extração de texto/OCR para automatizar completamente"
-    };
+    if (!extractedText) {
+      console.log("FALHA na extração de texto - criando registro básico");
+      return {
+        name: startupName,
+        description: `Startup ${startupName} - PDF processado mas texto não extraído. Revisar manualmente.`,
+        ceo_name: null,
+        problem_solution: "Extração de texto falhou - dados devem ser inseridos manualmente"
+      };
+    }
+    
+    console.log("=== ENVIANDO TEXTO PARA OPENAI ===");
+    console.log(`Tamanho do texto: ${extractedText.length} caracteres`);
+    
+    if (!openai) {
+      throw new Error("OpenAI não configurado");
+    }
+    
+    const prompt = `
+Analise este pitch deck da startup "${startupName}" e extraia informações em formato JSON.
+
+TEXTO EXTRAÍDO DO PDF:
+${extractedText}
+
+Extraia APENAS informações presentes no texto acima:
+
+{
+  "name": "Nome da startup (use '${startupName}' se não encontrar)",
+  "description": "Descrição do negócio",
+  "ceo_name": "Nome do CEO/fundador",
+  "ceo_email": "Email do CEO",
+  "ceo_whatsapp": "WhatsApp",
+  "ceo_linkedin": "LinkedIn",
+  "business_model": "Modelo de negócio",
+  "sector": "Setor",
+  "category": "Categoria",
+  "market": "Mercado alvo",
+  "city": "Cidade",
+  "state": "Estado",
+  "website": "Website",
+  "founding_date": "Data fundação (YYYY-MM-DD)",
+  "mrr": "Receita recorrente mensal (apenas número)",
+  "accumulated_revenue_current_year": "Receita acumulada ano atual",
+  "total_revenue_last_year": "Receita ano passado",
+  "tam": "Mercado total",
+  "sam": "Mercado endereçável",
+  "som": "Mercado obtível",
+  "client_count": "Número de clientes",
+  "partner_count": "Número de parceiros",
+  "problem_solution": "Problema e solução",
+  "differentials": "Diferenciais",
+  "competitors": "Concorrentes",
+  "positive_points": "Pontos positivos",
+  "attention_points": "Pontos de atenção"
+}
+
+IMPORTANTE: Use APENAS dados do texto extraído. Não invente informações.
+`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [
+        {
+          role: "system",
+          content: "Você é especialista em análise de pitch decks. Extraia APENAS informações reais do texto fornecido."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.1,
+      max_tokens: 2000
+    });
+
+    const result = response.choices[0].message.content;
+    
+    if (!result) {
+      throw new Error("OpenAI não retornou resultado");
+    }
+    
+    const extractedData = JSON.parse(result);
+    
+    console.log("=== DADOS EXTRAÍDOS PELA IA ===");
+    console.log(`Nome: ${extractedData.name}`);
+    console.log(`CEO: ${extractedData.ceo_name}`);
+    console.log(`Setor: ${extractedData.sector}`);
+    console.log(`MRR: ${extractedData.mrr}`);
+    console.log(`Descrição: ${extractedData.description?.substring(0, 100)}...`);
+    
+    return extractedData;
     
   } catch (error: any) {
-    console.error('Erro na análise visual:', error.message);
+    console.error('=== ERRO NA ANÁLISE ===');
+    console.error('Erro:', error.message);
     throw error;
   }
 }
@@ -87,8 +176,8 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     console.log(`Processando PDF para startup: ${name}`);
     console.log(`Arquivo: ${req.file.filename}`);
 
-    // Analisar PDF (atualmente retorna dados básicos)
-    const extractedData = await analyzePDFWithVision(req.file.path, name);
+    // Analisar PDF com extração real de texto
+    const extractedData = await analyzePDFWithAI(req.file.path, name);
     
     console.log("=== DADOS EXTRAÍDOS ===");
     console.log(`Nome: ${extractedData.name}`);

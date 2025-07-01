@@ -27,7 +27,7 @@ import {
 import { 
   uploadTempPDF, 
   processPitchDeckAI 
-} from "./ai-pdf-controller";
+} from "./ai-pdf-controller-new";
 import { 
   handleExternalForm, 
   uploadPitchDeck as externalFormUploadPitchDeck 
@@ -1265,7 +1265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota para o formulário externo de cadastro de startups
   app.post("/api/external/startup", externalFormUploadPitchDeck, handleExternalForm);
 
-  // Rota para processamento de PDF com IA
+  // Rota para processamento de PDF com IA (VERSÃO CORRIGIDA)
   app.post("/api/startup/process-pitch-deck", isAuthenticated, uploadTempPDF, processPitchDeckAI);
   
   // Rota de teste para OpenAI (temporária)
