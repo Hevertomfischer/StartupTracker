@@ -251,7 +251,8 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     // Usar IA para extrair dados estruturados
     console.log("Processando dados com IA...");
     const extractedData = await extractDataWithAI(extractedText, name);
-    console.log("Dados extraídos:", extractedData);
+    console.log("=== DADOS EXTRAÍDOS PELA IA ===");
+    console.log(JSON.stringify(extractedData, null, 2));
     
     // Get the "Cadastrada" status ID for AI-generated startups
     const cadastradaStatus = await db.query.statuses.findFirst({
