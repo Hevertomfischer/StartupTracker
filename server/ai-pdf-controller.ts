@@ -321,9 +321,9 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
       name: extractedData.name || name,
       description: extractedData.description || `Startup processada via AI a partir de PDF.`,
       status_id: cadastradaStatus?.id || null,
+      ai_extraction_data: JSON.stringify(extractedData),
       created_by_ai: true,
       ai_reviewed: false,
-      ai_extraction_data: JSON.stringify(extractedData),
       
       // Optional fields with proper type checking
       ceo_name: extractedData.ceo_name || null,
@@ -338,16 +338,16 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
       state: extractedData.state || null,
       website: extractedData.website || null,
       
-      // Numeric fields with proper conversion
-      mrr: extractedData.mrr ? Number(extractedData.mrr) : null,
-      accumulated_revenue_current_year: extractedData.accumulated_revenue_current_year ? Number(extractedData.accumulated_revenue_current_year) : null,
-      total_revenue_last_year: extractedData.total_revenue_last_year ? Number(extractedData.total_revenue_last_year) : null,
-      total_revenue_previous_year: extractedData.total_revenue_previous_year ? Number(extractedData.total_revenue_previous_year) : null,
-      tam: extractedData.tam ? Number(extractedData.tam) : null,
-      sam: extractedData.sam ? Number(extractedData.sam) : null,
-      som: extractedData.som ? Number(extractedData.som) : null,
+      // Numeric fields with proper conversion to string for Drizzle numeric type
+      mrr: extractedData.mrr ? String(extractedData.mrr) : null,
+      accumulated_revenue_current_year: extractedData.accumulated_revenue_current_year ? String(extractedData.accumulated_revenue_current_year) : null,
+      total_revenue_last_year: extractedData.total_revenue_last_year ? String(extractedData.total_revenue_last_year) : null,
+      total_revenue_previous_year: extractedData.total_revenue_previous_year ? String(extractedData.total_revenue_previous_year) : null,
+      tam: extractedData.tam ? String(extractedData.tam) : null,
+      sam: extractedData.sam ? String(extractedData.sam) : null,
+      som: extractedData.som ? String(extractedData.som) : null,
       
-      // Integer fields with proper conversion
+      // Integer fields with proper conversion  
       client_count: extractedData.client_count ? Number(extractedData.client_count) : null,
       partner_count: extractedData.partner_count ? Number(extractedData.partner_count) : null,
       time_tracking: extractedData.time_tracking ? Number(extractedData.time_tracking) : null,
