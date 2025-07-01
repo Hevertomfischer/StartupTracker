@@ -41,15 +41,76 @@ export const tempUpload = multer({
 
 export const uploadTempPDF = tempUpload.single('file');
 
-// Função temporária que simula extração de PDF (para ser melhorada depois)
-async function extractTextFromPDF(filePath: string): Promise<string | null> {
-  console.log(`=== SIMULANDO EXTRAÇÃO DE TEXTO DO PDF ===`);
-  console.log(`Arquivo: ${filePath}`);
-  console.log("NOTA: Extração real de PDF será implementada em versão futura");
+// Função para converter PDF em base64 e enviar para OpenAI Vision
+async function extractDataWithOpenAIVision(filePath: string): Promise<string | null> {
+  console.log(`=== ENVIANDO PDF DIRETO PARA OPENAI VISION ===`);
   
-  // Retorna null para indicar que não conseguimos extrair texto
-  // Isso forçará o sistema a usar apenas o nome fornecido pelo usuário
-  return null;
+  try {
+    // Ler o arquivo PDF como buffer
+    const pdfBuffer = fs.readFileSync(filePath);
+    const pdfBase64 = pdfBuffer.toString('base64');
+    
+    console.log(`PDF convertido para base64: ${pdfBase64.length} caracteres`);
+    
+    if (!openai) {
+      throw new Error("OpenAI não configurado");
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Analise este documento PDF e extraia todas as informações sobre a startup. 
+              
+              Procure especificamente por:
+              - Nome da empresa/startup
+              - Descrição do negócio e produto
+              - Informações do CEO/fundador (nome, email, telefone, LinkedIn)
+              - Modelo de negócio e setor
+              - Métricas financeiras (MRR, receita, clientes)
+              - Mercado (TAM, SAM, SOM)
+              - Localização (cidade, estado)
+              - Website e contatos
+              - Problema que resolve e solução oferecida
+              - Concorrentes e diferenciais
+              - Equipe e parceiros
+              
+              Retorne um texto estruturado com todas as informações encontradas no documento.`
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:application/pdf;base64,${pdfBase64}`
+              }
+            }
+          ]
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.1
+    });
+
+    const extractedContent = response.choices[0].message.content;
+    
+    console.log(`=== DADOS EXTRAÍDOS DA OPENAI VISION ===`);
+    console.log(`Tamanho da resposta: ${extractedContent?.length} caracteres`);
+    console.log(`Primeiros 500 caracteres: ${extractedContent?.substring(0, 500)}...`);
+    
+    return extractedContent;
+    
+  } catch (error: any) {
+    console.error(`ERRO ao processar PDF com OpenAI Vision: ${error.message}`);
+    
+    // Se Vision falhar, tentar análise básica do nome do arquivo
+    const fileName = path.basename(filePath);
+    console.log(`Usando nome do arquivo como fallback: ${fileName}`);
+    
+    return `Documento PDF analisado: ${fileName}. OpenAI Vision não conseguiu processar o conteúdo visual.`;
+  }
 }
 
 // Função para analisar PDF usando IA com texto extraído
@@ -57,31 +118,31 @@ async function analyzePDFWithAI(filePath: string, startupName: string): Promise<
   console.log(`=== ANALISANDO PDF COM IA ===`);
   
   try {
-    // Primeiro, extrair texto do PDF
-    const extractedText = await extractTextFromPDF(filePath);
+    // Enviar PDF diretamente para OpenAI Vision
+    const visionExtractedText = await extractDataWithOpenAIVision(filePath);
     
-    if (!extractedText) {
-      console.log("FALHA na extração de texto - criando registro básico");
+    if (!visionExtractedText) {
+      console.log("FALHA na extração via Vision - criando registro básico");
       return {
         name: startupName,
-        description: `Startup ${startupName} - PDF processado mas texto não extraído. Revisar manualmente.`,
+        description: `Startup ${startupName} - PDF processado mas dados não extraídos. Revisar manualmente.`,
         ceo_name: null,
-        problem_solution: "Extração de texto falhou - dados devem ser inseridos manualmente"
+        problem_solution: "Extração via Vision falhou - dados devem ser inseridos manualmente"
       };
     }
     
-    console.log("=== ENVIANDO TEXTO PARA OPENAI ===");
-    console.log(`Tamanho do texto: ${extractedText.length} caracteres`);
+    console.log("=== ESTRUTURANDO DADOS EXTRAÍDOS PELA VISION ===");
+    console.log(`Tamanho dos dados: ${visionExtractedText.length} caracteres`);
     
     if (!openai) {
       throw new Error("OpenAI não configurado");
     }
     
     const prompt = `
-Analise este pitch deck da startup "${startupName}" e extraia informações em formato JSON.
+Analise este conteúdo extraído do pitch deck da startup "${startupName}" e estruture em formato JSON.
 
-TEXTO EXTRAÍDO DO PDF:
-${extractedText}
+DADOS EXTRAÍDOS DO PDF PELA VISION:
+${visionExtractedText}
 
 Extraia APENAS informações presentes no texto acima:
 
@@ -115,7 +176,7 @@ Extraia APENAS informações presentes no texto acima:
   "attention_points": "Pontos de atenção"
 }
 
-IMPORTANTE: Use APENAS dados do texto extraído. Não invente informações.
+IMPORTANTE: Use APENAS dados extraídos pela Vision API. Não invente informações. Se um campo não estiver presente nos dados extraídos, use null.
 `;
 
     const response = await openai.chat.completions.create({
@@ -123,7 +184,7 @@ IMPORTANTE: Use APENAS dados do texto extraído. Não invente informações.
       messages: [
         {
           role: "system",
-          content: "Você é especialista em análise de pitch decks. Extraia APENAS informações reais do texto fornecido."
+          content: "Você é especialista em análise de pitch decks. Estruture em JSON APENAS as informações reais extraídas pela Vision API. Não invente dados."
         },
         {
           role: "user",
