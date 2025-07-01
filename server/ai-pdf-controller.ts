@@ -277,18 +277,20 @@ Responda apenas com o JSON válido contendo os dados extraídos:`;
 
 // Controlador para processar PDF e extrair dados
 export const processPitchDeckAI = async (req: Request, res: Response) => {
-  console.log("Iniciando processamento de PDF...");
+  console.log("=== INÍCIO DO PROCESSAMENTO AI ===");
+  console.log("Request body:", JSON.stringify(req.body));
+  console.log("Request file:", req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'Nenhum arquivo');
   
   try {
     if (!req.file) {
-      console.log("Erro: Nenhum arquivo foi enviado");
+      console.log("ERRO: Nenhum arquivo foi enviado");
       return res.status(400).json({ message: "Nenhum arquivo PDF foi enviado" });
     }
 
     const { name } = req.body;
     
     if (!name) {
-      console.log("Erro: Nome da startup não fornecido");
+      console.log("ERRO: Nome da startup não fornecido");
       return res.status(400).json({ message: "Nome da startup é obrigatório" });
     }
 
@@ -378,13 +380,17 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
       originalFileName: req.file.originalname
     });
     
-  } catch (error) {
-    console.error("Erro ao processar PDF:", error);
+  } catch (error: any) {
+    console.error("=== ERRO CRÍTICO NO PROCESSAMENTO ===");
+    console.error("Erro:", error.message);
+    console.error("Stack:", error.stack);
+    console.error("Tipo:", typeof error);
     
     // Remover arquivo temporário em caso de erro
     if (req.file && fs.existsSync(req.file.path)) {
       try {
         fs.unlinkSync(req.file.path);
+        console.log("Arquivo temporário removido após erro");
       } catch (cleanupError) {
         console.error("Erro ao remover arquivo temporário:", cleanupError);
       }
@@ -393,7 +399,8 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return res.status(500).json({ 
       message: "Erro ao processar pitch deck", 
-      error: errorMessage 
+      error: errorMessage,
+      stack: error.stack
     });
   }
 };
