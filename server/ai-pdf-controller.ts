@@ -6,6 +6,7 @@ import { db } from "./db.js";
 import { startups } from "../shared/schema.js";
 import { eq } from "drizzle-orm";
 import OpenAI from "openai";
+import { fromPath } from "pdf2pic";
 
 // Initialize OpenAI client
 const openai = new OpenAI({ 
@@ -57,17 +58,94 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
     
     console.log(`Arquivo PDF processado com sucesso: ${fileName} (${stats.size} bytes)`);
     
-    // For now, we'll use OpenAI vision capabilities to analyze the PDF
-    // Since direct text extraction is problematic, we'll use the file info for OpenAI analysis
-    console.log(`Preparando para análise com OpenAI: ${fileName} (${stats.size} bytes)`);
-    
-    return `PDF Document Analysis Request:
-File: ${fileName}
-Size: ${stats.size} bytes
-Path: ${filePath}
-
-This PDF contains startup pitch deck information that will be analyzed using AI vision capabilities.
-File is ready for processing with OpenAI.`;
+    // Convert PDF to images and use OpenAI Vision for analysis
+    try {
+      console.log(`Convertendo PDF para imagens para análise com OpenAI Vision: ${fileName}`);
+      
+      const convert = fromPath(filePath, {
+        density: 100,           // Output DPI
+        saveFilename: "page",   // File name prefix
+        savePath: path.dirname(filePath), // Save to temp directory
+        format: "png",          // Output format
+        width: 1200,           // Width in pixels
+        height: 1600           // Height in pixels
+      });
+      
+      // Convert first few pages to images
+      const maxPages = 3; // Limit to first 3 pages for analysis
+      const pageImages = [];
+      
+      for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+        try {
+          const result = await convert(pageNum, { responseType: "base64" });
+          if (result.base64) {
+            pageImages.push(result.base64);
+            console.log(`Página ${pageNum} convertida para imagem`);
+          }
+        } catch (pageError) {
+          console.error(`Erro ao converter página ${pageNum}:`, pageError);
+          break; // Stop if we can't convert a page
+        }
+      }
+      
+      if (pageImages.length > 0) {
+        console.log(`${pageImages.length} páginas convertidas para análise`);
+        
+        // Use OpenAI Vision to analyze the first page
+        const firstPageBase64 = pageImages[0];
+        
+        const visionResponse = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: `Analise esta imagem de um pitch deck de startup e extraia TODAS as informações visíveis no texto.
+                  
+                  Procure especificamente por:
+                  - Nome da empresa/startup
+                  - Nome do CEO/fundador
+                  - Email do CEO
+                  - Telefone/WhatsApp
+                  - Setor/área de atuação
+                  - Modelo de negócio
+                  - Website/URL
+                  - Localização (cidade, estado)
+                  - Métricas (MRR, clientes, funcionários)
+                  - Descrição do que a empresa faz
+                  
+                  Extraia APENAS informações que você pode ver claramente na imagem.
+                  Retorne em formato de texto estruturado com todos os dados encontrados.`
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:image/png;base64,${firstPageBase64}`
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 1000
+        });
+        
+        const extractedText = visionResponse.choices[0].message.content || '';
+        console.log(`Texto extraído via OpenAI Vision: ${extractedText.substring(0, 500)}...`);
+        
+        return extractedText;
+        
+      } else {
+        console.log('Não foi possível converter nenhuma página do PDF');
+        return `PDF Document: ${fileName} - Could not convert pages for analysis`;
+      }
+      
+    } catch (pdfError) {
+      console.error('Erro ao processar PDF:', pdfError);
+      const errorMessage = pdfError instanceof Error ? pdfError.message : 'Unknown error';
+      return `PDF Document: ${fileName} - Error processing: ${errorMessage}`;
+    }
 
     // Fallback to basic file info
     return `
@@ -105,22 +183,28 @@ async function extractDataWithAI(text: string, startupName: string): Promise<any
 Analise o seguinte texto extraído de um pitch deck de startup e extraia as informações estruturadas.
 Retorne APENAS um objeto JSON válido com os campos encontrados no documento.
 
-Campos a procurar:
-- ceo_name: Nome do CEO/fundador
-- ceo_email: Email do CEO/fundador
-- ceo_whatsapp: WhatsApp do CEO
-- ceo_linkedin: LinkedIn do CEO
-- sector: Setor da empresa
-- business_model: Modelo de negócio
-- website: Site da empresa
-- city: Cidade
-- state: Estado
-- mrr: MRR (Monthly Recurring Revenue) em número
-- client_count: Número de clientes
-- employee_count: Número de funcionários
-- description: Descrição da empresa (máximo 500 caracteres)
+IMPORTANTE: Extraia informações REAIS do texto fornecido. Não invente dados.
 
-Se um campo não for encontrado, não inclua no JSON.
+Campos a procurar:
+- ceo_name: Nome do CEO/fundador (procure por "CEO", "Founder", "Fundador")
+- ceo_email: Email do CEO/fundador (formato email válido)
+- ceo_whatsapp: WhatsApp do CEO (número de telefone)
+- ceo_linkedin: LinkedIn do CEO (URL ou perfil)
+- sector: Setor da empresa (tecnologia, fintech, saúde, etc.)
+- business_model: Modelo de negócio (SaaS, marketplace, etc.)
+- website: Site da empresa (URL)
+- city: Cidade da empresa
+- state: Estado da empresa
+- mrr: MRR (Monthly Recurring Revenue) em número
+- client_count: Número de clientes atual
+- employee_count: Número de funcionários/colaboradores
+- description: Descrição clara da empresa baseada no texto (máximo 500 caracteres)
+
+REGRAS:
+1. Se um campo não for encontrado no texto, NÃO inclua no JSON
+2. Extraia apenas informações que estão explicitamente no texto
+3. Para números (mrr, client_count, employee_count), use apenas valores numéricos
+4. Para description, resuma o que a empresa faz baseado no texto real
 
 Texto do PDF:
 ${text}
