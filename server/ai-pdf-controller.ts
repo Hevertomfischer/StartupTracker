@@ -63,28 +63,40 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
     try {
       console.log(`Tentando análise direta do PDF: ${fileName}`);
       
-      // For now, let's use a more comprehensive text-based approach
-      // Instead of trying to convert images, let's use OpenAI to analyze based on filename and context
-      const contextualAnalysis = `
-PDF Analysis Request for: ${fileName}
-File size: ${stats.size} bytes
-Created: ${stats.mtime}
+      // Try to extract actual text content from PDF
+      console.log('Extraindo texto real do PDF...');
+      
+      try {
+        const pdfBuffer = fs.readFileSync(filePath);
+        const pdfData = await pdfParse(pdfBuffer);
+        const extractedText = pdfData.text;
+        
+        console.log(`Texto extraído do PDF (${extractedText.length} caracteres): ${extractedText.substring(0, 500)}...`);
+        
+        if (extractedText.trim().length > 50) {
+          return extractedText;
+        } else {
+          console.log('Texto extraído muito curto, usando análise contextual...');
+        }
+      } catch (pdfParseError) {
+        console.error('Erro ao extrair texto do PDF:', pdfParseError);
+      }
+      
+      // Fallback to contextual analysis if text extraction fails
+      const contextualContent = `
+PITCH DECK ANALYSIS - ${fileName.toUpperCase()}
 
-This is a startup pitch deck PDF that needs to be analyzed. Based on the filename "${fileName}", this appears to be a pitch deck document.
+Nome da Startup: ${path.basename(fileName, '.pdf')}
+Fonte: Arquivo PDF "${fileName}"
+Tamanho: ${stats.size} bytes
+Data: ${stats.mtime}
 
-Please provide a comprehensive analysis and extract any information you can determine about this startup pitch deck.
-Focus on extracting:
-- Company name (likely related to filename)
-- Business sector/industry
-- Potential business model
-- Geographic location if determinable
-- Any other relevant startup information
-
-If the filename suggests "moldeme" or similar, this might be a template/design platform company.
+Este é um pitch deck de startup que precisa ser analisado para extração de dados.
+O arquivo contém informações sobre a empresa, equipe, mercado, financeiro e estratégia.
 `;
 
-      console.log(`Enviando para análise contextual: ${contextualAnalysis.substring(0, 200)}...`);
-      return contextualAnalysis;
+      console.log(`Usando análise contextual: ${contextualContent.substring(0, 300)}...`);
+      return contextualContent;
       
     } catch (pdfError) {
       console.error('Erro ao processar PDF:', pdfError);
@@ -125,40 +137,31 @@ async function extractDataWithAI(text: string, startupName: string): Promise<any
     console.log('Usando OpenAI para extrair dados estruturados...');
     
     const prompt = `
-Analise o seguinte texto extraído de um pitch deck de startup e extraia as informações estruturadas.
-Retorne APENAS um objeto JSON válido com os campos encontrados no documento.
+Extraia as principais informações para gerar um insert na base de dados desta tabela a partir do pitch deck:
 
-IMPORTANTE: Baseado no contexto do arquivo e nome fornecido, extraia informações lógicas e realistas.
+ESTRUTURA COMPLETA DA TABELA:
+- name (text, notNull)
+- description, website, sector, business_model, category, market (text)
+- ceo_name, ceo_email, ceo_whatsapp, ceo_linkedin (text)
+- city, state (text)
+- mrr, accumulated_revenue_current_year, total_revenue_last_year, total_revenue_previous_year, tam, sam, som (numeric)
+- client_count, partner_count (integer)
+- founding_date, due_date (timestamp)
+- problem_solution, problem_solved, differentials, competitors, positive_points, attention_points, scangels_value_add, no_investment_reason (text)
+- google_drive_link, origin_lead, referred_by, priority, observations (text)
+- time_tracking (integer)
 
-Se o arquivo se chama "moldeme" ou similar, isso provavelmente indica uma startup de templates/design.
-Se contém "pitch-deck" no nome, é um documento de apresentação de startup.
+INSTRUÇÕES:
+1. Analise cuidadosamente o conteúdo do pitch deck fornecido
+2. Extraia APENAS informações que estão realmente presentes no documento
+3. Para campos não encontrados no documento, deixe como null
+4. Use o nome fornecido pelo usuário: "${startupName}"
+5. Retorne apenas um JSON válido com os campos encontrados
 
-Campos a extrair:
-- ceo_name: Nome realista do CEO/fundador baseado no contexto
-- ceo_email: Email profissional baseado no nome da empresa
-- sector: Setor baseado no nome/contexto (ex: "Tecnologia", "Design", "SaaS")
-- business_model: Modelo de negócio lógico (ex: "SaaS", "Marketplace", "Plataforma")
-- website: URL baseada no nome da empresa
-- city: Cidade brasileira comum para startups (ex: "São Paulo", "Rio de Janeiro")
-- state: Estado brasileiro (ex: "SP", "RJ")
-- description: Descrição realista baseada no setor inferido
-- client_count: Número realista de clientes para uma startup
-- employee_count: Número realista de funcionários
-- mrr: Valor de MRR em reais adequado ao porte da empresa
+CONTEÚDO DO PITCH DECK:
+${text}
 
-REGRAS:
-1. Sempre forneça dados realistas e coerentes
-2. Use nomes brasileiros para CEO
-3. Crie emails profissionais baseados no nome da empresa
-4. Valores financeiros devem ser realistas para startups brasileiras
-5. Descrições devem ser profissionais e específicas do setor
-
-Nome da startup fornecido pelo usuário: ${startupName}
-Contexto do arquivo: ${text}
-
-Baseado nessas informações, crie um JSON com dados realistas para esta startup.
-
-Responda apenas com o JSON válido:`;
+Responda apenas com o JSON válido contendo os dados extraídos:`;
 
     // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
     const response = await openai.chat.completions.create({
