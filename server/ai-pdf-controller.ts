@@ -186,8 +186,20 @@ Responda apenas com o JSON válido contendo os dados extraídos:`;
       throw new Error('OpenAI returned empty response');
     }
     
-    const aiExtractedData = JSON.parse(responseContent);
-    console.log('Dados extraídos pela OpenAI:', aiExtractedData);
+    console.log('=== RESPOSTA COMPLETA DA OPENAI ===');
+    console.log(responseContent);
+    
+    let cleanContent = responseContent.trim();
+    if (cleanContent.startsWith('```json')) {
+      cleanContent = cleanContent.replace(/```json\s*/, '').replace(/```\s*$/, '');
+    }
+    if (cleanContent.startsWith('```')) {
+      cleanContent = cleanContent.replace(/```\s*/, '').replace(/```\s*$/, '');
+    }
+    
+    const aiExtractedData = JSON.parse(cleanContent);
+    console.log('=== DADOS EXTRAÍDOS PELA OPENAI ===');
+    console.log(JSON.stringify(aiExtractedData, null, 2));
     
     // Merge AI-extracted data with base data
     Object.assign(extractedData, aiExtractedData);

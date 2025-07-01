@@ -1267,6 +1267,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rota para processamento de PDF com IA
   app.post("/api/startup/process-pitch-deck", isAdmin, uploadTempPDF, processPitchDeckAI);
+  
+  // Rota de teste para OpenAI (temporária)
+  app.post("/api/test-openai", async (req: Request, res: Response) => {
+    try {
+      const { text, name } = req.body;
+      
+      const prompt = `
+Extraia as principais informações para gerar um insert na base de dados desta tabela a partir do pitch deck:
+
+ESTRUTURA COMPLETA DA TABELA:
+- name (text, notNull)
+- description, website, sector, business_model, category, market (text)
+- ceo_name, ceo_email, ceo_whatsapp, ceo_linkedin (text)
+- city, state (text)
+- mrr, accumulated_revenue_current_year, total_revenue_last_year, total_revenue_previous_year, tam, sam, som (numeric)
+- client_count, partner_count (integer)
+- founding_date, due_date (timestamp)
+- problem_solution, problem_solved, differentials, competitors, positive_points, attention_points, scangels_value_add, no_investment_reason (text)
+- google_drive_link, origin_lead, referred_by, priority, observations (text)
+- time_tracking (integer)
+
+INSTRUÇÕES:
+1. Analise cuidadosamente o conteúdo do pitch deck fornecido
+2. Extraia APENAS informações que estão realmente presentes no documento
+3. Para campos não encontrados no documento, deixe como null
+4. Use o nome fornecido pelo usuário: "${name || 'TestCompany'}"
+5. Retorne apenas um JSON válido com os campos encontrados
+
+CONTEÚDO DO PITCH DECK:
+${text || 'Documento de pitch deck da startup com informações sobre produto, mercado, equipe e financeiro.'}
+
+Responda apenas com o JSON válido contendo os dados extraídos:`;
+
+      console.log('Testando OpenAI com prompt:', prompt.substring(0, 300));
+
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'system',
+              content: 'Você é um especialista em análise de documentos de startups. Extraia informações precisas do texto fornecido e retorne apenas JSON válido.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API Error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const extractedData = JSON.parse(result.choices[0].message.content);
+      
+      console.log('OpenAI Response:', extractedData);
+      
+      return res.status(200).json({
+        success: true,
+        extractedData: extractedData,
+        prompt: prompt.substring(0, 500)
+      });
+    } catch (error) {
+      console.error('Erro no teste OpenAI:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  });
 
   // Rotas para importação de dados
 
