@@ -297,13 +297,22 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     console.log(`Processando PDF: ${req.file.filename} para startup: ${name}`);
     console.log(`Caminho do arquivo: ${req.file.path}`);
 
-    // Extrair texto do PDF
-    console.log("Extraindo texto do PDF...");
+    // Tentar extrair texto do PDF
+    console.log("=== TENTANDO EXTRAIR TEXTO DO PDF ===");
     const extractedText = await extractTextFromPDF(req.file.path);
-    console.log(`Texto extraído: ${extractedText.substring(0, 200)}...`);
     
-    // Usar IA para extrair dados estruturados
-    console.log("Processando dados com IA...");
+    if (!extractedText) {
+      console.log("=== EXTRAÇÃO DE TEXTO FALHOU ===");
+      console.log("Sistema não consegue ler conteúdo do PDF");
+      console.log("Continuando com dados básicos apenas");
+    } else {
+      console.log("=== TEXTO EXTRAÍDO COM SUCESSO ===");
+      console.log(`Tamanho: ${extractedText.length} caracteres`);
+      console.log(`Amostra: ${extractedText.substring(0, 300)}...`);
+    }
+    
+    // Processar dados com IA
+    console.log("=== PROCESSANDO COM IA ===");
     const extractedData = await extractDataWithAI(extractedText, name);
     console.log("=== DADOS EXTRAÍDOS PELA IA ===");
     console.log(JSON.stringify(extractedData, null, 2));
