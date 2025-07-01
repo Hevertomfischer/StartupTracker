@@ -223,30 +223,34 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
 
     // Create startup record in database with extracted data
     console.log("Criando startup no banco de dados...");
-    const newStartup = await db.insert(startups).values({
+    
+    // Build insert object with only valid schema fields
+    const insertData: any = {
       name: extractedData.name || name,
-      ceo_name: extractedData.ceo_name || null,
-      ceo_email: extractedData.ceo_email || null,
-      ceo_whatsapp: extractedData.ceo_whatsapp || null,
-      ceo_linkedin: extractedData.ceo_linkedin || null,
-      business_model: extractedData.business_model || null,
-      sector: extractedData.sector || null,
-      city: extractedData.city || null,
-      state: extractedData.state || null,
-      website: extractedData.website || null,
-      founding_date: extractedData.founding_date || null,
-      mrr: extractedData.mrr || null,
-      client_count: extractedData.client_count || null,
-      employee_count: extractedData.employee_count || null,
-      tam: extractedData.tam || null,
-      sam: extractedData.sam || null,
-      som: extractedData.som || null,
       description: extractedData.description || `Startup processada via AI a partir de PDF.`,
       status_id: cadastradaStatus?.id || null,
       created_by_ai: true,
       ai_reviewed: false,
       ai_extraction_data: JSON.stringify(extractedData)
-    }).returning();
+    };
+    
+    // Add optional fields only if they exist in extracted data
+    if (extractedData.ceo_name) insertData.ceo_name = extractedData.ceo_name;
+    if (extractedData.ceo_email) insertData.ceo_email = extractedData.ceo_email;
+    if (extractedData.ceo_whatsapp) insertData.ceo_whatsapp = extractedData.ceo_whatsapp;
+    if (extractedData.ceo_linkedin) insertData.ceo_linkedin = extractedData.ceo_linkedin;
+    if (extractedData.business_model) insertData.business_model = extractedData.business_model;
+    if (extractedData.sector) insertData.sector = extractedData.sector;
+    if (extractedData.city) insertData.city = extractedData.city;
+    if (extractedData.state) insertData.state = extractedData.state;
+    if (extractedData.website) insertData.website = extractedData.website;
+    if (extractedData.founding_date) insertData.founding_date = extractedData.founding_date;
+    if (extractedData.mrr) insertData.mrr = extractedData.mrr;
+    if (extractedData.client_count) insertData.client_count = extractedData.client_count;
+    
+    console.log("Dados para inserção:", insertData);
+    
+    const newStartup = await db.insert(startups).values(insertData).returning();
 
     console.log("Startup criada com sucesso:", newStartup[0].id);
     console.log("Dados salvos:", {
