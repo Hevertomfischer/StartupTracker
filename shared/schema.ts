@@ -70,11 +70,6 @@ export const startups = pgTable("startups", {
   // Campos de análise  
   problem_solution: text("problem_solution"),
   problem_solved: text("problem_solved"),
-  
-  // AI generation tracking
-  created_by_ai: boolean("created_by_ai").default(false),
-  ai_extraction_data: text("ai_extraction_data"), // Store original AI extracted data as JSON
-  ai_reviewed: boolean("ai_reviewed").default(false), // Track if AI-generated startup has been manually reviewed
   differentials: text("differentials"),
   competitors: text("competitors"),
   positive_points: text("positive_points"),
@@ -93,6 +88,11 @@ export const startups = pgTable("startups", {
   priority: text("priority"),
   time_tracking: integer("time_tracking"),
   observations: text("observations"),
+  
+  // AI generation tracking
+  created_by_ai: boolean("created_by_ai").default(false),
+  ai_reviewed: boolean("ai_reviewed").default(false),
+  ai_extraction_data: text("ai_extraction_data"), // Store original AI extracted data as JSON
 });
 
 // Tabela de anexos de startups

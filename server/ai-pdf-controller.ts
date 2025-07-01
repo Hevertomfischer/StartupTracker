@@ -316,33 +316,79 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     // Create startup record in database with extracted data
     console.log("Criando startup no banco de dados...");
     
-    // Build insert object with only valid schema fields
-    const insertData: any = {
+    // Build insert object with only valid schema fields - use proper type safety
+    const insertData = {
       name: extractedData.name || name,
       description: extractedData.description || `Startup processada via AI a partir de PDF.`,
       status_id: cadastradaStatus?.id || null,
       created_by_ai: true,
       ai_reviewed: false,
-      ai_extraction_data: JSON.stringify(extractedData)
+      ai_extraction_data: JSON.stringify(extractedData),
+      
+      // Optional fields with proper type checking
+      ceo_name: extractedData.ceo_name || null,
+      ceo_email: extractedData.ceo_email || null,
+      ceo_whatsapp: extractedData.ceo_whatsapp || null,
+      ceo_linkedin: extractedData.ceo_linkedin || null,
+      business_model: extractedData.business_model || null,
+      sector: extractedData.sector || null,
+      category: extractedData.category || null,
+      market: extractedData.market || null,
+      city: extractedData.city || null,
+      state: extractedData.state || null,
+      website: extractedData.website || null,
+      
+      // Numeric fields with proper conversion
+      mrr: extractedData.mrr ? Number(extractedData.mrr) : null,
+      accumulated_revenue_current_year: extractedData.accumulated_revenue_current_year ? Number(extractedData.accumulated_revenue_current_year) : null,
+      total_revenue_last_year: extractedData.total_revenue_last_year ? Number(extractedData.total_revenue_last_year) : null,
+      total_revenue_previous_year: extractedData.total_revenue_previous_year ? Number(extractedData.total_revenue_previous_year) : null,
+      tam: extractedData.tam ? Number(extractedData.tam) : null,
+      sam: extractedData.sam ? Number(extractedData.sam) : null,
+      som: extractedData.som ? Number(extractedData.som) : null,
+      
+      // Integer fields with proper conversion
+      client_count: extractedData.client_count ? Number(extractedData.client_count) : null,
+      partner_count: extractedData.partner_count ? Number(extractedData.partner_count) : null,
+      time_tracking: extractedData.time_tracking ? Number(extractedData.time_tracking) : null,
+      
+      // Date fields with proper validation
+      founding_date: extractedData.founding_date ? new Date(extractedData.founding_date) : null,
+      due_date: extractedData.due_date ? new Date(extractedData.due_date) : null,
+      
+      // Text fields
+      problem_solution: extractedData.problem_solution || null,
+      problem_solved: extractedData.problem_solved || null,
+      differentials: extractedData.differentials || null,
+      competitors: extractedData.competitors || null,
+      positive_points: extractedData.positive_points || null,
+      attention_points: extractedData.attention_points || null,
+      scangels_value_add: extractedData.scangels_value_add || null,
+      no_investment_reason: extractedData.no_investment_reason || null,
+      google_drive_link: extractedData.google_drive_link || null,
+      origin_lead: extractedData.origin_lead || null,
+      referred_by: extractedData.referred_by || null,
+      priority: extractedData.priority || null,
+      observations: extractedData.observations || null
     };
     
-    // Add optional fields only if they exist in extracted data
-    if (extractedData.ceo_name) insertData.ceo_name = extractedData.ceo_name;
-    if (extractedData.ceo_email) insertData.ceo_email = extractedData.ceo_email;
-    if (extractedData.ceo_whatsapp) insertData.ceo_whatsapp = extractedData.ceo_whatsapp;
-    if (extractedData.ceo_linkedin) insertData.ceo_linkedin = extractedData.ceo_linkedin;
-    if (extractedData.business_model) insertData.business_model = extractedData.business_model;
-    if (extractedData.sector) insertData.sector = extractedData.sector;
-    if (extractedData.city) insertData.city = extractedData.city;
-    if (extractedData.state) insertData.state = extractedData.state;
-    if (extractedData.website) insertData.website = extractedData.website;
-    if (extractedData.founding_date) insertData.founding_date = extractedData.founding_date;
-    if (extractedData.mrr) insertData.mrr = extractedData.mrr;
-    if (extractedData.client_count) insertData.client_count = extractedData.client_count;
+    console.log("Dados para inserção:", {
+      name: insertData.name,
+      ceo_name: insertData.ceo_name,
+      sector: insertData.sector,
+      mrr: insertData.mrr,
+      client_count: insertData.client_count
+    });
     
-    console.log("Dados para inserção:", insertData);
-    
-    const newStartup = await db.insert(startups).values(insertData).returning();
+    let newStartup;
+    try {
+      newStartup = await db.insert(startups).values([insertData]).returning();
+    } catch (insertError: any) {
+      console.error("=== ERRO ESPECÍFICO DE INSERÇÃO NO BANCO ===");
+      console.error("Erro:", insertError.message);
+      console.error("Dados que causaram erro:", JSON.stringify(insertData, null, 2));
+      throw insertError;
+    }
 
     console.log("Startup criada com sucesso:", newStartup[0].id);
     console.log("Dados salvos:", {
