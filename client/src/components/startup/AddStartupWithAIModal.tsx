@@ -24,7 +24,8 @@ import { SmartAutoCompleteField } from "./SmartAutoCompleteField";
 import { SmartFormProvider, useSmartForm } from "./SmartFormContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, FileText, CheckCircle, Loader2, Edit3 } from "lucide-react";
+import { Upload, FileText, CheckCircle, Loader2, Edit3, Brain, Image, Database } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -58,6 +59,11 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
   const [extractedData, setExtractedData] = useState<any>(null);
   const [fileName, setFileName] = useState<string>("");
   const [isModalClosing, setIsModalClosing] = useState(false);
+  
+  // Progress tracking state
+  const [processingStep, setProcessingStep] = useState(0);
+  const [processingMessage, setProcessingMessage] = useState('');
+  const [progress, setProgress] = useState(0);
 
   // Debug state changes
   useEffect(() => {
@@ -109,6 +115,41 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     enabled: open || currentView === "confirm"
   });
 
+  const processingSteps = [
+    { icon: Upload, message: "Enviando arquivo PDF...", duration: 1000 },
+    { icon: Image, message: "Convertendo páginas em imagens...", duration: 2000 },
+    { icon: Brain, message: "Analisando conteúdo com IA...", duration: 3000 },
+    { icon: Database, message: "Salvando dados extraídos...", duration: 1000 },
+    { icon: CheckCircle, message: "Processamento concluído!", duration: 500 }
+  ];
+
+  const simulateProgress = () => {
+    let currentProgressStep = 0;
+    let totalDuration = 0;
+    
+    const stepDurations = processingSteps.map(step => step.duration);
+    const totalTime = stepDurations.reduce((acc, duration) => acc + duration, 0);
+    
+    const updateProgress = () => {
+      if (currentProgressStep < processingSteps.length) {
+        const step = processingSteps[currentProgressStep];
+        setProcessingStep(currentProgressStep);
+        setProcessingMessage(step.message);
+        
+        const progressPercentage = (totalDuration / totalTime) * 100;
+        setProgress(progressPercentage);
+        
+        setTimeout(() => {
+          totalDuration += step.duration;
+          currentProgressStep++;
+          updateProgress();
+        }, step.duration);
+      }
+    };
+    
+    updateProgress();
+  };
+
   // PDF Processing mutation
   const processPDFMutation = useMutation({
     mutationFn: async (data: z.infer<typeof basicSchema>) => {
@@ -139,10 +180,20 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       console.log('Response data:', result);
       return result;
     },
+    onMutate: () => {
+      setCurrentView("processing");
+      setProgress(0);
+      setProcessingStep(0);
+      simulateProgress();
+    },
     onSuccess: (result) => {
       console.log('=== PDF MUTATION SUCCESS START ===');
       console.log('PDF processed successfully:', result);
       console.log('COMPLETE EXTRACTED DATA:', result.extractedData);
+
+      // Complete progress and show success
+      setProgress(100);
+      setProcessingMessage("Processamento concluído!");
 
       // Set extracted data immediately
       setExtractedData(result.extractedData);
@@ -166,9 +217,11 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
         confirmForm.setValue('status_id', statuses[0].id);
       }
 
-      // Switch to confirmation view immediately - state updates are synchronous
-      console.log('=== SWITCHING TO CONFIRM VIEW ===');
-      setCurrentView("confirm");
+      // Wait a moment before switching to confirmation view to show completion
+      setTimeout(() => {
+        console.log('=== SWITCHING TO CONFIRM VIEW ===');
+        setCurrentView("confirm");
+      }, 1000);
 
       // Invalidate startup cache to ensure new startup appears immediately
       queryClient.invalidateQueries({ queryKey: ['/api/startups'] });
@@ -238,9 +291,6 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
       return;
     }
     
-    console.log('Setting view to processing...');
-    setCurrentView("processing");
-    
     console.log('Triggering PDF mutation...');
     processPDFMutation.mutate(data);
     console.log('=== UPLOAD SUBMIT END ===');
@@ -265,6 +315,9 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
     setExtractedData(null);
     setCurrentView("upload");
     setFileName("");
+    setProcessingStep(0);
+    setProcessingMessage('');
+    setProgress(0);
     onClose();
   };
 
@@ -382,14 +435,71 @@ export function AddStartupWithAIModal({ open, onClose }: AddStartupWithAIModalPr
 
         {/* Processing View */}
         {currentView === "processing" && (
-          <div className="flex flex-col items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Processando Pitch Deck
-            </h3>
-            <p className="text-sm text-gray-600 text-center">
-              Nossa IA está analisando o documento e extraindo as informações...
-            </p>
+          <div className="flex flex-col space-y-8 py-8">
+            {/* Progress Bar */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Processando PDF com IA</h3>
+                <span className="text-sm text-gray-500">{Math.round(progress)}%</span>
+              </div>
+              <Progress value={progress} className="w-full h-2" />
+            </div>
+
+            {/* Current Step Indicator */}
+            <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg">
+              {processingSteps[processingStep] && (
+                <>
+                  <div className="flex-shrink-0">
+                    {React.createElement(processingSteps[processingStep].icon, {
+                      className: "w-6 h-6 text-blue-600",
+                    })}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-900">
+                      {processingMessage}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Steps Overview */}
+            <div className="space-y-3">
+              {processingSteps.map((step, index) => (
+                <div 
+                  key={index}
+                  className={`flex items-center space-x-3 p-2 rounded transition-colors ${
+                    index < processingStep 
+                      ? 'bg-green-50 text-green-700' 
+                      : index === processingStep 
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'text-gray-400'
+                  }`}
+                >
+                  <div className="flex-shrink-0">
+                    {index < processingStep ? (
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    ) : index === processingStep ? (
+                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      React.createElement(step.icon, {
+                        className: "w-5 h-5",
+                      })
+                    )}
+                  </div>
+                  <span className="text-sm">{step.message.replace('...', '')}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-center">
+              <p className="text-xs text-gray-500">
+                Este processo pode levar alguns minutos dependendo do tamanho do arquivo.
+              </p>
+            </div>
           </div>
         )}
 
