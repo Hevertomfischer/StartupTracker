@@ -6,7 +6,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
-import * as pdfParse from "pdf-parse";
+// import * as pdfParse from "pdf-parse"; // Removed due to package conflicts
 import { fromPath } from "pdf2pic";
 import { createWorker } from "tesseract.js";
 
