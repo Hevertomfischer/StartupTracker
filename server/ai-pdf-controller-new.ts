@@ -6,7 +6,9 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
-// import * as pdfParse from "pdf-parse"; // Removed due to package conflicts
+import * as pdfParse from "pdf-parse";
+import { fromPath } from "pdf2pic";
+import { createWorker } from "tesseract.js";
 
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY 
@@ -43,13 +45,12 @@ export const tempUpload = multer({
 
 export const uploadTempPDF = tempUpload.single('file');
 
-// Função para extrair texto do PDF - versão simplificada
+// Função para extrair texto do PDF com múltiplas estratégias
 async function extractTextFromPDF(filePath: string): Promise<string> {
   console.log(`=== EXTRAINDO TEXTO DO PDF ===`);
+  console.log(`Arquivo: ${filePath}`);
   
   try {
-    console.log(`Lendo PDF: ${filePath}`);
-    
     if (!fs.existsSync(filePath)) {
       throw new Error(`Arquivo não encontrado: ${filePath}`);
     }
@@ -57,44 +58,163 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
     const dataBuffer = fs.readFileSync(filePath);
     console.log(`PDF carregado: ${dataBuffer.length} bytes`);
     
-    // Fallback simples para análise de PDF
+    // Estratégia 1: Tentar pdf-parse primeiro
+    try {
+      console.log("=== TENTATIVA 1: PDF-PARSE ===");
+      const pdfData = await pdfParse(dataBuffer);
+      
+      if (pdfData.text && pdfData.text.trim().length > 50) {
+        console.log(`✅ PDF-PARSE funcionou: ${pdfData.text.length} caracteres extraídos`);
+        console.log(`Páginas: ${pdfData.numpages}`);
+        console.log(`Amostra: ${pdfData.text.substring(0, 200)}...`);
+        return pdfData.text;
+      } else {
+        console.log("⚠️ PDF-PARSE retornou pouco texto, tentando OCR...");
+      }
+    } catch (parseError: any) {
+      console.log(`❌ PDF-PARSE falhou: ${parseError.message}`);
+    }
+    
+    // Estratégia 2: Converter para imagens e usar OCR
+    try {
+      console.log("=== TENTATIVA 2: PDF-TO-IMAGE + OCR ===");
+      
+      const convert = fromPath(filePath, {
+        density: 200,
+        saveFilename: "page",
+        savePath: path.join(process.cwd(), 'temp'),
+        format: "png",
+        width: 2000,
+        height: 2000
+      });
+      
+      const pageImages = await convert.bulk(-1); // Convert all pages
+      console.log(`Convertidas ${pageImages.length} páginas para imagem`);
+      
+      let extractedText = "";
+      
+      // Criar worker do Tesseract
+      const worker = await createWorker('por+eng');
+      
+      for (let i = 0; i < Math.min(pageImages.length, 10); i++) { // Limitar a 10 páginas
+        const imagePage = pageImages[i];
+        if (imagePage.path) {
+          console.log(`Processando página ${i + 1} com OCR...`);
+          
+          try {
+            const { data } = await worker.recognize(imagePage.path);
+            if (data.text && data.text.trim()) {
+              extractedText += `\n=== PÁGINA ${i + 1} ===\n${data.text}\n`;
+              console.log(`Página ${i + 1}: ${data.text.length} caracteres extraídos`);
+            }
+            
+            // Limpar arquivo temporário da imagem
+            if (fs.existsSync(imagePage.path)) {
+              fs.unlinkSync(imagePage.path);
+            }
+          } catch (ocrError: any) {
+            console.log(`Erro OCR na página ${i + 1}: ${ocrError.message}`);
+          }
+        }
+      }
+      
+      await worker.terminate();
+      
+      if (extractedText.trim().length > 50) {
+        console.log(`✅ OCR funcionou: ${extractedText.length} caracteres extraídos`);
+        console.log(`Amostra: ${extractedText.substring(0, 200)}...`);
+        return extractedText;
+      } else {
+        console.log("⚠️ OCR retornou pouco texto");
+      }
+      
+    } catch (ocrError: any) {
+      console.log(`❌ OCR falhou: ${ocrError.message}`);
+    }
+    
+    // Estratégia 3: Usar OpenAI Vision API diretamente
+    try {
+      console.log("=== TENTATIVA 3: OPENAI VISION API ===");
+      
+      // Converter primeira página para base64
+      const convert = fromPath(filePath, {
+        density: 150,
+        saveFilename: "vision_page",
+        savePath: path.join(process.cwd(), 'temp'),
+        format: "png",
+        width: 1500,
+        height: 1500
+      });
+      
+      const firstPage = await convert(1); // Primeira página apenas
+      
+      if (firstPage.path && fs.existsSync(firstPage.path)) {
+        const imageBuffer = fs.readFileSync(firstPage.path);
+        const base64Image = imageBuffer.toString('base64');
+        
+        const visionResponse = await openai.chat.completions.create({
+          model: "gpt-4-vision-preview",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Extraia todo o texto visível nesta página de pitch deck de startup. Retorne apenas o texto extraído, preservando a formatação quando possível."
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:image/png;base64,${base64Image}`,
+                    detail: "high"
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 4000
+        });
+        
+        const visionText = visionResponse.choices[0].message.content;
+        
+        // Limpar arquivo temporário
+        fs.unlinkSync(firstPage.path);
+        
+        if (visionText && visionText.trim().length > 50) {
+          console.log(`✅ VISION API funcionou: ${visionText.length} caracteres extraídos`);
+          console.log(`Amostra: ${visionText.substring(0, 200)}...`);
+          return visionText;
+        }
+      }
+      
+    } catch (visionError: any) {
+      console.log(`❌ Vision API falhou: ${visionError.message}`);
+    }
+    
+    // Se todas as estratégias falharam, retornar informações básicas
+    console.log("❌ TODAS AS ESTRATÉGIAS FALHARAM");
     const fileName = path.basename(filePath);
     const fileStats = fs.statSync(filePath);
     
-    console.log(`=== EXTRAÇÃO CONCLUÍDA ===`);
-    console.log(`Arquivo: ${fileName}`);
-    console.log(`Tamanho: ${dataBuffer.length} bytes`);
-    
-    // Retorna informações básicas do PDF para análise de IA
     return `
-PDF Document: ${fileName}
-File Size: ${dataBuffer.length} bytes
-Created: ${fileStats.birthtime.toISOString()}
-Modified: ${fileStats.mtime.toISOString()}
+DOCUMENTO PDF: ${fileName}
+TAMANHO: ${Math.round(fileStats.size / 1024)}KB
+PROCESSADO: ${new Date().toISOString()}
 
-AVISO: Este PDF será analisado usando técnicas de AI Vision.
-O sistema processará o conteúdo visual do documento para extrair informações da startup.
+AVISO: Não foi possível extrair texto automaticamente deste PDF.
+Este documento requer revisão manual para extração das informações.
+Por favor, revise o pitch deck manualmente e complete os dados da startup.
 
-Por favor, revise manualmente as informações extraídas.
+POSSÍVEIS CAUSAS:
+- PDF com imagens escaneadas sem texto selecionável
+- PDF protegido ou criptografado
+- Formato de PDF não suportado
+- Conteúdo principalmente visual/gráfico
     `.trim();
     
   } catch (error: any) {
-    console.error(`ERRO ao extrair texto do PDF: ${error.message}`);
-    console.error(`Stack trace: ${error.stack}`);
-    
-    // Fallback em caso de erro
-    const fileName = path.basename(filePath);
-    const fileStats = fs.statSync(filePath);
-    
-    return `
-ERRO NA EXTRAÇÃO DE TEXTO: ${error.message}
-
-Arquivo: ${fileName}
-Tamanho: ${Math.round(fileStats.size / 1024)}KB
-Processado em: ${new Date().toISOString()}
-
-Este PDF requer processamento manual ou ferramentas adicionais de OCR.
-    `.trim();
+    console.error(`ERRO GERAL na extração: ${error.message}`);
+    throw new Error(`Falha na extração do PDF: ${error.message}`);
   }
 }
 
@@ -203,7 +323,7 @@ Responda APENAS com o JSON válido:`;
 
 // Controlador principal para processar PDF
 export const processPitchDeckAI = async (req: Request, res: Response) => {
-  console.log("=== PROCESSAMENTO AI PDF - VERSÃO COM EXTRAÇÃO DE TEXTO ===");
+  console.log("=== PROCESSAMENTO AI PDF - VERSÃO ROBUSTA ===");
   
   try {
     if (!req.file) {
@@ -218,12 +338,11 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     console.log(`Processando PDF para startup: ${name}`);
     console.log(`Arquivo: ${req.file.filename} (${req.file.size} bytes)`);
 
-    // 1. Extrair texto do PDF
+    // 1. Extrair texto do PDF usando múltiplas estratégias
     const extractedText = await extractTextFromPDF(req.file.path);
     
-    if (!extractedText || extractedText.length < 10) {
-      console.log("AVISO: Muito pouco texto extraído do PDF");
-    }
+    console.log(`=== TEXTO EXTRAÍDO (${extractedText.length} caracteres) ===`);
+    console.log(`Amostra: ${extractedText.substring(0, 300)}...`);
 
     // 2. Analisar com IA
     const extractedData = await analyzePDFWithAI(extractedText, name);
@@ -245,7 +364,7 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
       ai_extraction_data: JSON.stringify({
         ...extractedData,
         extracted_text_length: extractedText.length,
-        extraction_method: "pdf-parse + OpenAI GPT-4o"
+        extraction_method: "Multi-strategy: pdf-parse + OCR + Vision API"
       }),
       created_by_ai: true,
       ai_reviewed: false,
@@ -314,11 +433,12 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      message: "PDF processado com sucesso usando extração de texto",
+      message: "PDF processado com sucesso usando extração robusta",
       startup: newStartup[0],
       originalFileName: req.file.originalname,
       extractedTextLength: extractedText.length,
-      extractionMethod: "pdf-parse + OpenAI GPT-4o"
+      extractionMethod: "Multi-strategy: pdf-parse + OCR + Vision API",
+      extractedData: extractedData
     });
     
   } catch (error: any) {

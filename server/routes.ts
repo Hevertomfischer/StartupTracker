@@ -25,9 +25,10 @@ import {
   deletePitchDeck
 } from "./file-controller";
 import { 
-  uploadTempPDF, 
-  processPitchDeckAI 
-} from "./ai-pdf-controller-new";
+  processPitchDeckAI, 
+  uploadTempPDF 
+} from "./ai-pdf-controller-new.js";
+import { processPitchDeckHybrid, uploadTempPDF as uploadTempPDFHybrid } from "./ai-pdf-controller-hybrid.js";
 import { 
   handleExternalForm, 
   uploadPitchDeck as externalFormUploadPitchDeck 
@@ -1265,8 +1266,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota para o formulário externo de cadastro de startups
   app.post("/api/external/startup", externalFormUploadPitchDeck, handleExternalForm);
 
-  // Rota para processamento de PDF com IA (VERSÃO CORRIGIDA)
-  app.post("/api/startup/process-pitch-deck", isAuthenticated, uploadTempPDF, processPitchDeckAI);
+  // AI PDF Processing Routes
+  app.post("/api/startup/process-pitch-deck", uploadTempPDF, processPitchDeckAI);
+  app.post("/api/startup/process-pitch-deck-hybrid", uploadTempPDFHybrid, processPitchDeckHybrid);
 
   // Rota de teste para OpenAI (temporária)
   app.post("/api/test-openai", async (req: Request, res: Response) => {
