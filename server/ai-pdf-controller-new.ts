@@ -1,3 +1,4 @@
+
 import { Request, Response } from "express";
 import { db } from "./db.js";
 import { startups } from "../shared/schema.js";
@@ -5,7 +6,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
-import pdf2pic from "pdf2pic";
+import * as pdfParse from "pdf-parse";
 
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY 
@@ -36,192 +37,132 @@ export const tempUpload = multer({
     }
   },
   limits: {
-    fileSize: 200 * 1024 * 1024 // 200MB limit - increased for larger PDFs
+    fileSize: 200 * 1024 * 1024 // 200MB limit
   }
 });
 
 export const uploadTempPDF = tempUpload.single('file');
 
-// Função para converter PDF em imagens e enviar para OpenAI Vision
-async function extractDataWithOpenAIVision(filePath: string): Promise<string | null> {
-  console.log(`=== CONVERTENDO PDF PARA IMAGENS E ENVIANDO PARA OPENAI VISION ===`);
+// Função para extrair texto do PDF usando pdf-parse
+async function extractTextFromPDF(filePath: string): Promise<string> {
+  console.log(`=== EXTRAINDO TEXTO DO PDF ===`);
   
   try {
-    console.log(`Convertendo PDF para imagens: ${filePath}`);
+    console.log(`Lendo PDF: ${filePath}`);
     
-    // Configurar conversão para imagem usando pdf2pic com configurações otimizadas
-    const convert = pdf2pic.fromPath(filePath, {
-      density: 150,           // Resolução aumentada para melhor qualidade
-      saveFilename: "page",   // Nome base dos arquivos
-      savePath: path.join(process.cwd(), 'temp'), // Diretório temporário
-      format: "png",          // Formato da imagem
-      width: 2400,           // Largura aumentada
-      height: 3200,          // Altura aumentada para formato retrato
-      quality: 100           // Qualidade máxima
-    });
-
-    console.log("Iniciando conversão da primeira página...");
-    const pageResult = await convert(1, { responseType: "base64" });
-    
-    if (!pageResult || !pageResult.base64) {
-      throw new Error("Falha na conversão PDF para imagem");
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Arquivo não encontrado: ${filePath}`);
     }
     
-    console.log(`PDF convertido para imagem base64: ${pageResult.base64.length} caracteres`);
+    const dataBuffer = fs.readFileSync(filePath);
+    console.log(`PDF carregado: ${dataBuffer.length} bytes`);
     
-    if (!openai) {
-      throw new Error("OpenAI não configurado");
+    const data = await pdfParse(dataBuffer);
+    
+    console.log(`=== EXTRAÇÃO CONCLUÍDA ===`);
+    console.log(`Páginas: ${data.numpages}`);
+    console.log(`Texto extraído: ${data.text.length} caracteres`);
+    console.log(`Primeiros 500 caracteres: ${data.text.substring(0, 500)}...`);
+    
+    if (!data.text || data.text.trim().length < 50) {
+      console.log("AVISO: Pouco texto extraído, PDF pode ser baseado em imagens");
+      
+      // Fallback para PDFs baseados em imagem - retorna informações básicas
+      const fileName = path.basename(filePath);
+      return `
+PDF Document: ${fileName}
+Pages: ${data.numpages}
+File Size: ${dataBuffer.length} bytes
+
+AVISO: Este PDF parece ser baseado em imagens e requer OCR para extração completa.
+Processando com informações básicas disponíveis.
+
+Por favor, revise manualmente as informações extraídas.
+      `.trim();
     }
-
-    console.log("Enviando imagem para OpenAI Vision...");
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-      messages: [
-        {
-          role: "system",
-          content: "Você é um especialista em análise de pitch decks de startups. Analise cuidadosamente cada elemento visual e textual da imagem fornecida."
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `Analise esta imagem de um pitch deck de startup e extraia TODAS as informações visíveis.
-
-IMPORTANTE: Procure por:
-- Nome da empresa/startup
-- Nome do CEO/fundador e informações de contato
-- Descrição do negócio e problema que resolve
-- Modelo de negócio e setor de atuação
-- Números financeiros (receita, MRR, clientes)
-- Localização da empresa
-- Diferencial competitivo
-- Mercado total (TAM/SAM/SOM)
-- Informações sobre fundação
-- Qualquer texto ou dados numéricos visíveis
-
-Retorne um texto estruturado e detalhado com TODAS as informações que conseguir identificar na imagem. Seja o mais específico possível e inclua todos os dados visíveis, mesmo que sejam pequenos detalhes.`
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: `data:image/png;base64,${pageResult.base64}`
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 3000,      // Aumentado para respostas mais detalhadas
-      temperature: 0.1
-    });
-
-    const extractedContent = response.choices[0].message.content;
     
-    console.log(`=== DADOS EXTRAÍDOS DA OPENAI VISION ===`);
-    console.log(`Tamanho da resposta: ${extractedContent?.length} caracteres`);
-    console.log(`Primeiros 800 caracteres: ${extractedContent?.substring(0, 800)}...`);
-    
-    return extractedContent;
+    return data.text;
     
   } catch (error: any) {
-    console.error(`ERRO ao processar PDF com OpenAI Vision: ${error.message}`);
+    console.error(`ERRO ao extrair texto do PDF: ${error.message}`);
     console.error(`Stack trace: ${error.stack}`);
     
-    // Fallback melhorado
-    console.log("Tentando fallback com análise contextual...");
-    
+    // Fallback em caso de erro
     const fileName = path.basename(filePath);
     const fileStats = fs.statSync(filePath);
     
-    console.log(`Usando análise contextual para: ${fileName} (${fileStats.size} bytes)`);
-    
-    return `ERRO NA EXTRAÇÃO: Não foi possível processar o PDF ${fileName}.
-    
-    Arquivo de ${Math.round(fileStats.size / 1024)}KB processado em ${new Date().toISOString()}.
-    
-    Possíveis causas:
-    - PDF protegido ou criptografado
-    - Formato de PDF não suportado
-    - Erro de conectividade com OpenAI
-    - Limitações de processamento de imagem
-    
-    O arquivo foi salvo mas requer revisão manual para extração de dados.`;
+    return `
+ERRO NA EXTRAÇÃO DE TEXTO: ${error.message}
+
+Arquivo: ${fileName}
+Tamanho: ${Math.round(fileStats.size / 1024)}KB
+Processado em: ${new Date().toISOString()}
+
+Este PDF requer processamento manual ou ferramentas adicionais de OCR.
+    `.trim();
   }
 }
 
-// Função para analisar PDF usando IA com texto extraído
-async function analyzePDFWithAI(filePath: string, startupName: string): Promise<any> {
-  console.log(`=== ANALISANDO PDF COM IA ===`);
+// Função para analisar dados extraídos usando OpenAI
+async function analyzePDFWithAI(extractedText: string, startupName: string): Promise<any> {
+  console.log(`=== ANALISANDO DADOS EXTRAÍDOS COM IA ===`);
   
   try {
-    // Enviar PDF diretamente para OpenAI Vision
-    const visionExtractedText = await extractDataWithOpenAIVision(filePath);
-    
-    if (!visionExtractedText) {
-      console.log("FALHA na extração via Vision - criando registro básico");
-      return {
-        name: startupName,
-        description: `Startup ${startupName} - PDF processado mas dados não extraídos. Revisar manualmente.`,
-        ceo_name: null,
-        problem_solution: "Extração via Vision falhou - dados devem ser inseridos manualmente"
-      };
-    }
-    
-    console.log("=== ESTRUTURANDO DADOS EXTRAÍDOS PELA VISION ===");
-    console.log(`Tamanho dos dados: ${visionExtractedText.length} caracteres`);
-    
     if (!openai) {
       throw new Error("OpenAI não configurado");
     }
     
+    console.log(`Analisando ${extractedText.length} caracteres de texto extraído`);
+    
     const prompt = `
-Você está analisando dados extraídos de um pitch deck para criar um registro estruturado de startup.
+Você está analisando texto extraído de um pitch deck para criar um registro estruturado de startup.
 
-DADOS EXTRAÍDOS DO PITCH DECK:
-${visionExtractedText}
+TEXTO EXTRAÍDO DO PITCH DECK:
+${extractedText}
 
 NOME DA STARTUP FORNECIDO PELO USUÁRIO: "${startupName}"
 
 INSTRUÇÕES PARA EXTRAÇÃO:
-1. Analise CUIDADOSAMENTE todos os dados fornecidos
-2. Extraia informações que estão claramente presentes no texto
+1. Analise CUIDADOSAMENTE todo o texto fornecido
+2. Extraia apenas informações que estão claramente presentes no texto
 3. Para informações não encontradas, use null
 4. Mantenha números como números (não strings)
 5. Use o nome fornecido pelo usuário como nome principal
-6. Seja conservador - só inclua dados que estão claramente presentes
+6. Seja conservador - só inclua dados que estão claramente presentes no texto
 
-CAMPOS OBRIGATÓRIOS:
-- name: use "${startupName}"
+CAMPOS DA TABELA PARA EXTRAÇÃO:
+- name (obrigatório): use "${startupName}"
 - description: descrição do negócio baseada no pitch deck
-
-CAMPOS OPCIONAIS (só inclua se estiverem claramente presentes):
+- website, sector, business_model, category, market
 - ceo_name, ceo_email, ceo_whatsapp, ceo_linkedin
-- sector, business_model, category, market
-- city, state, website
-- mrr, client_count, partner_count (números)
-- problem_solution, differentials, competitors
-- positive_points, attention_points
+- city, state
+- mrr, accumulated_revenue_current_year, total_revenue_last_year, total_revenue_previous_year, tam, sam, som (valores numéricos)
+- client_count, partner_count (números inteiros)
+- founding_date, due_date (formato YYYY-MM-DD)
+- problem_solution, problem_solved, differentials, competitors, positive_points, attention_points
+- google_drive_link, origin_lead, referred_by, priority, observations
 
 FORMATO DE RESPOSTA:
-Retorne APENAS um JSON válido seguindo este exemplo:
+Retorne APENAS um JSON válido com todos os campos encontrados. Exemplo:
 {
   "name": "${startupName}",
   "description": "Descrição baseada no pitch deck",
   "ceo_name": "Nome do CEO se encontrado ou null",
   "sector": "Setor se identificado ou null",
-  "mrr": 50000 (número) ou null,
-  "client_count": 100 (número) ou null,
+  "mrr": 50000,
+  "client_count": 100,
+  "founding_date": "2023-01-15",
   "problem_solution": "Problema e solução se descritos ou null"
 }
 
 Responda APENAS com o JSON válido:`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "Você é especialista em análise de pitch decks. Estruture em JSON APENAS as informações reais extraídas pela Vision API. Não invente dados."
+          content: "Você é especialista em análise de pitch decks. Extraia em JSON APENAS as informações reais presentes no texto. Não invente dados."
         },
         {
           role: "user",
@@ -251,15 +192,23 @@ Responda APENAS com o JSON válido:`;
     return extractedData;
     
   } catch (error: any) {
-    console.error('=== ERRO NA ANÁLISE ===');
+    console.error('=== ERRO NA ANÁLISE COM IA ===');
     console.error('Erro:', error.message);
-    throw error;
+    
+    // Fallback com dados básicos
+    return {
+      name: startupName,
+      description: `Startup ${startupName} - PDF processado mas análise com IA falhou. Dados devem ser revisados manualmente.`,
+      ceo_name: null,
+      sector: null,
+      problem_solution: "Análise com IA falhou - dados devem ser inseridos manualmente"
+    };
   }
 }
 
 // Controlador principal para processar PDF
 export const processPitchDeckAI = async (req: Request, res: Response) => {
-  console.log("=== PROCESSAMENTO AI PDF - VERSÃO CORRIGIDA ===");
+  console.log("=== PROCESSAMENTO AI PDF - VERSÃO COM EXTRAÇÃO DE TEXTO ===");
   
   try {
     if (!req.file) {
@@ -272,70 +221,121 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     }
 
     console.log(`Processando PDF para startup: ${name}`);
-    console.log(`Arquivo: ${req.file.filename}`);
+    console.log(`Arquivo: ${req.file.filename} (${req.file.size} bytes)`);
 
-    // Analisar PDF com extração real de texto
-    const extractedData = await analyzePDFWithAI(req.file.path, name);
+    // 1. Extrair texto do PDF
+    const extractedText = await extractTextFromPDF(req.file.path);
     
-    console.log("=== DADOS EXTRAÍDOS ===");
+    if (!extractedText || extractedText.length < 10) {
+      console.log("AVISO: Muito pouco texto extraído do PDF");
+    }
+
+    // 2. Analisar com IA
+    const extractedData = await analyzePDFWithAI(extractedText, name);
+    
+    console.log("=== DADOS FINAIS EXTRAÍDOS ===");
     console.log(`Nome: ${extractedData.name}`);
     console.log(`Descrição: ${extractedData.description}`);
 
-    // Buscar status "Cadastrada" 
+    // 3. Buscar status "Cadastrada" 
     const cadastradaStatus = await db.query.statuses.findFirst({
       where: (statuses, { ilike }) => ilike(statuses.name, '%cadastr%')
     });
 
-    // Preparar dados para inserção
+    // 4. Preparar dados para inserção
     const insertData = {
       name: extractedData.name || name,
-      description: extractedData.description,
+      description: extractedData.description || `Startup ${name} processada via AI a partir de PDF.`,
       status_id: cadastradaStatus?.id || null,
-      ai_extraction_data: JSON.stringify(extractedData),
+      ai_extraction_data: JSON.stringify({
+        ...extractedData,
+        extracted_text_length: extractedText.length,
+        extraction_method: "pdf-parse + OpenAI GPT-4o"
+      }),
       created_by_ai: true,
       ai_reviewed: false,
       
       // Campos opcionais
       ceo_name: extractedData.ceo_name || null,
       ceo_email: extractedData.ceo_email || null,
+      ceo_whatsapp: extractedData.ceo_whatsapp || null,
+      ceo_linkedin: extractedData.ceo_linkedin || null,
       sector: extractedData.sector || null,
       business_model: extractedData.business_model || null,
+      category: extractedData.category || null,
+      market: extractedData.market || null,
+      city: extractedData.city || null,
+      state: extractedData.state || null,
+      website: extractedData.website || null,
       problem_solution: extractedData.problem_solution || null,
+      problem_solved: extractedData.problem_solved || null,
+      differentials: extractedData.differentials || null,
+      competitors: extractedData.competitors || null,
+      positive_points: extractedData.positive_points || null,
       attention_points: extractedData.attention_points || null,
+      google_drive_link: extractedData.google_drive_link || null,
+      origin_lead: extractedData.origin_lead || null,
+      referred_by: extractedData.referred_by || null,
+      priority: extractedData.priority || null,
+      observations: extractedData.observations || null,
       
       // Campos numéricos como string para Postgres numeric
       mrr: extractedData.mrr ? String(extractedData.mrr) : null,
-      client_count: extractedData.client_count ? Number(extractedData.client_count) : null
+      accumulated_revenue_current_year: extractedData.accumulated_revenue_current_year ? String(extractedData.accumulated_revenue_current_year) : null,
+      total_revenue_last_year: extractedData.total_revenue_last_year ? String(extractedData.total_revenue_last_year) : null,
+      total_revenue_previous_year: extractedData.total_revenue_previous_year ? String(extractedData.total_revenue_previous_year) : null,
+      tam: extractedData.tam ? String(extractedData.tam) : null,
+      sam: extractedData.sam ? String(extractedData.sam) : null,
+      som: extractedData.som ? String(extractedData.som) : null,
+      
+      // Campos inteiros
+      client_count: extractedData.client_count ? Number(extractedData.client_count) : null,
+      partner_count: extractedData.partner_count ? Number(extractedData.partner_count) : null,
+      time_tracking: extractedData.time_tracking ? Number(extractedData.time_tracking) : null,
+      
+      // Campos de data
+      founding_date: extractedData.founding_date ? new Date(extractedData.founding_date) : null,
+      due_date: extractedData.due_date ? new Date(extractedData.due_date) : null
     };
 
-    console.log("=== INSERINDO NO BANCO ===");
-    console.log("Dados para inserção:", JSON.stringify(insertData, null, 2));
+    console.log("=== INSERINDO NO BANCO DE DADOS ===");
+    console.log("Dados principais:", {
+      name: insertData.name,
+      ceo_name: insertData.ceo_name,
+      sector: insertData.sector,
+      mrr: insertData.mrr
+    });
     
     const newStartup = await db.insert(startups).values([insertData]).returning();
     
     console.log(`Startup criada com sucesso: ${newStartup[0].id}`);
     console.log(`Dados salvos - Nome: ${newStartup[0].name}, CEO: ${newStartup[0].ceo_name}, Setor: ${newStartup[0].sector}`);
     
-    // Remover arquivo temporário
+    // 5. Remover arquivo temporário
     if (fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
       console.log("Arquivo temporário removido");
     }
 
     return res.status(200).json({
-      message: "PDF processado com sucesso",
+      success: true,
+      message: "PDF processado com sucesso usando extração de texto",
       startup: newStartup[0],
-      originalFileName: req.file.originalname
+      originalFileName: req.file.originalname,
+      extractedTextLength: extractedText.length,
+      extractionMethod: "pdf-parse + OpenAI GPT-4o"
     });
     
   } catch (error: any) {
     console.error("=== ERRO NO PROCESSAMENTO ===");
     console.error("Erro:", error.message);
+    console.error("Stack:", error.stack);
     
     // Limpar arquivo temporário em caso de erro
     if (req.file && fs.existsSync(req.file.path)) {
       try {
         fs.unlinkSync(req.file.path);
+        console.log("Arquivo temporário removido após erro");
       } catch (cleanupError) {
         console.error("Erro ao limpar arquivo:", cleanupError);
       }

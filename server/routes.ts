@@ -1267,12 +1267,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Rota para processamento de PDF com IA (VERSÃO CORRIGIDA)
   app.post("/api/startup/process-pitch-deck", isAuthenticated, uploadTempPDF, processPitchDeckAI);
-  
+
   // Rota de teste para OpenAI (temporária)
   app.post("/api/test-openai", async (req: Request, res: Response) => {
     try {
       const { text, name } = req.body;
-      
+
       const prompt = `
 Extraia as principais informações para gerar um insert na base de dados desta tabela a partir do pitch deck:
 
@@ -1331,9 +1331,9 @@ Responda apenas com o JSON válido contendo os dados extraídos:`;
 
       const result = await response.json();
       const extractedData = JSON.parse(result.choices[0].message.content);
-      
+
       console.log('OpenAI Response:', extractedData);
-      
+
       return res.status(200).json({
         success: true,
         extractedData: extractedData,
@@ -1352,7 +1352,7 @@ Responda apenas com o JSON válido contendo os dados extraídos:`;
 
   // Processamento final com mapeamento de colunas
   app.post("/api/import/startups", isAdmin, uploadImportFile, processImportFile);
-  
+
   // Adicionar rota para download do relatório de erros
   app.post("/api/import/error-report", isAdmin, uploadImportFile, downloadErrorReport);
 
