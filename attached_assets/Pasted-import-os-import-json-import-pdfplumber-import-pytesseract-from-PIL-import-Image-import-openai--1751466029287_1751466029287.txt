@@ -1,0 +1,74 @@
+import os
+import json
+import pdfplumber
+import pytesseract
+from PIL import Image
+import openai
+
+# Se necessário, ajuste para onde o tesseract está instalado:
+# pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+# 1. Carrega chave de API
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# 2. Extrai texto (com OCR fallback)
+def extrai_texto_pdf(caminho_pdf: str) -> str:
+    texto_total = ""
+    with pdfplumber.open(caminho_pdf) as pdf:
+        print(f"PDF aberto: {len(pdf.pages)} páginas")
+        for i, page in enumerate(pdf.pages, start=1):
+            texto = page.extract_text()
+            if not texto or not texto.strip():
+                print(f"[página {i}] sem texto — aplicando OCR")
+                img = page.to_image(resolution=300).original
+                texto = pytesseract.image_to_string(img, lang="por+eng")
+            else:
+                print(f"[página {i}] extraídos {len(texto)} caracteres via texto")
+            texto_total += (texto or "") + "\n"
+    return texto_total
+
+# 3. Schema da função para extrair campos
+extract_startup = {
+    "name": "extract_startup",
+    "description": "Extrai dados estruturados de uma descrição de startup",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            # ... (mesmas propriedades do exemplo anterior) ...
+        },
+        "required": ["name"]
+    }
+}
+
+def main():
+    PDF_PATH = "/mnt/data/moldeme.pdf"  # ou o caminho no Windows
+    texto = extrai_texto_pdf(PDF_PATH)
+
+    # 4. Escolhe método ChatCompletion conforme versão do SDK
+    create_fn = getattr(openai, "chat", None)
+    if create_fn and hasattr(create_fn, "completions"):
+        create_fn = openai.chat.completions.create
+    else:
+        create_fn = openai.ChatCompletion.create
+
+    # 5. Chama a API para preencher o JSON
+    response = create_fn(
+        model="gpt-4-0613",
+        messages=[
+            {"role": "system", "content": "Você é um parser que extrai dados de startups."},
+            {"role": "user",   "content": texto}
+        ],
+        functions=[extract_startup],
+        function_call={"name": "extract_startup"}
+    )
+
+    # 6. Parseia o JSON retornado
+    message = response.choices[0].message
+    args = message.get("function_call", {}).get("arguments", "{}")
+    dados = json.loads(args)
+
+    # 7. Exibe o dicionário com os campos extraídos
+    print(json.dumps(dados, indent=2, ensure_ascii=False))
+
+if __name__ == "__main__":
+    main()
