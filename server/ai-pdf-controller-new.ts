@@ -5,7 +5,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
-import { fromPath } from "pdf2pic";
+const pdf2pic = require("pdf2pic");
 
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY 
@@ -47,13 +47,10 @@ async function extractDataWithOpenAIVision(filePath: string): Promise<string | n
   console.log(`=== CONVERTENDO PDF PARA IMAGENS E ENVIANDO PARA OPENAI VISION ===`);
   
   try {
-    // Primeiro, vamos tentar usar pdf2pic para converter PDF em imagens
-    const { fromPath } = require("pdf2pic");
-    
     console.log(`Convertendo PDF para imagens: ${filePath}`);
     
-    // Configurar conversão para imagem
-    const convert = fromPath(filePath, {
+    // Configurar conversão para imagem usando pdf2pic
+    const convert = pdf2pic.fromPath(filePath, {
       density: 100,           // Resolução da imagem
       saveFilename: "page",   // Nome base dos arquivos
       savePath: path.join(process.cwd(), 'temp'), // Diretório temporário
@@ -83,22 +80,25 @@ async function extractDataWithOpenAIVision(filePath: string): Promise<string | n
           content: [
             {
               type: "text",
-              text: `Analise esta página do pitch deck da startup e extraia todas as informações visíveis. 
-              
-              Procure especificamente por:
-              - Nome da empresa/startup
-              - Descrição do negócio e produto
-              - Informações do CEO/fundador (nome, email, telefone, LinkedIn)
-              - Modelo de negócio e setor
-              - Métricas financeiras (MRR, receita, clientes)
-              - Mercado (TAM, SAM, SOM)
-              - Localização (cidade, estado)
-              - Website e contatos
-              - Problema que resolve e solução oferecida
-              - Concorrentes e diferenciais
-              - Equipe e parceiros
-              
-              Retorne um texto estruturado com todas as informações encontradas na imagem.`
+              text: `Extraia as principais informações para gerar um insert na base de dados desta tabela:
+
+id (uuid, PK, defaultRandom)
+name (text, notNull)
+created_at, updated_at (timestamp, defaultNow, notNull)
+status_id (uuid → statuses.id): status atual
+description, website, sector, business_model, category, market (text)
+ceo_name, ceo_email, ceo_whatsapp, ceo_linkedin (text)
+city, state (text)
+mrr, accumulated_revenue_current_year, total_revenue_last_year, total_revenue_previous_year, tam, sam, som (numeric)
+client_count, partner_count (integer)
+founding_date, due_date (timestamp)
+problem_solution, problem_solved, differentials, competitors, positive_points, attention_points, scangels_value_add, no_investment_reason (text)
+pitch_deck_id (uuid → files.id, onDelete: set null)
+assigned_to (uuid): responsável interno
+google_drive_link, origin_lead, referred_by, priority, observations (text)
+time_tracking (integer)
+
+Analise esta imagem do pitch deck e extraia todas as informações disponíveis. Retorne um texto estruturado com os dados encontrados.`
             },
             {
               type: "image_url",
@@ -168,45 +168,38 @@ async function analyzePDFWithAI(filePath: string, startupName: string): Promise<
     }
     
     const prompt = `
-Analise este conteúdo extraído do pitch deck da startup "${startupName}" e estruture em formato JSON.
+Extraia as principais informações para gerar um insert na base de dados desta tabela a partir do pitch deck:
 
-DADOS EXTRAÍDOS DO PDF PELA VISION:
+ESTRUTURA COMPLETA DA TABELA:
+- id (uuid, PK, defaultRandom)
+- name (text, notNull)
+- created_at, updated_at (timestamp, defaultNow, notNull)
+- status_id (uuid → statuses.id): status atual
+- description, website, sector, business_model, category, market (text)
+- ceo_name, ceo_email, ceo_whatsapp, ceo_linkedin (text)
+- city, state (text)
+- mrr, accumulated_revenue_current_year, total_revenue_last_year, total_revenue_previous_year, tam, sam, som (numeric)
+- client_count, partner_count (integer)
+- founding_date, due_date (timestamp)
+- problem_solution, problem_solved, differentials, competitors, positive_points, attention_points, scangels_value_add, no_investment_reason (text)
+- pitch_deck_id (uuid → files.id, onDelete: set null)
+- assigned_to (uuid): responsável interno
+- google_drive_link, origin_lead, referred_by, priority, observations (text)
+- time_tracking (integer)
+
+DADOS EXTRAÍDOS DO PITCH DECK PELA VISION:
 ${visionExtractedText}
 
-Extraia APENAS informações presentes no texto acima:
+INSTRUÇÕES:
+1. Analise cuidadosamente o conteúdo do pitch deck fornecido
+2. Extraia TODAS as informações disponíveis no documento
+3. Para campos não encontrados no documento, deixe como null
+4. Use o nome fornecido pelo usuário: "${startupName}"
+5. Valores numéricos devem ser números, não strings
+6. Datas no formato ISO (YYYY-MM-DD)
+7. Retorne apenas um JSON válido com TODOS os campos encontrados
 
-{
-  "name": "Nome da startup (use '${startupName}' se não encontrar)",
-  "description": "Descrição do negócio",
-  "ceo_name": "Nome do CEO/fundador",
-  "ceo_email": "Email do CEO",
-  "ceo_whatsapp": "WhatsApp",
-  "ceo_linkedin": "LinkedIn",
-  "business_model": "Modelo de negócio",
-  "sector": "Setor",
-  "category": "Categoria",
-  "market": "Mercado alvo",
-  "city": "Cidade",
-  "state": "Estado",
-  "website": "Website",
-  "founding_date": "Data fundação (YYYY-MM-DD)",
-  "mrr": "Receita recorrente mensal (apenas número)",
-  "accumulated_revenue_current_year": "Receita acumulada ano atual",
-  "total_revenue_last_year": "Receita ano passado",
-  "tam": "Mercado total",
-  "sam": "Mercado endereçável",
-  "som": "Mercado obtível",
-  "client_count": "Número de clientes",
-  "partner_count": "Número de parceiros",
-  "problem_solution": "Problema e solução",
-  "differentials": "Diferenciais",
-  "competitors": "Concorrentes",
-  "positive_points": "Pontos positivos",
-  "attention_points": "Pontos de atenção"
-}
-
-IMPORTANTE: Use APENAS dados extraídos pela Vision API. Não invente informações. Se um campo não estiver presente nos dados extraídos, use null.
-`;
+Responda apenas com o JSON válido contendo os dados extraídos:`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
