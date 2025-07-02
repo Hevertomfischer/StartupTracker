@@ -49,17 +49,18 @@ async function extractDataWithOpenAIVision(filePath: string): Promise<string | n
   try {
     console.log(`Convertendo PDF para imagens: ${filePath}`);
     
-    // Configurar conversão para imagem usando pdf2pic
+    // Configurar conversão para imagem usando pdf2pic com configurações otimizadas
     const convert = pdf2pic.fromPath(filePath, {
-      density: 100,           // Resolução da imagem
+      density: 150,           // Resolução aumentada para melhor qualidade
       saveFilename: "page",   // Nome base dos arquivos
       savePath: path.join(process.cwd(), 'temp'), // Diretório temporário
       format: "png",          // Formato da imagem
-      width: 2000,           // Largura máxima
-      height: 2000           // Altura máxima
+      width: 2400,           // Largura aumentada
+      height: 3200,          // Altura aumentada para formato retrato
+      quality: 100           // Qualidade máxima
     });
 
-    // Converter a primeira página (mais importante)
+    console.log("Iniciando conversão da primeira página...");
     const pageResult = await convert(1, { responseType: "base64" });
     
     if (!pageResult || !pageResult.base64) {
@@ -72,33 +73,34 @@ async function extractDataWithOpenAIVision(filePath: string): Promise<string | n
       throw new Error("OpenAI não configurado");
     }
 
+    console.log("Enviando imagem para OpenAI Vision...");
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
+        {
+          role: "system",
+          content: "Você é um especialista em análise de pitch decks de startups. Analise cuidadosamente cada elemento visual e textual da imagem fornecida."
+        },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: `Extraia as principais informações para gerar um insert na base de dados desta tabela:
+              text: `Analise esta imagem de um pitch deck de startup e extraia TODAS as informações visíveis.
 
-id (uuid, PK, defaultRandom)
-name (text, notNull)
-created_at, updated_at (timestamp, defaultNow, notNull)
-status_id (uuid → statuses.id): status atual
-description, website, sector, business_model, category, market (text)
-ceo_name, ceo_email, ceo_whatsapp, ceo_linkedin (text)
-city, state (text)
-mrr, accumulated_revenue_current_year, total_revenue_last_year, total_revenue_previous_year, tam, sam, som (numeric)
-client_count, partner_count (integer)
-founding_date, due_date (timestamp)
-problem_solution, problem_solved, differentials, competitors, positive_points, attention_points, scangels_value_add, no_investment_reason (text)
-pitch_deck_id (uuid → files.id, onDelete: set null)
-assigned_to (uuid): responsável interno
-google_drive_link, origin_lead, referred_by, priority, observations (text)
-time_tracking (integer)
+IMPORTANTE: Procure por:
+- Nome da empresa/startup
+- Nome do CEO/fundador e informações de contato
+- Descrição do negócio e problema que resolve
+- Modelo de negócio e setor de atuação
+- Números financeiros (receita, MRR, clientes)
+- Localização da empresa
+- Diferencial competitivo
+- Mercado total (TAM/SAM/SOM)
+- Informações sobre fundação
+- Qualquer texto ou dados numéricos visíveis
 
-Analise esta imagem do pitch deck e extraia todas as informações disponíveis. Retorne um texto estruturado com os dados encontrados.`
+Retorne um texto estruturado e detalhado com TODAS as informações que conseguir identificar na imagem. Seja o mais específico possível e inclua todos os dados visíveis, mesmo que sejam pequenos detalhes.`
             },
             {
               type: "image_url",
@@ -109,7 +111,7 @@ Analise esta imagem do pitch deck e extraia todas as informações disponíveis.
           ]
         }
       ],
-      max_tokens: 2000,
+      max_tokens: 3000,      // Aumentado para respostas mais detalhadas
       temperature: 0.1
     });
 
@@ -117,14 +119,15 @@ Analise esta imagem do pitch deck e extraia todas as informações disponíveis.
     
     console.log(`=== DADOS EXTRAÍDOS DA OPENAI VISION ===`);
     console.log(`Tamanho da resposta: ${extractedContent?.length} caracteres`);
-    console.log(`Primeiros 500 caracteres: ${extractedContent?.substring(0, 500)}...`);
+    console.log(`Primeiros 800 caracteres: ${extractedContent?.substring(0, 800)}...`);
     
     return extractedContent;
     
   } catch (error: any) {
     console.error(`ERRO ao processar PDF com OpenAI Vision: ${error.message}`);
+    console.error(`Stack trace: ${error.stack}`);
     
-    // Fallback: tentar extrair texto usando uma abordagem alternativa
+    // Fallback melhorado
     console.log("Tentando fallback com análise contextual...");
     
     const fileName = path.basename(filePath);
@@ -132,13 +135,17 @@ Analise esta imagem do pitch deck e extraia todas as informações disponíveis.
     
     console.log(`Usando análise contextual para: ${fileName} (${fileStats.size} bytes)`);
     
-    return `Pitch deck analisado: ${fileName}. 
+    return `ERRO NA EXTRAÇÃO: Não foi possível processar o PDF ${fileName}.
     
-    O sistema detectou um documento PDF de ${Math.round(fileStats.size / 1024)}KB que contém informações de uma startup.
+    Arquivo de ${Math.round(fileStats.size / 1024)}KB processado em ${new Date().toISOString()}.
     
-    Para uma análise completa, o documento precisa ser processado manualmente ou convertido em um formato de imagem compatível.
+    Possíveis causas:
+    - PDF protegido ou criptografado
+    - Formato de PDF não suportado
+    - Erro de conectividade com OpenAI
+    - Limitações de processamento de imagem
     
-    Arquivo processado em: ${new Date().toISOString()}`;
+    O arquivo foi salvo mas requer revisão manual para extração de dados.`;
   }
 }
 
@@ -168,38 +175,46 @@ async function analyzePDFWithAI(filePath: string, startupName: string): Promise<
     }
     
     const prompt = `
-Extraia as principais informações para gerar um insert na base de dados desta tabela a partir do pitch deck:
+Você está analisando dados extraídos de um pitch deck para criar um registro estruturado de startup.
 
-ESTRUTURA COMPLETA DA TABELA:
-- id (uuid, PK, defaultRandom)
-- name (text, notNull)
-- created_at, updated_at (timestamp, defaultNow, notNull)
-- status_id (uuid → statuses.id): status atual
-- description, website, sector, business_model, category, market (text)
-- ceo_name, ceo_email, ceo_whatsapp, ceo_linkedin (text)
-- city, state (text)
-- mrr, accumulated_revenue_current_year, total_revenue_last_year, total_revenue_previous_year, tam, sam, som (numeric)
-- client_count, partner_count (integer)
-- founding_date, due_date (timestamp)
-- problem_solution, problem_solved, differentials, competitors, positive_points, attention_points, scangels_value_add, no_investment_reason (text)
-- pitch_deck_id (uuid → files.id, onDelete: set null)
-- assigned_to (uuid): responsável interno
-- google_drive_link, origin_lead, referred_by, priority, observations (text)
-- time_tracking (integer)
-
-DADOS EXTRAÍDOS DO PITCH DECK PELA VISION:
+DADOS EXTRAÍDOS DO PITCH DECK:
 ${visionExtractedText}
 
-INSTRUÇÕES:
-1. Analise cuidadosamente o conteúdo do pitch deck fornecido
-2. Extraia TODAS as informações disponíveis no documento
-3. Para campos não encontrados no documento, deixe como null
-4. Use o nome fornecido pelo usuário: "${startupName}"
-5. Valores numéricos devem ser números, não strings
-6. Datas no formato ISO (YYYY-MM-DD)
-7. Retorne apenas um JSON válido com TODOS os campos encontrados
+NOME DA STARTUP FORNECIDO PELO USUÁRIO: "${startupName}"
 
-Responda apenas com o JSON válido contendo os dados extraídos:`;
+INSTRUÇÕES PARA EXTRAÇÃO:
+1. Analise CUIDADOSAMENTE todos os dados fornecidos
+2. Extraia informações que estão claramente presentes no texto
+3. Para informações não encontradas, use null
+4. Mantenha números como números (não strings)
+5. Use o nome fornecido pelo usuário como nome principal
+6. Seja conservador - só inclua dados que estão claramente presentes
+
+CAMPOS OBRIGATÓRIOS:
+- name: use "${startupName}"
+- description: descrição do negócio baseada no pitch deck
+
+CAMPOS OPCIONAIS (só inclua se estiverem claramente presentes):
+- ceo_name, ceo_email, ceo_whatsapp, ceo_linkedin
+- sector, business_model, category, market
+- city, state, website
+- mrr, client_count, partner_count (números)
+- problem_solution, differentials, competitors
+- positive_points, attention_points
+
+FORMATO DE RESPOSTA:
+Retorne APENAS um JSON válido seguindo este exemplo:
+{
+  "name": "${startupName}",
+  "description": "Descrição baseada no pitch deck",
+  "ceo_name": "Nome do CEO se encontrado ou null",
+  "sector": "Setor se identificado ou null",
+  "mrr": 50000 (número) ou null,
+  "client_count": 100 (número) ou null,
+  "problem_solution": "Problema e solução se descritos ou null"
+}
+
+Responda APENAS com o JSON válido:`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
@@ -294,9 +309,12 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     };
 
     console.log("=== INSERINDO NO BANCO ===");
+    console.log("Dados para inserção:", JSON.stringify(insertData, null, 2));
+    
     const newStartup = await db.insert(startups).values([insertData]).returning();
     
-    console.log(`Startup criada: ${newStartup[0].id}`);
+    console.log(`Startup criada com sucesso: ${newStartup[0].id}`);
+    console.log(`Dados salvos - Nome: ${newStartup[0].name}, CEO: ${newStartup[0].ceo_name}, Setor: ${newStartup[0].sector}`);
     
     // Remover arquivo temporário
     if (fs.existsSync(req.file.path)) {
