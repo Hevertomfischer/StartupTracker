@@ -58,21 +58,63 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
     const dataBuffer = fs.readFileSync(filePath);
     console.log(`PDF carregado: ${dataBuffer.length} bytes`);
     
-    // Estratégia 1: Tentar pdf-parse primeiro
+    // Estratégia 1: Usar OpenAI Vision API diretamente (mais eficaz)
     try {
-      console.log("=== TENTATIVA 1: PDF-PARSE ===");
-      const pdfData = await pdfParse(dataBuffer);
+      console.log("=== TENTATIVA 1: OPENAI VISION API ===");
       
-      if (pdfData.text && pdfData.text.trim().length > 50) {
-        console.log(`✅ PDF-PARSE funcionou: ${pdfData.text.length} caracteres extraídos`);
-        console.log(`Páginas: ${pdfData.numpages}`);
-        console.log(`Amostra: ${pdfData.text.substring(0, 200)}...`);
-        return pdfData.text;
-      } else {
-        console.log("⚠️ PDF-PARSE retornou pouco texto, tentando OCR...");
+      // Converter primeira página para base64
+      const convert = fromPath(filePath, {
+        density: 150,
+        saveFilename: "vision_page",
+        savePath: path.join(process.cwd(), 'temp'),
+        format: "png",
+        width: 1500,
+        height: 1500
+      });
+      
+      const firstPage = await convert(1); // Primeira página apenas
+      
+      if (firstPage.path && fs.existsSync(firstPage.path)) {
+        const imageBuffer = fs.readFileSync(firstPage.path);
+        const base64Image = imageBuffer.toString('base64');
+        
+        const visionResponse = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Extraia todo o texto visível nesta página de pitch deck de startup. Retorne apenas o texto extraído, preservando a formatação quando possível."
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:image/png;base64,${base64Image}`,
+                    detail: "high"
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 4000
+        });
+        
+        const visionText = visionResponse.choices[0].message.content;
+        
+        // Limpar arquivo temporário
+        fs.unlinkSync(firstPage.path);
+        
+        if (visionText && visionText.trim().length > 50) {
+          console.log(`✅ VISION API funcionou: ${visionText.length} caracteres extraídos`);
+          console.log(`Amostra: ${visionText.substring(0, 200)}...`);
+          return visionText;
+        }
       }
-    } catch (parseError: any) {
-      console.log(`❌ PDF-PARSE falhou: ${parseError.message}`);
+      
+    } catch (visionError: any) {
+      console.log(`❌ Vision API falhou: ${visionError.message}`);
     }
     
     // Estratégia 2: Converter para imagens e usar OCR
@@ -132,64 +174,7 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
       console.log(`❌ OCR falhou: ${ocrError.message}`);
     }
     
-    // Estratégia 3: Usar OpenAI Vision API diretamente
-    try {
-      console.log("=== TENTATIVA 3: OPENAI VISION API ===");
-      
-      // Converter primeira página para base64
-      const convert = fromPath(filePath, {
-        density: 150,
-        saveFilename: "vision_page",
-        savePath: path.join(process.cwd(), 'temp'),
-        format: "png",
-        width: 1500,
-        height: 1500
-      });
-      
-      const firstPage = await convert(1); // Primeira página apenas
-      
-      if (firstPage.path && fs.existsSync(firstPage.path)) {
-        const imageBuffer = fs.readFileSync(firstPage.path);
-        const base64Image = imageBuffer.toString('base64');
-        
-        const visionResponse = await openai.chat.completions.create({
-          model: "gpt-4-vision-preview",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Extraia todo o texto visível nesta página de pitch deck de startup. Retorne apenas o texto extraído, preservando a formatação quando possível."
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:image/png;base64,${base64Image}`,
-                    detail: "high"
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: 4000
-        });
-        
-        const visionText = visionResponse.choices[0].message.content;
-        
-        // Limpar arquivo temporário
-        fs.unlinkSync(firstPage.path);
-        
-        if (visionText && visionText.trim().length > 50) {
-          console.log(`✅ VISION API funcionou: ${visionText.length} caracteres extraídos`);
-          console.log(`Amostra: ${visionText.substring(0, 200)}...`);
-          return visionText;
-        }
-      }
-      
-    } catch (visionError: any) {
-      console.log(`❌ Vision API falhou: ${visionError.message}`);
-    }
+
     
     // Se todas as estratégias falharam, retornar informações básicas
     console.log("❌ TODAS AS ESTRATÉGIAS FALHARAM");
@@ -345,11 +330,15 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     console.log(`Amostra: ${extractedText.substring(0, 300)}...`);
 
     // 2. Analisar com IA
+    console.log("=== INICIANDO ANÁLISE COM IA ===");
     const extractedData = await analyzePDFWithAI(extractedText, name);
     
     console.log("=== DADOS FINAIS EXTRAÍDOS ===");
     console.log(`Nome: ${extractedData.name}`);
     console.log(`Descrição: ${extractedData.description}`);
+    console.log(`CEO: ${extractedData.ceo_name}`);
+    console.log(`Setor: ${extractedData.sector}`);
+    console.log(`Website: ${extractedData.website}`);
 
     // 3. Buscar status "Cadastrada" 
     const cadastradaStatus = await db.query.statuses.findFirst({
