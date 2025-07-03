@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { type SelectStatus, type Startup } from "@shared/schema";
+import { type Startup } from "@shared/schema";
 import { Bot, CheckCircle, AlertTriangle, Edit, Eye, Trash2, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
