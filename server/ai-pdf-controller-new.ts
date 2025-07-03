@@ -201,18 +201,53 @@ export async function processPitchDeckAI(req: Request, res: Response) {
 
     console.log('Dados finais após limpeza:', cleanedData);
 
-    // Remover arquivo temporário
-    if (fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-      console.log('Arquivo temporário removido');
-    }
+    // Salvar startup no banco de dados
+    console.log('Salvando startup no banco de dados...');
+    try {
+      const startupData = {
+        ...cleanedData,
+        created_by_ai: true,
+        ai_reviewed: false,
+        ai_extraction_data: JSON.stringify(aiExtractedData)
+      };
 
-    // Retornar dados extraídos
-    return res.status(200).json({
-      success: true,
-      extractedData: cleanedData,
-      textLength: extractedText.length
-    });
+      // Usar schema de validação para garantir dados corretos
+      const validatedData = insertStartupSchema.parse(startupData);
+      
+      // Criar startup no banco
+      const createdStartup = await storage.createStartup(validatedData);
+      console.log('Startup criada com sucesso:', createdStartup.id);
+
+      // Remover arquivo temporário
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+        console.log('Arquivo temporário removido');
+      }
+
+      // Retornar dados extraídos com ID da startup criada
+      return res.status(200).json({
+        success: true,
+        extractedData: cleanedData,
+        startupId: createdStartup.id,
+        textLength: extractedText.length
+      });
+    } catch (dbError) {
+      console.error('Erro ao salvar startup no banco:', dbError);
+      
+      // Remover arquivo temporário mesmo em caso de erro
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+        console.log('Arquivo temporário removido após erro do banco');
+      }
+
+      // Retornar dados extraídos mesmo se não conseguir salvar no banco
+      return res.status(200).json({
+        success: true,
+        extractedData: cleanedData,
+        textLength: extractedText.length,
+        warning: 'Dados extraídos com sucesso, mas houve erro ao salvar no banco de dados'
+      });
+    }
 
   } catch (error) {
     console.error('=== ERRO NO PROCESSAMENTO ===');
