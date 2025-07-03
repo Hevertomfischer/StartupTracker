@@ -1266,7 +1266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/external/startup", externalFormUploadPitchDeck, handleExternalForm);
 
   // AI PDF Processing Routes
-  app.post("/api/startup/process-pitch-deck", uploadTempPDF, processPitchDeckAI);
+  app.post("/api/startup/process-pitch-deck", isAuthenticated, uploadTempPDF, processPitchDeckAI);
   app.post("/api/startup/process-pitch-deck-hybrid", uploadTempPDFHybrid, processPitchDeckHybrid);
 
   // Rota de teste para OpenAI (temporária)
