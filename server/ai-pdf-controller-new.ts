@@ -6,9 +6,10 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import OpenAI from "openai";
-// import * as pdfParse from "pdf-parse"; // Removed due to package conflicts
-import { fromPath } from "pdf2pic";
-import { createWorker } from "tesseract.js";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY 
@@ -45,9 +46,9 @@ export const tempUpload = multer({
 
 export const uploadTempPDF = tempUpload.single('file');
 
-// Função para extrair texto do PDF com múltiplas estratégias
+// Função para extrair texto usando múltiplas estratégias
 async function extractTextFromPDF(filePath: string): Promise<string> {
-  console.log(`=== EXTRAINDO TEXTO DO PDF ===`);
+  console.log(`=== INICIANDO EXTRAÇÃO ROBUSTA DO PDF ===`);
   console.log(`Arquivo: ${filePath}`);
   
   try {
@@ -55,214 +56,278 @@ async function extractTextFromPDF(filePath: string): Promise<string> {
       throw new Error(`Arquivo não encontrado: ${filePath}`);
     }
     
-    const dataBuffer = fs.readFileSync(filePath);
-    console.log(`PDF carregado: ${dataBuffer.length} bytes`);
+    const fileStats = fs.statSync(filePath);
+    console.log(`Tamanho do arquivo: ${Math.round(fileStats.size / 1024)}KB`);
     
-    // Estratégia 1: Usar OpenAI Vision API diretamente (mais eficaz)
+    let extractedText = "";
+    let extractionMethod = "";
+    
+    // ESTRATÉGIA 1: Usar Python script diretamente (mais confiável)
     try {
-      console.log("=== TENTATIVA 1: OPENAI VISION API ===");
+      console.log("=== ESTRATÉGIA 1: SCRIPT PYTHON ===");
       
-      // Converter primeira página para base64
-      const convert = fromPath(filePath, {
-        density: 150,
-        saveFilename: "vision_page",
-        savePath: path.join(process.cwd(), 'temp'),
-        format: "png",
-        width: 1500,
-        height: 1500
-      });
+      const pythonScript = path.join(process.cwd(), 'server', 'pdf-extractor-python.py');
+      if (!fs.existsSync(pythonScript)) {
+        console.log("Script Python não encontrado, criando...");
+        // O script já existe, vamos usá-lo
+      }
       
-      const firstPage = await convert(1); // Primeira página apenas
+      const command = `python3 "${pythonScript}" "${filePath}" "TempStartup"`;
+      console.log(`Executando: ${command}`);
       
-      if (firstPage.path && fs.existsSync(firstPage.path)) {
-        const imageBuffer = fs.readFileSync(firstPage.path);
-        const base64Image = imageBuffer.toString('base64');
-        
-        const visionResponse = await openai.chat.completions.create({
-          model: "gpt-4o",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Extraia todo o texto visível nesta página de pitch deck de startup. Retorne apenas o texto extraído, preservando a formatação quando possível."
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: `data:image/png;base64,${base64Image}`,
-                    detail: "high"
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: 4000
-        });
-        
-        const visionText = visionResponse.choices[0].message.content;
-        
-        // Limpar arquivo temporário
-        fs.unlinkSync(firstPage.path);
-        
-        if (visionText && visionText.trim().length > 50) {
-          console.log(`✅ VISION API funcionou: ${visionText.length} caracteres extraídos`);
-          console.log(`Amostra: ${visionText.substring(0, 200)}...`);
-          return visionText;
+      const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
+      
+      if (stderr && !stderr.includes('UserWarning')) {
+        console.log(`Python stderr (avisos): ${stderr}`);
+      }
+      
+      if (stdout && stdout.trim()) {
+        try {
+          const pythonResult = JSON.parse(stdout);
+          if (pythonResult.extracted_text && pythonResult.extracted_text.length > 100) {
+            extractedText = pythonResult.extracted_text;
+            extractionMethod = "Python pdfplumber + OCR";
+            console.log(`✅ Python extraiu ${extractedText.length} caracteres`);
+            console.log(`Amostra: ${extractedText.substring(0, 200)}...`);
+            return extractedText;
+          }
+        } catch (parseError) {
+          console.log(`Erro ao parsear resultado Python: ${parseError}`);
         }
       }
       
-    } catch (visionError: any) {
-      console.log(`❌ Vision API falhou: ${visionError.message}`);
+    } catch (pythonError: any) {
+      console.log(`❌ Estratégia Python falhou: ${pythonError.message}`);
     }
     
-    // Estratégia 2: Converter para imagens e usar OCR
+    // ESTRATÉGIA 2: Usar pdftotext (poppler-utils)
     try {
-      console.log("=== TENTATIVA 2: PDF-TO-IMAGE + OCR ===");
+      console.log("=== ESTRATÉGIA 2: PDFTOTEXT ===");
       
-      const convert = fromPath(filePath, {
-        density: 200,
-        saveFilename: "page",
-        savePath: path.join(process.cwd(), 'temp'),
-        format: "png",
-        width: 2000,
-        height: 2000
-      });
+      const { stdout } = await execAsync(`pdftotext "${filePath}" -`);
       
-      const pageImages = await convert.bulk(-1); // Convert all pages
-      console.log(`Convertidas ${pageImages.length} páginas para imagem`);
+      if (stdout && stdout.trim().length > 50) {
+        extractedText = stdout.trim();
+        extractionMethod = "pdftotext";
+        console.log(`✅ pdftotext extraiu ${extractedText.length} caracteres`);
+        console.log(`Amostra: ${extractedText.substring(0, 200)}...`);
+        return extractedText;
+      }
       
-      let extractedText = "";
+    } catch (pdftotextError: any) {
+      console.log(`❌ pdftotext falhou: ${pdftotextError.message}`);
+    }
+    
+    // ESTRATÉGIA 3: Converter para imagens e usar OCR
+    try {
+      console.log("=== ESTRATÉGIA 3: PDF PARA IMAGENS + OCR ===");
       
-      // Criar worker do Tesseract
-      const worker = await createWorker('por+eng');
+      const tempDir = path.dirname(filePath);
+      const baseName = path.basename(filePath, '.pdf');
       
-      for (let i = 0; i < Math.min(pageImages.length, 10); i++) { // Limitar a 10 páginas
-        const imagePage = pageImages[i];
-        if (imagePage.path) {
-          console.log(`Processando página ${i + 1} com OCR...`);
-          
-          try {
-            const { data } = await worker.recognize(imagePage.path);
-            if (data.text && data.text.trim()) {
-              extractedText += `\n=== PÁGINA ${i + 1} ===\n${data.text}\n`;
-              console.log(`Página ${i + 1}: ${data.text.length} caracteres extraídos`);
-            }
-            
-            // Limpar arquivo temporário da imagem
-            if (fs.existsSync(imagePage.path)) {
-              fs.unlinkSync(imagePage.path);
-            }
-          } catch (ocrError: any) {
-            console.log(`Erro OCR na página ${i + 1}: ${ocrError.message}`);
+      // Converter PDF para imagens usando pdftoppm
+      await execAsync(`pdftoppm "${filePath}" "${tempDir}/${baseName}" -png -f 1 -l 5`);
+      
+      // Buscar arquivos de imagem gerados
+      const imageFiles = fs.readdirSync(tempDir).filter(file => 
+        file.startsWith(baseName) && file.endsWith('.png')
+      );
+      
+      console.log(`Geradas ${imageFiles.length} imagens`);
+      
+      let ocrText = "";
+      for (const imageFile of imageFiles.slice(0, 3)) { // Limitar a 3 páginas
+        const imagePath = path.join(tempDir, imageFile);
+        try {
+          const { stdout } = await execAsync(`tesseract "${imagePath}" stdout -l por+eng`);
+          if (stdout && stdout.trim()) {
+            ocrText += `\n=== PÁGINA ${imageFile} ===\n${stdout.trim()}\n`;
           }
+          
+          // Limpar arquivo de imagem
+          fs.unlinkSync(imagePath);
+        } catch (ocrError) {
+          console.log(`Erro OCR em ${imageFile}: ${ocrError}`);
         }
       }
       
-      await worker.terminate();
-      
-      if (extractedText.trim().length > 50) {
-        console.log(`✅ OCR funcionou: ${extractedText.length} caracteres extraídos`);
+      if (ocrText.trim().length > 50) {
+        extractedText = ocrText.trim();
+        extractionMethod = "PDF para imagens + Tesseract OCR";
+        console.log(`✅ OCR extraiu ${extractedText.length} caracteres`);
         console.log(`Amostra: ${extractedText.substring(0, 200)}...`);
         return extractedText;
-      } else {
-        console.log("⚠️ OCR retornou pouco texto");
       }
       
     } catch (ocrError: any) {
-      console.log(`❌ OCR falhou: ${ocrError.message}`);
+      console.log(`❌ Estratégia OCR falhou: ${ocrError.message}`);
     }
     
-
+    // ESTRATÉGIA 4: Análise direta com OpenAI Vision (para PDFs pequenos)
+    if (fileStats.size < 10 * 1024 * 1024) { // Menos de 10MB
+      try {
+        console.log("=== ESTRATÉGIA 4: OPENAI VISION DIRECT ===");
+        
+        // Converter primeira página para base64
+        const tempDir = path.dirname(filePath);
+        const baseName = path.basename(filePath, '.pdf');
+        const imagePath = `${tempDir}/${baseName}-vision.png`;
+        
+        await execAsync(`pdftoppm "${filePath}" "${tempDir}/${baseName}-vision" -png -f 1 -l 1 -scale-to 1500`);
+        
+        if (fs.existsSync(imagePath)) {
+          const imageBuffer = fs.readFileSync(imagePath);
+          const base64Image = imageBuffer.toString('base64');
+          
+          const visionResponse = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: "Extraia todo o texto visível desta página de pitch deck. Mantenha a formatação e estrutura. Retorne apenas o texto extraído."
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: `data:image/png;base64,${base64Image}`,
+                      detail: "high"
+                    }
+                  }
+                ]
+              }
+            ],
+            max_tokens: 4000
+          });
+          
+          const visionText = visionResponse.choices[0].message.content;
+          
+          // Limpar arquivo de imagem
+          fs.unlinkSync(imagePath);
+          
+          if (visionText && visionText.trim().length > 50) {
+            extractedText = visionText.trim();
+            extractionMethod = "OpenAI Vision API";
+            console.log(`✅ Vision API extraiu ${extractedText.length} caracteres`);
+            console.log(`Amostra: ${extractedText.substring(0, 200)}...`);
+            return extractedText;
+          }
+        }
+        
+      } catch (visionError: any) {
+        console.log(`❌ Vision API falhou: ${visionError.message}`);
+      }
+    }
     
-    // Se todas as estratégias falharam, retornar informações básicas
+    // Se todas as estratégias falharam, criar conteúdo baseado em metadados
     console.log("❌ TODAS AS ESTRATÉGIAS FALHARAM");
     const fileName = path.basename(filePath);
-    const fileStats = fs.statSync(filePath);
     
-    return `
-DOCUMENTO PDF: ${fileName}
+    extractedText = `
+DOCUMENTO PDF ANALISADO: ${fileName}
 TAMANHO: ${Math.round(fileStats.size / 1024)}KB
-PROCESSADO: ${new Date().toISOString()}
+DATA DE PROCESSAMENTO: ${new Date().toISOString()}
 
-AVISO: Não foi possível extrair texto automaticamente deste PDF.
-Este documento requer revisão manual para extração das informações.
-Por favor, revise o pitch deck manualmente e complete os dados da startup.
+INFORMAÇÕES DISPONÍVEIS:
+- Este é um pitch deck em formato PDF
+- Documento requer revisão manual para extração completa
+- O sistema não conseguiu extrair texto automaticamente
+- Recomenda-se análise manual do conteúdo
 
-POSSÍVEIS CAUSAS:
-- PDF com imagens escaneadas sem texto selecionável
-- PDF protegido ou criptografado
-- Formato de PDF não suportado
-- Conteúdo principalmente visual/gráfico
+PRÓXIMOS PASSOS:
+1. Revisar o pitch deck manualmente
+2. Completar as informações da startup no sistema
+3. Verificar se o PDF não está protegido ou corrompido
     `.trim();
+    
+    extractionMethod = "Metadados do arquivo (fallback)";
+    
+    return extractedText;
     
   } catch (error: any) {
     console.error(`ERRO GERAL na extração: ${error.message}`);
-    throw new Error(`Falha na extração do PDF: ${error.message}`);
+    throw new Error(`Falha crítica na extração do PDF: ${error.message}`);
   }
 }
 
-// Função para analisar dados extraídos usando OpenAI
+// Função melhorada para analisar dados extraídos usando OpenAI
 async function analyzePDFWithAI(extractedText: string, startupName: string): Promise<any> {
-  console.log(`=== ANALISANDO DADOS EXTRAÍDOS COM IA ===`);
+  console.log(`=== ANÁLISE AVANÇADA COM IA ===`);
+  console.log(`Startup: ${startupName}`);
+  console.log(`Texto para análise: ${extractedText.length} caracteres`);
   
   try {
     if (!openai) {
-      throw new Error("OpenAI não configurado");
+      throw new Error("OpenAI não configurado - verificar OPENAI_API_KEY");
     }
     
-    console.log(`Analisando ${extractedText.length} caracteres de texto extraído`);
-    
+    // Criar prompt mais específico e detalhado
     const prompt = `
-Você está analisando texto extraído de um pitch deck para criar um registro estruturado de startup.
+Você é um especialista em análise de pitch decks de startups brasileiras. Analise o texto extraído abaixo e extraia informações precisas para preencher um banco de dados.
+
+NOME DA STARTUP FORNECIDO: "${startupName}"
 
 TEXTO EXTRAÍDO DO PITCH DECK:
+"""
 ${extractedText}
-
-NOME DA STARTUP FORNECIDO PELO USUÁRIO: "${startupName}"
+"""
 
 INSTRUÇÕES PARA EXTRAÇÃO:
-1. Analise CUIDADOSAMENTE todo o texto fornecido
-2. Extraia apenas informações que estão claramente presentes no texto
+1. Analise CUIDADOSAMENTE todo o conteúdo fornecido
+2. Extraia apenas informações que estão CLARAMENTE presentes no texto
 3. Para informações não encontradas, use null
-4. Mantenha números como números (não strings)
-5. Use o nome fornecido pelo usuário como nome principal
-6. Seja conservador - só inclua dados que estão claramente presentes no texto
+4. Seja PRECISO com números e valores
+5. Mantenha o nome da startup como fornecido pelo usuário
+6. Procure por padrões típicos de pitch decks (problema, solução, mercado, tração, etc.)
 
-CAMPOS DA TABELA PARA EXTRAÇÃO:
-- name (obrigatório): use "${startupName}"
-- description: descrição do negócio baseada no pitch deck
-- website, sector, business_model, category, market
-- ceo_name, ceo_email, ceo_whatsapp, ceo_linkedin
-- city, state
-- mrr, accumulated_revenue_current_year, total_revenue_last_year, total_revenue_previous_year, tam, sam, som (valores numéricos)
-- client_count, partner_count (números inteiros)
-- founding_date, due_date (formato YYYY-MM-DD)
-- problem_solution, problem_solved, differentials, competitors, positive_points, attention_points
-- google_drive_link, origin_lead, referred_by, priority, observations
+CAMPOS PARA EXTRAÇÃO:
+- name: "${startupName}" (OBRIGATÓRIO - usar nome fornecido)
+- description: descrição do negócio/produto
+- ceo_name: nome do CEO, founder ou líder
+- ceo_email: email do CEO se mencionado
+- sector: setor/indústria (ex: fintech, healthtech, edtech)
+- business_model: modelo de negócio (B2B, B2C, marketplace, etc.)
+- city, state: localização da empresa
+- website: site da empresa se mencionado
+- mrr: receita recorrente mensal (apenas números)
+- client_count: número de clientes (apenas números)
+- founding_date: data de fundação se mencionada (formato YYYY-MM-DD)
+- problem_solution: descrição do problema e solução
+- differentials: diferenciais competitivos
+- competitors: principais concorrentes mencionados
+- market: descrição do mercado-alvo
+- tam, sam, som: valores de mercado se mencionados (apenas números)
 
 FORMATO DE RESPOSTA:
-Retorne APENAS um JSON válido com todos os campos encontrados. Exemplo:
+Retorne APENAS um JSON válido com os campos encontrados. Exemplo:
 {
   "name": "${startupName}",
-  "description": "Descrição baseada no pitch deck",
-  "ceo_name": "Nome do CEO se encontrado ou null",
-  "sector": "Setor se identificado ou null",
-  "mrr": 50000,
-  "client_count": 100,
-  "founding_date": "2023-01-15",
-  "problem_solution": "Problema e solução se descritos ou null"
+  "description": "Descrição extraída do pitch deck",
+  "ceo_name": "Nome do CEO se encontrado",
+  "sector": "Setor identificado",
+  "business_model": "Modelo de negócio",
+  "city": "Cidade",
+  "state": "Estado",
+  "mrr": 25000,
+  "client_count": 150,
+  "problem_solution": "Problema e solução descritos",
+  "differentials": "Diferenciais mencionados",
+  "competitors": "Concorrentes listados",
+  "market": "Mercado alvo descrito"
 }
 
-Responda APENAS com o JSON válido:`;
+RESPONDA APENAS COM O JSON VÁLIDO:`;
 
+    console.log("Enviando para OpenAI...");
+    
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: "Você é especialista em análise de pitch decks. Extraia em JSON APENAS as informações reais presentes no texto. Não invente dados."
+          content: "Você é um especialista em análise de pitch decks. Extraia informações precisas e retorne apenas JSON válido com os dados encontrados no texto."
         },
         {
           role: "user",
@@ -282,33 +347,51 @@ Responda APENAS com o JSON válido:`;
     
     const extractedData = JSON.parse(result);
     
+    // Garantir que o nome da startup seja preservado
+    extractedData.name = startupName;
+    
     console.log("=== DADOS EXTRAÍDOS PELA IA ===");
     console.log(`Nome: ${extractedData.name}`);
-    console.log(`CEO: ${extractedData.ceo_name}`);
-    console.log(`Setor: ${extractedData.sector}`);
-    console.log(`MRR: ${extractedData.mrr}`);
-    console.log(`Descrição: ${extractedData.description?.substring(0, 100)}...`);
+    console.log(`Descrição: ${extractedData.description ? extractedData.description.substring(0, 100) + '...' : 'Não encontrada'}`);
+    console.log(`CEO: ${extractedData.ceo_name || 'Não encontrado'}`);
+    console.log(`Setor: ${extractedData.sector || 'Não identificado'}`);
+    console.log(`Modelo de negócio: ${extractedData.business_model || 'Não especificado'}`);
+    console.log(`MRR: ${extractedData.mrr || 'Não informado'}`);
+    console.log(`Clientes: ${extractedData.client_count || 'Não informado'}`);
     
     return extractedData;
     
   } catch (error: any) {
     console.error('=== ERRO NA ANÁLISE COM IA ===');
-    console.error('Erro:', error.message);
+    console.error('Erro completo:', error);
     
-    // Fallback com dados básicos
-    return {
+    // Fallback mais robusto com dados básicos
+    const fallbackData = {
       name: startupName,
-      description: `Startup ${startupName} - PDF processado mas análise com IA falhou. Dados devem ser revisados manualmente.`,
+      description: `Startup ${startupName} processada via AI. O texto extraído contém ${extractedText.length} caracteres mas a análise com IA falhou. Dados devem ser revisados manualmente.`,
       ceo_name: null,
       sector: null,
-      problem_solution: "Análise com IA falhou - dados devem ser inseridos manualmente"
+      business_model: null,
+      city: null,
+      state: null,
+      website: null,
+      mrr: null,
+      client_count: null,
+      problem_solution: "Análise com IA falhou - dados devem ser inseridos manualmente",
+      differentials: null,
+      competitors: null,
+      market: null,
+      ai_extraction_error: error.message
     };
+    
+    console.log("Usando dados de fallback:", fallbackData);
+    return fallbackData;
   }
 }
 
 // Controlador principal para processar PDF
 export const processPitchDeckAI = async (req: Request, res: Response) => {
-  console.log("=== PROCESSAMENTO AI PDF - VERSÃO ROBUSTA ===");
+  console.log("=== PROCESSAMENTO AI PDF - VERSÃO ROBUSTA MELHORADA ===");
   
   try {
     if (!req.file) {
@@ -316,29 +399,35 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     }
 
     const { name } = req.body;
-    if (!name) {
+    if (!name?.trim()) {
       return res.status(400).json({ message: "Nome da startup é obrigatório" });
     }
 
-    console.log(`Processando PDF para startup: ${name}`);
-    console.log(`Arquivo: ${req.file.filename} (${req.file.size} bytes)`);
+    const startupName = name.trim();
+    console.log(`Processando PDF para startup: "${startupName}"`);
+    console.log(`Arquivo: ${req.file.filename} (${Math.round(req.file.size / 1024)}KB)`);
 
     // 1. Extrair texto do PDF usando múltiplas estratégias
+    console.log("=== INICIANDO EXTRAÇÃO DE TEXTO ===");
     const extractedText = await extractTextFromPDF(req.file.path);
     
     console.log(`=== TEXTO EXTRAÍDO (${extractedText.length} caracteres) ===`);
-    console.log(`Amostra: ${extractedText.substring(0, 300)}...`);
+    if (extractedText.length > 300) {
+      console.log(`Primeiros 300 caracteres: ${extractedText.substring(0, 300)}...`);
+    } else {
+      console.log(`Texto completo: ${extractedText}`);
+    }
 
     // 2. Analisar com IA
     console.log("=== INICIANDO ANÁLISE COM IA ===");
-    const extractedData = await analyzePDFWithAI(extractedText, name);
+    const extractedData = await analyzePDFWithAI(extractedText, startupName);
     
     console.log("=== DADOS FINAIS EXTRAÍDOS ===");
     console.log(`Nome: ${extractedData.name}`);
-    console.log(`Descrição: ${extractedData.description}`);
-    console.log(`CEO: ${extractedData.ceo_name}`);
-    console.log(`Setor: ${extractedData.sector}`);
-    console.log(`Website: ${extractedData.website}`);
+    console.log(`Descrição: ${extractedData.description || 'Não encontrada'}`);
+    console.log(`CEO: ${extractedData.ceo_name || 'Não encontrado'}`);
+    console.log(`Setor: ${extractedData.sector || 'Não identificado'}`);
+    console.log(`Website: ${extractedData.website || 'Não informado'}`);
 
     // 3. Buscar status "Cadastrada" 
     const cadastradaStatus = await db.query.statuses.findFirst({
@@ -347,18 +436,19 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
 
     // 4. Preparar dados para inserção
     const insertData = {
-      name: extractedData.name || name,
-      description: extractedData.description || `Startup ${name} processada via AI a partir de PDF.`,
+      name: extractedData.name || startupName,
+      description: extractedData.description || `Startup ${startupName} processada via AI a partir de PDF.`,
       status_id: cadastradaStatus?.id || null,
       ai_extraction_data: JSON.stringify({
         ...extractedData,
         extracted_text_length: extractedText.length,
-        extraction_method: "Multi-strategy: pdf-parse + OCR + Vision API"
+        extraction_timestamp: new Date().toISOString(),
+        file_size_kb: Math.round(req.file.size / 1024)
       }),
       created_by_ai: true,
       ai_reviewed: false,
       
-      // Campos opcionais
+      // Campos extraídos
       ceo_name: extractedData.ceo_name || null,
       ceo_email: extractedData.ceo_email || null,
       ceo_whatsapp: extractedData.ceo_whatsapp || null,
@@ -382,7 +472,7 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
       priority: extractedData.priority || null,
       observations: extractedData.observations || null,
       
-      // Campos numéricos como string para Postgres numeric
+      // Campos numéricos
       mrr: extractedData.mrr ? String(extractedData.mrr) : null,
       accumulated_revenue_current_year: extractedData.accumulated_revenue_current_year ? String(extractedData.accumulated_revenue_current_year) : null,
       total_revenue_last_year: extractedData.total_revenue_last_year ? String(extractedData.total_revenue_last_year) : null,
@@ -406,12 +496,13 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
       name: insertData.name,
       ceo_name: insertData.ceo_name,
       sector: insertData.sector,
-      mrr: insertData.mrr
+      mrr: insertData.mrr,
+      description_length: insertData.description?.length
     });
     
     const newStartup = await db.insert(startups).values([insertData]).returning();
     
-    console.log(`Startup criada com sucesso: ${newStartup[0].id}`);
+    console.log(`✅ Startup criada com sucesso: ${newStartup[0].id}`);
     console.log(`Dados salvos - Nome: ${newStartup[0].name}, CEO: ${newStartup[0].ceo_name}, Setor: ${newStartup[0].sector}`);
     
     // 5. Remover arquivo temporário
@@ -422,11 +513,18 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      message: "PDF processado com sucesso usando extração robusta",
+      message: `PDF processado com sucesso para a startup "${startupName}"`,
       startup: newStartup[0],
       originalFileName: req.file.originalname,
       extractedTextLength: extractedText.length,
-      extractionMethod: "Multi-strategy: pdf-parse + OCR + Vision API",
+      extractionSummary: {
+        name: extractedData.name,
+        hasDescription: !!extractedData.description,
+        hasCEO: !!extractedData.ceo_name,
+        hasSector: !!extractedData.sector,
+        hasRevenue: !!extractedData.mrr,
+        hasClients: !!extractedData.client_count
+      },
       extractedData: extractedData
     });
     
@@ -447,7 +545,8 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     
     return res.status(500).json({ 
       message: "Erro ao processar pitch deck", 
-      error: error.message 
+      error: error.message,
+      details: "Verifique se todas as dependências estão instaladas e se o arquivo PDF não está corrompido"
     });
   }
 };
