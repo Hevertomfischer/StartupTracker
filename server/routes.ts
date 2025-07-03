@@ -1273,6 +1273,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rota de teste para OpenAI (temporária)
   app.post("/api/test-openai", async (req: Request, res: Response) => {
     try {
+      console.log('=== TESTE DA API OPENAI ===');
+      
+      // Verificar se a chave da OpenAI existe
+      if (!process.env.OPENAI_API_KEY) {
+        console.error('Chave da OpenAI não configurada');
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Chave da OpenAI não configurada. Verifique a variável de ambiente OPENAI_API_KEY' 
+        });
+      }
+
       const { text, name } = req.body;
 
       const prompt = `
@@ -1328,7 +1339,9 @@ Responda apenas com o JSON válido contendo os dados extraídos:`;
       });
 
       if (!response.ok) {
-        throw new Error(`OpenAI API Error: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`OpenAI API Error: ${response.status} - ${errorText}`);
+        throw new Error(`OpenAI API Error: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
@@ -1339,11 +1352,16 @@ Responda apenas com o JSON válido contendo os dados extraídos:`;
       return res.status(200).json({
         success: true,
         extractedData: extractedData,
-        prompt: prompt.substring(0, 500)
+        prompt: prompt.substring(0, 500),
+        apiKeyConfigured: !!process.env.OPENAI_API_KEY
       });
     } catch (error) {
       console.error('Erro no teste OpenAI:', error);
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ 
+        success: false,
+        error: error.message,
+        apiKeyConfigured: !!process.env.OPENAI_API_KEY
+      });
     }
   });
 
