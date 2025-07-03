@@ -32,7 +32,7 @@ const tempStorage = multer.diskStorage({
 const tempUpload = multer({
   storage: tempStorage,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB max file size
+    fileSize: 100 * 1024 * 1024, // 100MB max file size
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {

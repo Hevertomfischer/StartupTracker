@@ -1266,7 +1266,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/external/startup", externalFormUploadPitchDeck, handleExternalForm);
 
   // AI PDF Processing Routes
-  app.post("/api/startup/process-pitch-deck", isAuthenticated, uploadTempPDF, processPitchDeckAI);
+  app.post("/api/startup/process-pitch-deck", isAuthenticated, uploadTempPDF, (error: any, req: Request, res: Response, next: NextFunction) => {
+    if (error && error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        error: 'Arquivo PDF muito grande. Tamanho máximo permitido: 100MB'
+      });
+    }
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message || 'Erro no upload do arquivo'
+      });
+    }
+    next();
+  }, processPitchDeckAI);
   app.post("/api/startup/process-pitch-deck-hybrid", uploadTempPDFHybrid, processPitchDeckHybrid);
 
   // Rota de teste para OpenAI (temporária)
