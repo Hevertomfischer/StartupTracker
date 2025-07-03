@@ -27,8 +27,8 @@ import {
 import { 
   processPitchDeckAI, 
   uploadTempPDF 
-} from "./ai-pdf-controller-new.js";
-import { processPitchDeckHybrid, uploadTempPDF as uploadTempPDFHybrid } from "./ai-pdf-controller-hybrid.js";
+} from "./ai-pdf-controller-new";
+import { processPitchDeckHybrid, uploadTempPDF as uploadTempPDFHybrid } from "./ai-pdf-controller-hybrid";
 import { 
   handleExternalForm, 
   uploadPitchDeck as externalFormUploadPitchDeck 
@@ -37,7 +37,6 @@ import {
   uploadImportFile, 
   analyzeImportFile, 
   processImportFile, 
-  getImportTemplate,
   downloadErrorReport
 } from "./import-controller";
 import path from "path";
