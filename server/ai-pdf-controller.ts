@@ -237,7 +237,15 @@ Responda apenas com o JSON válido contendo os dados extraídos:`;
       cleanContent = cleanContent.replace(/```\s*/, '').replace(/```\s*$/, '');
     }
     
-    const aiExtractedData = JSON.parse(cleanContent);
+    let aiExtractedData;
+    try {
+      aiExtractedData = JSON.parse(cleanContent);
+    } catch (parseErr) {
+      const raw = responseContent.slice(0, 200);
+      console.error('Failed to parse JSON from OpenAI:', raw);
+      throw new Error(`Invalid JSON from OpenAI: ${raw}`);
+    }
+
     console.log('=== DADOS EXTRAÍDOS PELA OPENAI ===');
     console.log(JSON.stringify(aiExtractedData, null, 2));
     

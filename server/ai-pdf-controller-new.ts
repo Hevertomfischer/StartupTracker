@@ -180,7 +180,16 @@ Retorne apenas um JSON válido com os dados extraídos:`;
       max_tokens: 4000
     });
 
-    const extractedData = JSON.parse(response.choices[0].message.content || '{}');
+    let extractedData;
+    try {
+      extractedData = JSON.parse(response.choices[0].message.content || '{}');
+    } catch (parseErr) {
+      const raw = response.choices[0].message.content || '';
+      const truncated = raw.slice(0, 200);
+      console.error('Failed to parse JSON from OpenAI:', truncated);
+      throw new Error(`Invalid JSON from OpenAI: ${truncated}`);
+    }
+
     console.log('Dados extraídos pela OpenAI:', extractedData);
 
     return extractedData;
