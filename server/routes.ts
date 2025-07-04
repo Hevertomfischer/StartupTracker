@@ -1358,7 +1358,18 @@ Responda apenas com o JSON válido contendo os dados extraídos:`;
       }
 
       const result = await response.json();
-      const extractedData = JSON.parse(result.choices[0].message.content);
+      let extractedData;
+      try {
+        extractedData = JSON.parse(result.choices[0].message.content);
+      } catch (parseErr) {
+        const raw = result.choices[0].message.content.slice(0, 200);
+        console.error('Failed to parse JSON from OpenAI:', raw);
+        return res.status(500).json({
+          success: false,
+          error: `Invalid JSON from OpenAI: ${raw}`,
+          apiKeyConfigured: !!process.env.OPENAI_API_KEY
+        });
+      }
 
       console.log('OpenAI Response:', extractedData);
 
