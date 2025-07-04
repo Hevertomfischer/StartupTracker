@@ -292,7 +292,7 @@ export const deleteAttachment = async (req: Request, res: Response) => {
     if (fileInfo) {
       const filePath = path.join(process.cwd(), "uploads", fileInfo.filename);
       if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+        await fs.promises.unlink(filePath);
       }
     }
     
@@ -349,7 +349,7 @@ export const deletePitchDeck = async (req: Request, res: Response) => {
     if (fileInfo) {
       const filePath = path.join(process.cwd(), "uploads", fileInfo.filename);
       if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+        await fs.promises.unlink(filePath);
       }
     }
     

@@ -420,7 +420,7 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     const finalPath = path.join(uploadsDir, newFileName);
     
     // Move file from temp to uploads
-    fs.renameSync(req.file.path, finalPath);
+    await fs.promises.rename(req.file.path, finalPath);
     
     // For now, just log the file was moved successfully
     console.log(`PDF salvo como: ${finalPath}`);
@@ -444,7 +444,7 @@ export const processPitchDeckAI = async (req: Request, res: Response) => {
     // Remover arquivo temporário em caso de erro
     if (req.file && fs.existsSync(req.file.path)) {
       try {
-        fs.unlinkSync(req.file.path);
+        await fs.promises.unlink(req.file.path);
         console.log("Arquivo temporário removido após erro");
       } catch (cleanupError) {
         console.error("Erro ao remover arquivo temporário:", cleanupError);
