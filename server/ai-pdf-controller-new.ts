@@ -268,7 +268,7 @@ export async function processPitchDeckAI(req: Request, res: Response) {
 
       // Remover arquivo temporário
       if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
+        await fs.promises.unlink(req.file.path);
         console.log('Arquivo temporário removido');
       }
 
@@ -284,7 +284,7 @@ export async function processPitchDeckAI(req: Request, res: Response) {
       
       // Remover arquivo temporário mesmo em caso de erro
       if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
+        await fs.promises.unlink(req.file.path);
         console.log('Arquivo temporário removido após erro do banco');
       }
 
@@ -305,7 +305,7 @@ export async function processPitchDeckAI(req: Request, res: Response) {
     // Remover arquivo temporário em caso de erro
     if (req.file && fs.existsSync(req.file.path)) {
       try {
-        fs.unlinkSync(req.file.path);
+        await fs.promises.unlink(req.file.path);
         console.log('Arquivo temporário removido após erro');
       } catch (cleanupError) {
         console.error('Erro ao remover arquivo temporário:', cleanupError);
