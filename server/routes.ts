@@ -2,8 +2,9 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
-  insertStartupSchema, 
-  insertStartupMemberSchema, 
+  insertStartupSchema,
+  insertStartupMemberSchema,
+  type InsertStartup,
   updateStartupStatusSchema,
   insertStatusSchema,
   insertTaskSchema,
@@ -487,15 +488,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Create a new startup
   app.post("/api/startups", isAdmin, async (req: Request, res: Response) => {
+    let data: InsertStartup;
     try {
-      const data = insertStartupSchema.parse(req.body);
-      const startup = await storage.createStartup(data);
-      return res.status(201).json(startup);
+      data = insertStartupSchema.parse(req.body);
     } catch (error) {
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
         return res.status(400).json({ message: validationError.message });
       }
+      throw error;
+    }
+
+    try {
+      const startup = await storage.createStartup(data);
+      return res.status(201).json(startup);
+    } catch (error) {
       console.error("Error creating startup:", error);
       return res.status(500).json({ message: "Failed to create startup" });
     }

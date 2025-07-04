@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { storage } from './storage';
 import { v4 as uuidv4 } from 'uuid';
-import { insertStartupSchema } from '@shared/schema';
+import { insertStartupSchema, type InsertStartup } from '@shared/schema';
 import { ZodError } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import OpenAI from 'openai';
@@ -260,7 +260,15 @@ export async function processPitchDeckAI(req: Request, res: Response) {
       };
 
       // Usar schema de validação para garantir dados corretos
-      const validatedData = insertStartupSchema.parse(startupData);
+      let validatedData: InsertStartup;
+      try {
+        validatedData = insertStartupSchema.parse(startupData);
+      } catch (err) {
+        if (err instanceof ZodError) {
+          return res.status(400).json({ success: false, error: fromZodError(err).message });
+        }
+        throw err;
+      }
       
       // Criar startup no banco
       const createdStartup = await storage.createStartup(validatedData);
